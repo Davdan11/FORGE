@@ -7,7 +7,7 @@ import { Bluetooth, BluetoothOff, Gauge, Heart, Mountain } from "lucide-react";
 import { db, getProfile } from "@/lib/db";
 import { generateCourse, courseFromActivity, at, type Course } from "@/lib/indoor/course";
 import { step, ROAD_BIKE, powerFromHr, powerFromSpeed, declaredPower, guessFtp, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
-import { bluetoothAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
+import { sensorAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
 import { fmtDist, fmtDuration } from "@/lib/units";
 import { Screen, Section, ScreenSkeleton, Toast } from "@/components/ui";
 import { Page, Press } from "@/components/motion";
@@ -140,6 +140,9 @@ function Ride({ course, profile, onStop, say }: {
 
   const fusion = useRef(new SensorFusion());
   const [sensors, setSensors] = useState<Sensor[]>([]);
+  // Which sensor is mid-connect. A button that looks identical while it is
+  // working reads as a button that did nothing.
+  const [connecting, setConnecting] = useState<SensorKind | null>(null);
   const [manualW, setManualW] = useState(150);
 
   // Physics state lives in refs: it changes sixty times a second and React
@@ -162,7 +165,14 @@ function Ride({ course, profile, onStop, say }: {
   // The dial, sampled at a rate a person can read.
   const [hud, setHud] = useState({ speedMs: 0, distanceM: 0, watts: 0, quality: "declared" as Effort["quality"], hr: 0, cadence: 0, gradient: 0, elapsed: 0 });
 
-  const availability = useMemo(() => bluetoothAvailability(), []);
+  // Reaching a sensor is an async question now: the native transport has to
+  // load a plugin before it can answer. Null means "still asking".
+  const [availability, setAvailability] = useState<Availability | null>(null);
+  useEffect(() => {
+    let alive = true;
+    sensorAvailability().then((a) => { if (alive) setAvailability(a); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let raf = 0;
@@ -221,6 +231,7 @@ function Ride({ course, profile, onStop, say }: {
   useEffect(() => () => { for (const s of sensors) s.disconnect(); }, [sensors]);
 
   async function connect(kind: SensorKind) {
+    setConnecting(kind);
     try {
       const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(`${SENSOR_LABEL[kind]} disconnected.`));
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
@@ -229,6 +240,8 @@ function Ride({ course, profile, onStop, say }: {
       // A person closing the chooser is not an error worth shouting about.
       const msg = e instanceof Error ? e.message : String(e);
       if (!/cancelled|User cancelled/i.test(msg)) say(msg);
+    } finally {
+      setConnecting(null);
     }
   }
 
@@ -262,13 +275,15 @@ function Ride({ course, profile, onStop, say }: {
         <div className="card p-3 grid gap-3 backdrop-blur-xl !bg-[rgba(255,255,255,.92)] max-w-[520px] mx-auto w-full">
           <Provenance quality={hud.quality} />
 
-          {!sensors.length && (
+          {/* null while the transport is still being asked — the native one has
+              to load a plugin before it can answer. */}
+          {!sensors.length && availability && (
             availability.ok ? (
               <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
                 {(["heart_rate", "fitness_machine", "cycling_power", "csc"] as SensorKind[]).map((k) => (
-                  <button key={k} type="button" onClick={() => connect(k)}
-                    className="shrink-0 h-9 px-3 rounded-full border border-line-strong text-xs text-ink hover:border-ink transition-colors flex items-center gap-1.5">
-                    <Bluetooth className="w-3.5 h-3.5" strokeWidth={2} />{SENSOR_LABEL[k]}
+                  <button key={k} type="button" onClick={() => connect(k)} disabled={connecting !== null}
+                    className={`shrink-0 h-9 px-3 rounded-full border text-xs transition-colors flex items-center gap-1.5 ${connecting === k ? "border-volt text-volt-deep" : "border-line-strong text-ink hover:border-ink"} ${connecting !== null && connecting !== k ? "opacity-40" : ""}`}>
+                    <Bluetooth className="w-3.5 h-3.5" strokeWidth={2} />{connecting === k ? `Looking for ${SENSOR_LABEL[k].toLowerCase()}…` : SENSOR_LABEL[k]}
                   </button>
                 ))}
               </div>

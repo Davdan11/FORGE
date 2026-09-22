@@ -66,5 +66,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>FORGE connects to your heart-rate strap, power meter or smart trainer so an indoor ride moves at the speed your effort earns.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>FORGE uses motion data to count steps and detect when a recorded activity has paused.</string>
 </dict>
 </plist>
