@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, getProfile, getStats, resetAll } from "@/lib/db";
+import { addDays, db, getProfile, getStats, resetAll, todayISO } from "@/lib/db";
 import { goalLabel } from "@/lib/engine/plan";
 import { PAIN_LABEL } from "@/lib/engine/readiness";
 import { rebuildRemaining } from "@/lib/engine/rebuild";
@@ -22,6 +22,8 @@ import { Screen, Hero, Section, Seg, MultiSeg, Toggle, Toast, Photo, ScreenSkele
 import { Page, Stagger, Item, Press } from "@/components/motion";
 import { ensureNotificationPermission } from "@/lib/notify";
 import { InjuryPanel } from "@/components/InjuryPanel";
+import { AREAS, AVOID, DIETS, DEFAULT_LIFESTYLE, HOME_KIT, PLACES, SLEEP, STRESS, WORK, equipmentFor } from "@/lib/data/choices";
+import { buildNutritionDay } from "@/lib/nutrition/engine";
 import type { Goal, PainArea, Profile } from "@/lib/types";
 
 const GOALS: { v: Goal; name: string; image: string }[] = [
@@ -57,9 +59,25 @@ export default function SettingsPage() {
   if (!profile || !stats) return <ScreenSkeleton />;
   const lvl = levelFromXp(stats.xp);
   const imperial = profile.units.weight === "lb";
+  // Profiles made before these existed: infer the place from the equipment.
+  const place = profile.trainingPlace ?? (profile.equipment.includes("machine") ? "full_gym" : profile.equipment.some((e) => e !== "outdoor" && e !== "bodyweight") ? "home_gym" : "no_gym");
+  const homeKit = profile.equipment.filter((e) => e !== "outdoor");
+  const life = profile.lifestyle ?? DEFAULT_LIFESTYLE;
   const update = (patch: Partial<Profile>) => db.profile.update(profile.id, { ...patch, dirty: 1, updatedAt: new Date().toISOString() });
 
   /** Anything that changes the prescription rebuilds the remaining weeks. Done sessions stay. */
+  /** A new diet or avoided food applies from today's menu on, not tomorrow's. */
+  async function food(patch: Partial<Profile>) {
+    await update(patch);
+    const p = { ...profile!, ...patch };
+    const today = todayISO();
+    const session = await db.sessions.where("date").equals(today).first();
+    const recent = (await db.nutrition.where("date").between(addDays(today, -3), addDays(today, -1), true, true).toArray()).flatMap((d) => d.meals.map((m) => m.mealId));
+    const yesterday = await db.nutrition.get(addDays(today, -1));
+    await db.nutrition.put({ ...buildNutritionDay(p, today, session ?? null, yesterday ?? undefined, recent), dirty: 1 });
+    say("Today's menu rebuilt.");
+  }
+
   async function rebuild(patch: Partial<Profile>, why: string) {
     await update(patch);
     await rebuildRemaining(patch);
@@ -110,7 +128,22 @@ export default function SettingsPage() {
                     <div className="field"><span className="meta">Sessions / week</span><Seg fill value={profile.daysPerWeek} onChange={(d) => rebuild({ daysPerWeek: d }, `${d} days a week`)} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} /></div>
                     <div className="field"><span className="meta">Minutes</span><Seg fill value={profile.sessionMinutes} onChange={(m) => rebuild({ sessionMinutes: m }, `${m}-minute sessions`)} options={[25, 40, 60, 75].map((m) => ({ v: m as Profile["sessionMinutes"], label: String(m) }))} /></div>
                   </div>
+                  <div className="field">
+                    <span className="meta">Where you train</span>
+                    <Seg fill value={place} onChange={(v) => rebuild({ trainingPlace: v, equipment: equipmentFor(v, homeKit) }, PLACES.find((x) => x.v === v)!.name.toLowerCase())} options={PLACES.map((x) => ({ v: x.v, label: x.name }))} />
+                  </div>
+                  {place === "home_gym" && <div className="field"><span className="meta">In your home gym</span><MultiSeg value={homeKit} onChange={(kit) => rebuild({ equipment: equipmentFor("home_gym", kit) }, "home gym updated")} options={HOME_KIT} /></div>}
+                  <div className="field"><span className="meta">Old injuries · healed</span><MultiSeg value={profile.injuryHistory ?? []} onChange={(injuryHistory) => rebuild({ injuryHistory }, "old injuries noted")} options={AREAS} /><span className="text-xs text-smoke">Not excluded — the gentler version of each movement comes first.</span></div>
                   <div className="field"><span className="meta">Pain flags · clear when healed</span><MultiSeg value={profile.pain} onChange={(pain) => update({ pain })} options={(Object.keys(PAIN_LABEL) as PainArea[]).map((k) => ({ v: k, label: PAIN_LABEL[k] }))} /></div>
+                </div>
+              </Section>
+            </Item>
+            <Item>
+              <Section title="Recovery" aside={<span className="text-xs text-smoke">sets volume and food</span>}>
+                <div className="card p-4 grid gap-4">
+                  <div className="field"><span className="meta">Sleep on a normal night</span><Seg fill value={life.sleep} onChange={(sleep) => rebuild({ lifestyle: { ...life, sleep } }, "recovery updated")} options={SLEEP} /></div>
+                  <div className="field"><span className="meta">Stress these days</span><Seg fill value={life.stress} onChange={(stress) => rebuild({ lifestyle: { ...life, stress } }, "recovery updated")} options={STRESS} /></div>
+                  <div className="field"><span className="meta">Your days are mostly</span><Seg fill value={life.work} onChange={(work) => rebuild({ lifestyle: { ...life, work } }, "recovery updated")} options={WORK} /></div>
                 </div>
               </Section>
             </Item>
@@ -120,6 +153,11 @@ export default function SettingsPage() {
             <Item>
               <Section title="Preferences">
                 <div className="card divide-y divide-line">
+                  <div className="p-4 grid gap-3">
+                    <div><p className="text-sm font-medium">Food</p><p className="text-xs text-smoke">Changes rebuild today’s menu.</p></div>
+                    <div className="field"><span className="meta">Way of eating</span><MultiSeg value={profile.dietary} onChange={(dietary) => food({ dietary })} options={DIETS} /></div>
+                    <div className="field"><span className="meta">Foods you don’t eat</span><MultiSeg value={profile.avoidFoods ?? []} onChange={(avoidFoods) => food({ avoidFoods })} options={AVOID} /></div>
+                  </div>
                   <div className="p-4 grid gap-3">
                     <div><p className="text-sm font-medium">Units</p><p className="text-xs text-smoke">Body weight and distance are set separately — plenty of places weigh in pounds and run in kilometres.</p></div>
                     <div className="grid gap-4 sm:grid-cols-2">

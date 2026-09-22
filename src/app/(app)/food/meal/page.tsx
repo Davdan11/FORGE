@@ -62,7 +62,7 @@ function Recipe() {
   return (
     <Page>
       <Screen>
-        <Hero image={meal.image} color height="h-[400px]" back="/food" eyebrow={`${meal.cuisine ?? "Recipe"} · ${meal.minutes} min · ${meal.slot.join(" / ")}`} title={<>{meal.name}</>}>
+        <Hero image={meal.image} color height="h-[400px]" back="/food" eyebrow={[meal.cuisine ?? "Recipe", `${meal.minutes} min`, ...meal.slot.filter((sl) => sl.toLowerCase() !== (meal.cuisine ?? "").toLowerCase())].join(" · ")} title={<>{meal.name}</>}>
           <div className="flex flex-wrap gap-1.5 mt-3">
             <span className="chip chip--volt tnum">{Math.round(meal.kcal * scale)} kcal</span>
             <span className="chip chip--live backdrop-blur-md tnum">Protein {Math.round(meal.protein * scale)} g</span>

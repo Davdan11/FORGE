@@ -9,6 +9,7 @@ import { adaptationsFor } from "@/lib/engine/injury";
 import { buildNutritionDay } from "@/lib/nutrition/engine";
 import { lbToKg } from "@/lib/units";
 import { ART, IMG, sessionImage } from "@/lib/data/images";
+import { AREAS, AVOID, DIETS, HOME_KIT, PLACES, SLEEP, STRESS, WORK, DEFAULT_LIFESTYLE, equipmentFor } from "@/lib/data/choices";
 import { Seg, MultiSeg, Photo } from "@/components/ui";
 import { motion, AnimatePresence, Press } from "@/components/motion";
 import { AccountPanel } from "@/components/AccountPanel";
@@ -23,15 +24,6 @@ import type { AvoidFood, Equipment, Goal, Level, Lifestyle, PainArea, Profile, S
 
 const STEPS = ["You", "Goal", "Schedule", "Gear", "Recovery", "Food"] as const;
 const CLAIMS = ["We measure before we prescribe.", "One goal. Everything follows.", "The week you actually have.", "Train with what is in front of you.", "Recovery happens outside the gym.", "Fuel is part of the plan."];
-const PLACES: { v: TrainingPlace; name: string; line: string }[] = [
-  { v: "full_gym", name: "Full gym", line: "Racks, cables, machines. Nothing to list." },
-  { v: "home_gym", name: "Home gym", line: "Tell us what you have." },
-  { v: "no_gym", name: "No gym", line: "Bodyweight, outdoors, anywhere." },
-];
-const FULL_GYM: Equipment[] = ["barbell", "rack", "bench", "dumbbell", "kettlebell", "cable", "machine", "pullup_bar", "band", "rower", "bike", "treadmill", "outdoor"];
-const HOME_KIT: { v: Equipment; label: string }[] = [{ v: "dumbbell", label: "Dumbbells" }, { v: "kettlebell", label: "Kettlebell" }, { v: "barbell", label: "Barbell" }, { v: "rack", label: "Rack" }, { v: "bench", label: "Bench" }, { v: "pullup_bar", label: "Pull-up bar" }, { v: "band", label: "Bands" }, { v: "cable", label: "Cables" }, { v: "bike", label: "Bike" }, { v: "rower", label: "Rower" }, { v: "treadmill", label: "Treadmill" }];
-const AREAS: { v: PainArea; label: string }[] = [{ v: "knee", label: "Knee" }, { v: "back", label: "Lower back" }, { v: "shoulder", label: "Shoulder" }, { v: "hip", label: "Hip" }, { v: "wrist", label: "Wrist" }, { v: "ankle", label: "Ankle" }, { v: "elbow", label: "Elbow" }];
-const AVOID: { v: AvoidFood; label: string }[] = [{ v: "nuts", label: "Nuts" }, { v: "peanuts", label: "Peanuts" }, { v: "shellfish", label: "Shellfish" }, { v: "fish", label: "Fish" }, { v: "eggs", label: "Eggs" }, { v: "dairy", label: "Dairy" }, { v: "soy", label: "Soy" }, { v: "pork", label: "Pork" }, { v: "red_meat", label: "Red meat" }];
 const GOALS: { v: Goal; name: string; line: string; image: string }[] = [
   { v: "strength", name: "Get strong", line: "Heavy compounds, low reps, long rests.", image: sessionImage("lower", 600, 600) },
   { v: "build", name: "Build muscle", line: "Volume, tempo, food to grow.", image: sessionImage("upper", 600, 600) },
@@ -68,7 +60,7 @@ export default function Onboarding() {
   const [homeKit, setHomeKit] = useState<Equipment[]>(["dumbbell", "bench"]);
   const [injured, setInjured] = useState<PainArea[]>([]);
   const [healed, setHealed] = useState<PainArea[]>([]);
-  const [lifestyle, setLifestyle] = useState<Lifestyle>({ sleep: "7_8", stress: "moderate", work: "desk" });
+  const [lifestyle, setLifestyle] = useState<Lifestyle>(DEFAULT_LIFESTYLE);
   const [dietary, setDietary] = useState<Profile["dietary"]>([]);
   const [avoidFoods, setAvoidFoods] = useState<AvoidFood[]>([]);
   const [mealsPerDay, setMealsPerDay] = useState<Profile["mealsPerDay"]>(4);
@@ -102,7 +94,7 @@ export default function Onboarding() {
     setBusy(true);
     // Cinematic build: staged messages while the engine works.
     for (let i = 0; i < 4; i++) { setStage(i); await new Promise((r) => setTimeout(r, 650)); }
-    const equipment: Equipment[] = place === "full_gym" ? FULL_GYM : place === "home_gym" ? [...homeKit, "outdoor"] : ["outdoor"];
+    const equipment = equipmentFor(place, homeKit);
     const profile: Profile = {
       id: uid(), name: name.trim(), sex, age, units, goal, level,
       heightCm: units.weight === "lb" ? height * 2.54 : height, weightKg: units.weight === "lb" ? lbToKg(weight) : weight,
@@ -243,14 +235,14 @@ export default function Onboarding() {
           </>)}
           {step === 4 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Life <em>outside</em> the gym.</h1>
-            <div className="field"><span className="meta">Sleep on a normal night</span><Seg fill value={lifestyle.sleep} onChange={(sleep) => setLifestyle((l) => ({ ...l, sleep }))} options={[{ v: "under_6", label: "Under 6 h" }, { v: "6_7", label: "6–7 h" }, { v: "7_8", label: "7–8 h" }, { v: "over_8", label: "8 h +" }]} /></div>
-            <div className="field"><span className="meta">Stress these days</span><Seg fill value={lifestyle.stress} onChange={(stress) => setLifestyle((l) => ({ ...l, stress }))} options={[{ v: "low", label: "Low" }, { v: "moderate", label: "Moderate" }, { v: "high", label: "High" }]} /></div>
-            <div className="field"><span className="meta">Your days are mostly</span><Seg fill value={lifestyle.work} onChange={(work) => setLifestyle((l) => ({ ...l, work }))} options={[{ v: "desk", label: "Sitting" }, { v: "on_feet", label: "On my feet" }, { v: "physical", label: "Physical work" }]} /></div>
+            <div className="field"><span className="meta">Sleep on a normal night</span><Seg fill value={lifestyle.sleep} onChange={(sleep) => setLifestyle((l) => ({ ...l, sleep }))} options={SLEEP} /></div>
+            <div className="field"><span className="meta">Stress these days</span><Seg fill value={lifestyle.stress} onChange={(stress) => setLifestyle((l) => ({ ...l, stress }))} options={STRESS} /></div>
+            <div className="field"><span className="meta">Your days are mostly</span><Seg fill value={lifestyle.work} onChange={(work) => setLifestyle((l) => ({ ...l, work }))} options={WORK} /></div>
             <p className="text-sm text-smoke">Muscle is built while you recover. Short sleep, heavy stress or a physical job mean fewer sets per session, and a physical job means more food. Every four weeks the next block is rewritten from how the last one actually went.</p>
           </>)}
           {step === 5 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>How do you <em>eat</em>?</h1>
-            <div className="field"><span className="meta">Way of eating</span><MultiSeg value={dietary} onChange={setDietary} options={[{ v: "vegetarian", label: "Vegetarian" }, { v: "vegan", label: "Vegan" }, { v: "pescatarian", label: "Pescatarian" }, { v: "keto", label: "Keto" }, { v: "halal", label: "Halal" }, { v: "gluten_free", label: "Gluten-free" }, { v: "lactose_free", label: "Lactose-free" }]} /></div>
+            <div className="field"><span className="meta">Way of eating</span><MultiSeg value={dietary} onChange={setDietary} options={DIETS} /></div>
             <div className="field"><span className="meta">Foods you don’t eat</span><MultiSeg value={avoidFoods} onChange={setAvoidFoods} options={AVOID} /></div>
             <div className="field"><span className="meta">Meals per day</span><Seg value={mealsPerDay} onChange={setMealsPerDay} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
             <p className="text-sm text-smoke">Targets come from your body, goal and the kind of day it is. 30,000+ recipes with cook mode; meals never repeat within three days.</p>

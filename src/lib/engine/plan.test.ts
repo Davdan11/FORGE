@@ -107,3 +107,16 @@ describe("exercise choice", () => {
         for (const ex of s.exercises.filter((e) => e.block === "main")) expect(getExercise(ex.slug)?.isolation).not.toBe(true);
   });
 });
+
+describe("a knee that hurts", () => {
+  it("keeps lower days trainable with knee-friendly squats, and nothing that loads the knee harder", () => {
+    const { sessions } = generatePlan(make({ pain: ["knee"], equipment: ["barbell", "rack", "bench", "dumbbell", "kettlebell", "machine", "cable"] }), "2026-01-05");
+    const lower = sessions.filter((s) => s.kind === "lower");
+    for (const s of lower) {
+      expect(s.exercises.filter((e) => e.block !== "prep").length).toBeGreaterThan(1);
+      for (const e of s.exercises) expect(getExercise(e.slug)?.painFlags ?? []).not.toContain("knee");
+    }
+    const slugs = new Set(sessions.flatMap((s) => s.exercises.map((e) => e.slug)));
+    for (const banned of ["reverse-lunge", "step-up", "leg-press", "hack-squat"]) expect(slugs.has(banned)).toBe(false);
+  });
+});

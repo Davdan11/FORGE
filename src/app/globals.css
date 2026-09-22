@@ -144,7 +144,9 @@
 /* Marker slab: the accent word sits on a hand-drawn-looking block. The slab is
    a pseudo-element so it can skew while the serif italic above it stays upright
    — skewing an italic twice reads as a rendering fault, not a gesture. */
-.display em.slab { position: relative; isolation: isolate; color: var(--ink); padding: 0 .16em; }
+/* inline-block: as a plain inline box, a slab that wraps onto a second line
+   collapsed its highlight to a sliver at the line break. */
+.display em.slab { position: relative; isolation: isolate; color: var(--ink); padding: 0 .16em; display: inline-block; }
 .display em.slab::before {
   content: ''; position: absolute; z-index: -1;
   inset: .12em -.04em .1em; border-radius: 3px;

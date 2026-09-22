@@ -36,6 +36,8 @@ export default function TrendsPage() {
   const tonnage = useMemo(() => weekly(logs ?? [], (l) => l.startedAt, (l) => l.volumeKg ?? 0, weeks), [logs, weeks]);
   const distance = useMemo(() => weekly(activities ?? [], (a) => a.startedAt, (a) => a.distanceM, weeks), [activities, weeks]);
   const minutes = useMemo(() => weekly(logs ?? [], (l) => l.startedAt, (l) => Math.round((l.durationSec ?? 0) / 60), weeks), [logs, weeks]);
+  const hasTonnage = tonnage.some((w) => w.value > 0);
+  const hasMinutes = minutes.some((w) => w.value > 0);
   const cons = useMemo(() => consistency(logs ?? [], activities ?? [], weeks), [logs, activities, weeks]);
   const read = useMemo(() => profile ? readGoal({
     goal: profile.goal, weights: weights ?? [], lifts, tonnage, distance, consistency: cons, readiness: readiness ?? [],
@@ -108,20 +110,22 @@ export default function TrendsPage() {
               </Section>
             </Item>
 
-            <Item>
+            {/* Empty charts are eight flat lines: until there is something to
+                draw, "Where you stand" above already says why. */}
+            {hasTonnage && <Item>
               <Section title="Weekly tonnage" aside={<span className="flex items-center gap-1.5 text-xs text-smoke"><Arrow v={tonnageSlope} />{tonnageSlope > 0 ? "climbing" : tonnageSlope < 0 ? "falling" : "flat"}</span>}>
                 <div className="card p-4">
                   <Bars data={tonnage} format={(v) => `${Math.round(v / 1000)} t`} />
                 </div>
               </Section>
-            </Item>
+            </Item>}
           </div>
 
           <div className="min-w-0">
             <Item>
               <Section title="Showing up">
                 <div className="card p-4 grid gap-3">
-                  <Bars data={cons.sessions} format={(v) => `${Math.round(v)}`} height={90} />
+                  {cons.weeksTrained > 0 && <Bars data={cons.sessions} format={(v) => `${Math.round(v)}`} height={90} />}
                   <p className="text-sm tnum">
                     <strong>{cons.weeksTrained}</strong> of {cons.weeksTotal} weeks · longest run <strong>{cons.longestRun}</strong>.
                   </p>
@@ -130,11 +134,11 @@ export default function TrendsPage() {
               </Section>
             </Item>
 
-            <Item>
+            {hasMinutes && <Item>
               <Section title="Minutes trained">
                 <div className="card p-4"><Bars data={minutes} format={(v) => `${Math.round(v)} min`} height={90} /></div>
               </Section>
-            </Item>
+            </Item>}
 
             {totalKm > 0 && (
               <Item>
