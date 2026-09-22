@@ -112,9 +112,14 @@ export function scatter(course: Course, count: number, seed: number): Placement[
   const out: Placement[] = [];
   const pts = course.points;
 
+  // The camera starts behind the rider, which on a loop is the far end of the
+  // course. Leave both ends of the run bare so the opening shot is a road.
+  const clear = Math.min(30, Math.floor(pts.length * 0.02));
+
   for (let i = 0; i < count; i++) {
-    const p = pts[Math.floor(rnd() * pts.length)];
-    const next = pts[Math.min(pts.length - 1, pts.indexOf(p) + 1)] ?? p;
+    const idx = clear + Math.floor(rnd() * Math.max(1, pts.length - clear * 2));
+    const p = pts[idx];
+    const next = pts[Math.min(pts.length - 1, idx + 1)] ?? p;
 
     // Perpendicular to the road, so nothing is ever planted on it.
     const dx = next.x - p.x, dz = next.z - p.z;
@@ -122,16 +127,18 @@ export function scatter(course: Course, count: number, seed: number): Placement[
     const nx = -dz / len, nz = dx / len;
 
     const side = rnd() < 0.5 ? 1 : -1;
-    // 7 m clears the verge; the square puts most things near the road and a
-    // few far out, which reads as a wood thinning rather than a row.
-    const off = 7 + rnd() * rnd() * 90;
+    // 14 m, not 7. The camera rides 6.5 m behind the athlete and a tree at the
+    // old distance filled the whole screen at the start line. The square still
+    // puts most things near the road and a few far out, which reads as a wood
+    // thinning rather than as a row.
+    const off = 14 + rnd() * rnd() * 90;
 
     out.push({
       x: p.x + nx * off * side,
       y: p.alt - 0.3,
       z: p.z + nz * off * side,
       rotation: rnd() * Math.PI * 2,
-      scale: 0.7 + rnd() * 0.8,
+      scale: 0.6 + rnd() * 0.55,
     });
   }
   return out;

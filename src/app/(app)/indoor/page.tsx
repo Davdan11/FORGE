@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Bluetooth, BluetoothOff, Gauge, Heart, Mountain } from "lucide-react";
+import { Bluetooth, BluetoothOff, Gauge, Heart, Mountain, ChevronDown, ChevronUp } from "lucide-react";
 import { db, getProfile } from "@/lib/db";
 import { generateCourse, courseFromActivity, at, type Course } from "@/lib/indoor/course";
 import { step, ROAD_BIKE, powerFromHr, powerFromSpeed, declaredPower, guessFtp, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
@@ -12,6 +12,7 @@ import { fmtDist, fmtDuration } from "@/lib/units";
 import { Screen, Section, ScreenSkeleton, Toast } from "@/components/ui";
 import { Page, Press } from "@/components/motion";
 import type { Rider } from "@/components/indoor/World";
+import { startPacers, stepPacers, placeInBunch, gapToNext, type PacerState } from "@/lib/indoor/pacers";
 import type { Profile as AthleteProfile, UnitPrefs } from "@/lib/types";
 
 // Three.js is ~600 KB. It has no business in the bundle of anyone who never
@@ -143,7 +144,10 @@ function Ride({ course, profile, onStop, say }: {
   // Which sensor is mid-connect. A button that looks identical while it is
   // working reads as a button that did nothing.
   const [connecting, setConnecting] = useState<SensorKind | null>(null);
-  const [manualW, setManualW] = useState(150);
+  // Zero, not 150. A rider who sets off down the road on their own the moment
+  // the screen opens, with nothing connected and nobody pedalling, is the app
+  // inventing an effort — and it reads exactly as wrong as it is.
+  const [manualW, setManualW] = useState(0);
 
   // Physics state lives in refs: it changes sixty times a second and React
   // has no business seeing most of those.
@@ -153,6 +157,10 @@ function Ride({ course, profile, onStop, say }: {
   // different answer every time React happens to re-run it.
   const started = useRef(0);
   const riders = useRef<Rider[]>([{ id: "me", distanceM: 0, me: true }]);
+  const pacers = useRef<PacerState[]>(startPacers());
+  // The panel covers a third of the screen. On a phone that is most of the
+  // world, and the one thing you never see is your own rider.
+  const [hudOpen, setHudOpen] = useState(true);
 
   // The loop reads these through refs so it never has to be rebuilt; restarting
   // it would reset its clock and stutter the ride. Synced in an effect rather
@@ -163,7 +171,7 @@ function Ride({ course, profile, onStop, say }: {
   useEffect(() => { hasSensorRef.current = sensors.length > 0; }, [sensors]);
 
   // The dial, sampled at a rate a person can read.
-  const [hud, setHud] = useState({ speedMs: 0, distanceM: 0, watts: 0, quality: "declared" as Effort["quality"], hr: 0, cadence: 0, gradient: 0, elapsed: 0 });
+  const [dials, setDials] = useState({ speedMs: 0, distanceM: 0, watts: 0, quality: "declared" as Effort["quality"], hr: 0, cadence: 0, gradient: 0, elapsed: 0, position: 1, of: 1, gapM: null as number | null });
 
   // Reaching a sensor is an async question now: the native transport has to
   // load a plugin before it can answer. Null means "still asking".
@@ -182,7 +190,11 @@ function Ride({ course, profile, onStop, say }: {
 
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      const dt = Math.min((now - last) / 1000, 0.1);
+      // Clamped at both ends. The ceiling covers a backgrounded tab returning
+      // with a huge gap; the floor covers a clock that steps backwards, which
+      // ran the physics in reverse and put the ride at "-0.00 km, lap 0"
+      // before anybody had turned a pedal.
+      const dt = Math.max(0, Math.min((now - last) / 1000, 0.1));
       last = now;
 
       // Where does the effort come from, and what is it worth?
@@ -205,13 +217,21 @@ function Ride({ course, profile, onStop, say }: {
 
       const here = at(course, distance.current);
       speed.current = step(speed.current, effort.watts, here.gradient, bike, dt);
-      distance.current += speed.current * dt;
+      distance.current = Math.max(0, distance.current + speed.current * dt);
       riders.current[0].distanceM = distance.current;
       riders.current[0].cadence = fusion.current.get("cadence") ?? undefined;
 
+      stepPacers(pacers.current, course, dt);
+      // Rebuild rather than mutate: the world diffs this list by id to add and
+      // remove avatars, and a stale entry leaves a ghost on the road.
+      riders.current.length = 1;
+      for (const p of pacers.current) {
+        riders.current.push({ id: p.spec.id, distanceM: p.distanceM, label: p.spec.name, cadence: 84 });
+      }
+
       if (now - lastHud > 120) {
         lastHud = now;
-        setHud({
+        setDials({
           speedMs: speed.current,
           distanceM: distance.current,
           watts: effort.watts,
@@ -220,6 +240,8 @@ function Ride({ course, profile, onStop, say }: {
           cadence: fusion.current.get("cadence") ?? 0,
           gradient: here.gradient,
           elapsed: (Date.now() - started.current) / 1000,
+          ...placeInBunch(distance.current, pacers.current),
+          gapM: gapToNext(distance.current, pacers.current),
         });
       }
     };
@@ -245,8 +267,8 @@ function Ride({ course, profile, onStop, say }: {
     }
   }
 
-  const kmh = hud.speedMs * 3.6;
-  const credit = XP_CREDIT[hud.quality];
+  const kmh = dials.speedMs * 3.6;
+  const credit = XP_CREDIT[dials.quality];
 
   // z-50 sits above .nav-float (z-40), which otherwise covers the End ride
   // button, and below the level-up card (z-60) and the post sheet (z-70) — a
@@ -255,25 +277,46 @@ function Ride({ course, profile, onStop, say }: {
     <div className="fixed inset-0 z-50 bg-ink">
       <World course={course} riders={riders} className="absolute inset-0" />
 
-      {/* top: the numbers */}
-      <div className="absolute inset-x-0 top-0 p-3 pt-[calc(var(--safe-top)+10px)] flex gap-2 justify-center pointer-events-none">
-        <Dial label="Speed" value={kmh.toFixed(1)} unit="km/h" wide />
-        <Dial label="Power" value={String(Math.round(hud.watts))} unit="W" tone={credit === 1 ? "volt" : credit > 0 ? "plain" : "dim"} />
-        <Dial label="Gradient" value={`${(hud.gradient * 100).toFixed(1)}`} unit="%" />
+      {/* Dials, then the standings beneath them. Side by side they collided:
+          the position chip landed on top of the speed. */}
+      <div className="absolute inset-x-0 top-0 p-3 pt-[calc(var(--safe-top)+10px)] grid gap-2 justify-items-center pointer-events-none">
+        <div className="flex gap-2">
+          <Dial label="Speed" value={kmh.toFixed(1)} unit="km/h" wide />
+          <Dial label="Power" value={String(Math.round(dials.watts))} unit="W" tone={credit === 1 ? "volt" : credit > 0 ? "plain" : "dim"} />
+          <Dial label="Gradient" value={`${(dials.gradient * 100).toFixed(1)}`} unit="%" />
+        </div>
+        <div className="flex gap-1.5">
+          <span className="chip chip--volt tnum">{ordinal(dials.position)} of {dials.of}</span>
+          {dials.gapM != null && <span className="chip chip--live backdrop-blur-md tnum">{Math.round(dials.gapM)} m to catch</span>}
+        </div>
       </div>
 
-      {/* bottom: state and controls */}
+      {/* bottom: state and controls, or a single button when put away */}
+      {!hudOpen && (
+        <div className="absolute inset-x-0 bottom-0 p-3 pb-[calc(var(--safe-bottom)+12px)] flex justify-center">
+          <Press><button type="button" onClick={() => setHudOpen(true)}
+            className="chip chip--live backdrop-blur-md"><ChevronUp className="w-3.5 h-3.5" strokeWidth={2.4} />Controls</button></Press>
+        </div>
+      )}
+      {hudOpen && (
       <div className="absolute inset-x-0 bottom-0 p-3 pb-[calc(var(--safe-bottom)+12px)] grid gap-2">
         <div className="flex gap-2 justify-center flex-wrap">
-          <span className="chip chip--live backdrop-blur-md tnum">{fmtDist(hud.distanceM, profile.units)}</span>
-          <span className="chip chip--live backdrop-blur-md tnum">{fmtDuration(hud.elapsed)}</span>
-          {hud.hr > 0 && <span className="chip chip--live backdrop-blur-md tnum"><Heart className="w-3 h-3" strokeWidth={2.4} />{Math.round(hud.hr)}</span>}
-          {hud.cadence > 0 && <span className="chip chip--live backdrop-blur-md tnum"><Gauge className="w-3 h-3" strokeWidth={2.4} />{Math.round(hud.cadence)}</span>}
-          {course.loop && <span className="chip chip--live backdrop-blur-md tnum"><Mountain className="w-3 h-3" strokeWidth={2.4} />lap {Math.floor(hud.distanceM / course.lengthM) + 1}</span>}
+          <span className="chip chip--live backdrop-blur-md tnum">{fmtDist(dials.distanceM, profile.units)}</span>
+          <span className="chip chip--live backdrop-blur-md tnum">{fmtDuration(dials.elapsed)}</span>
+          {dials.hr > 0 && <span className="chip chip--live backdrop-blur-md tnum"><Heart className="w-3 h-3" strokeWidth={2.4} />{Math.round(dials.hr)}</span>}
+          {dials.cadence > 0 && <span className="chip chip--live backdrop-blur-md tnum"><Gauge className="w-3 h-3" strokeWidth={2.4} />{Math.round(dials.cadence)}</span>}
+          {course.loop && <span className="chip chip--live backdrop-blur-md tnum"><Mountain className="w-3 h-3" strokeWidth={2.4} />lap {Math.floor(dials.distanceM / course.lengthM) + 1}</span>}
         </div>
 
-        <div className="card p-3 grid gap-3 backdrop-blur-xl !bg-[rgba(255,255,255,.92)] max-w-[520px] mx-auto w-full">
-          <Provenance quality={hud.quality} />
+        <div className="card relative p-3 grid gap-3 backdrop-blur-xl !bg-[rgba(255,255,255,.92)] max-w-[520px] mx-auto w-full">
+          {/* Collapse, because the panel covers a third of the screen and the
+              one thing it hides is your own rider. Riding is the point; the
+              controls are what you touch twice. */}
+          <button type="button" onClick={() => setHudOpen(false)} aria-label="Hide the controls"
+            className="absolute -top-3 right-3 w-9 h-9 grid place-items-center rounded-full bg-carbon border border-line-strong shadow-sm">
+            <ChevronDown className="w-4 h-4" strokeWidth={2.2} />
+          </button>
+          <Provenance quality={dials.quality} />
 
           {/* null while the transport is still being asked — the native one has
               to load a plugin before it can answer. */}
@@ -306,8 +349,15 @@ function Ride({ course, profile, onStop, say }: {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
+}
+
+/** 1st, 2nd, 3rd, 4th — the suffix English refuses to make regular. */
+function ordinal(n: number) {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
 
 /** Says where the number came from, every second of the ride. The alternative

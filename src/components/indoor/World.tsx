@@ -184,6 +184,12 @@ export function World({ course, riders, className = "" }: { course: Course; ride
           group.add(avatar);
         }
         place(avatar, course, r.distanceM);
+        // A label that is always legible: sprites drawn this way ignore the
+        // camera's rotation, so a name never ends up edge-on and invisible.
+        if (r.label && !avatar.userData.labelled) {
+          avatar.add(nameTag(r.label));
+          avatar.userData.labelled = true;
+        }
 
         const mixer = mixers.get(r.id);
         if (mixer) {
@@ -509,6 +515,34 @@ function buildPrimitiveAvatar(me: boolean) {
   body.position.y = 0.9;
   group.add(body);
   return group;
+}
+
+/** A name floating over a rider, drawn into a canvas and hung as a sprite. */
+function nameTag(text: string) {
+  const c = document.createElement("canvas");
+  c.width = 256; c.height = 64;
+  const ctx = c.getContext("2d")!;
+  ctx.font = "600 30px -apple-system, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  // A pill behind it: over a dark hillside white text alone disappears, and
+  // over the sky it glares.
+  const w = Math.min(240, ctx.measureText(text).width + 34);
+  ctx.fillStyle = "rgba(10,10,10,.72)";
+  ctx.beginPath();
+  ctx.roundRect((256 - w) / 2, 12, w, 40, 20);
+  ctx.fill();
+  ctx.fillStyle = "#f6f3ec";
+  ctx.fillText(text, 128, 33);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  sprite.scale.set(5.2, 1.3, 1);
+  sprite.position.y = 3.1;
+  // Drawn last, so a name is never buried inside the hill it is standing on.
+  sprite.renderOrder = 10;
+  return sprite;
 }
 
 /* ── placement ────────────────────────────────────────────── */
