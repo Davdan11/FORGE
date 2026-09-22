@@ -34,14 +34,14 @@ function Browse() {
         <p className="text-xs text-smoke mb-4">Every recipe carries kcal, protein, carbs, sugar, fat and fibre per portion, exact measures and cook steps.{diets.length ? ` Filtered to your diet: ${diets.join(", ").replace(/_/g, "-")}.` : ""}</p>
         <input className="input mb-3" placeholder="Search: salmon, tofu curry, oats…" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
         <div className="grid gap-2 mb-4">
-          <Seg value={slot} onChange={(v) => { setSlot(v); setPage(1); }} options={[{ v: "", label: "All" }, { v: "breakfast", label: "Breakfast" }, { v: "lunch", label: "Lunch" }, { v: "dinner", label: "Dinner" }, { v: "snack", label: "Snack" }, { v: "pre", label: "Pre" }, { v: "post", label: "Post" }]} />
+          <Seg scroll value={slot} onChange={(v) => { setSlot(v); setPage(1); }} options={[{ v: "", label: "All" }, { v: "breakfast", label: "Breakfast" }, { v: "lunch", label: "Lunch" }, { v: "dinner", label: "Dinner" }, { v: "snack", label: "Snack" }, { v: "pre", label: "Pre" }, { v: "post", label: "Post" }]} />
           <div className="flex gap-2 flex-wrap">
             <button type="button" className={`chip ${quick ? "chip--volt" : ""}`} aria-pressed={quick} onClick={() => { setQuick(!quick); setPage(1); }}>≤ 15 min</button>
             <button type="button" className={`chip ${hp ? "chip--volt" : ""}`} aria-pressed={hp} onClick={() => { setHp(!hp); setPage(1); }}>30 g+ protein</button>
             {[400, 600, 800].map((k) => <button key={k} type="button" className={`chip ${maxKcal === k ? "chip--volt" : ""}`} aria-pressed={maxKcal === k} onClick={() => { setMaxKcal(maxKcal === k ? 0 : k); setPage(1); }}>≤ {k} kcal</button>)}
           </div>
         </div>
-        <Stagger className="grid grid-cols-2 gap-3" delay={0.02}>
+        <Stagger className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4" delay={0.02}>
           {res.items.map((m) => (
             <Item key={m.id}>
               <Press>

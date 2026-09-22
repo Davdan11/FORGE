@@ -97,15 +97,3 @@ export function ElevationChart({ profile, height = 90 }: { profile: { d: number;
   );
 }
 
-export function RankLadder({ ranks, current }: { ranks: readonly string[]; current: number }) {
-  return (
-    <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] -mx-1 px-1">
-      {ranks.map((r, i) => (
-        <div key={r} className={`shrink-0 grid gap-1 px-3 py-2 rounded-xl border text-center min-w-[72px] ${i === current ? "border-volt bg-[rgba(212,255,58,.08)]" : i < current ? "border-line-strong" : "border-line opacity-50"}`}>
-          <span className={`text-[10px] tracking-widest uppercase ${i === current ? "text-volt" : "text-smoke"}`}>{i < current ? "✓" : i === current ? "now" : `L${i * 10 + 1}`}</span>
-          <span className="text-sm font-semibold">{r}</span>
-        </div>
-      ))}
-    </div>
-  );
-}

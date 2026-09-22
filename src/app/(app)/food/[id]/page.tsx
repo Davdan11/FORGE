@@ -59,9 +59,9 @@ function Recipe() {
         <Hero image={meal.image} color height="h-[400px]" back="/food" eyebrow={`${meal.cuisine ?? "Recipe"} · ${meal.minutes} min · ${meal.slot.join(" / ")}`} title={<>{meal.name}</>}>
           <div className="flex flex-wrap gap-1.5 mt-3">
             <span className="chip chip--volt tnum">{Math.round(meal.kcal * scale)} kcal</span>
-            <span className="chip chip--live backdrop-blur-md tnum">P {Math.round(meal.protein * scale)} g</span>
-            <span className="chip chip--live backdrop-blur-md tnum">C {Math.round(meal.carbs * scale)} g</span>
-            <span className="chip chip--live backdrop-blur-md tnum">F {Math.round(meal.fat * scale)} g</span>
+            <span className="chip chip--live backdrop-blur-md tnum">Protein {Math.round(meal.protein * scale)} g</span>
+            <span className="chip chip--live backdrop-blur-md tnum">Carbs {Math.round(meal.carbs * scale)} g</span>
+            <span className="chip chip--live backdrop-blur-md tnum">Fat {Math.round(meal.fat * scale)} g</span>
             {scale !== 1 && <span className="chip chip--live backdrop-blur-md">×{scale} portion</span>}
             {meal.tags.filter((t) => t !== "quick" && t !== "batch").map((t) => <span key={t} className="chip chip--live backdrop-blur-md">{t.replace("_", "-")}</span>)}
           </div>
@@ -132,7 +132,7 @@ function Recipe() {
             <div className="px-5"><div className="bar"><motion.i animate={{ width: `${((step + 1) / meal.steps.length) * 100}%` }} /></div></div>
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="flex-1 grid content-center gap-6 px-6">
-                <span className="display text-6xl text-volt tnum">{step + 1}</span>
+                <span className="numeral text-volt">{step + 1}</span>
                 <p className="cook-step">{meal.steps[step]}</p>
                 {(() => { const sec = minutesIn(meal.steps[step]); if (!sec) return null; return (
                   <div className="flex items-center gap-4">

@@ -1,10 +1,10 @@
-import type { Activity, Units } from "./types";
+import type { Activity, UnitPrefs } from "./types";
 import { fmtDist, fmtDuration, fmtPace } from "./units";
 
 /* Render a 1080×1350 share card (route + stats) and hand it to the OS share
    sheet; falls back to a download when Web Share can't take files. */
 
-export async function renderShareCard(a: Activity, units: Units, name: string): Promise<Blob> {
+export async function renderShareCard(a: Activity, units: UnitPrefs, name: string): Promise<Blob> {
   const W = 1080, H = 1350;
   const c = document.createElement("canvas"); c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
@@ -44,7 +44,7 @@ export async function renderShareCard(a: Activity, units: Units, name: string): 
   return await new Promise<Blob>((res) => c.toBlob((b) => res(b!), "image/png"));
 }
 
-export async function shareCard(a: Activity, units: Units, name: string) {
+export async function shareCard(a: Activity, units: UnitPrefs, name: string) {
   const blob = await renderShareCard(a, units, name);
   const file = new File([blob], `forge-${a.id.slice(0, 8)}.png`, { type: "image/png" });
   const text = `${a.title} · ${fmtDist(a.distanceM, units)} · ${fmtDuration(a.durationSec)} · +${a.xp} XP on FORGE`;

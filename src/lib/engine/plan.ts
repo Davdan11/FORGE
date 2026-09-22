@@ -4,6 +4,7 @@ import type {
 import { EXERCISES, getExercise } from "../data/exercises";
 import { addDays, uid } from "../db";
 import { roundLoad } from "../units";
+import { limitFor, protectedAreas, type InjuryAdaptation } from "./injury";
 
 /* ─────────────────────────────────────────────────────────────
    THE ENGINE — plan generation.
@@ -80,8 +81,8 @@ function slotsFor(kind: SessionKind, goal: Goal, week: number, minutes: number):
 }
 
 /* Exercise selection: honour equipment, pain flags, level. */
-function pick(pattern: Exercise["pattern"], profile: Profile, used: Set<string>, painToday: PainArea[] = []): Exercise | null {
-  const pain = new Set([...profile.pain, ...painToday]);
+function pick(pattern: Exercise["pattern"], profile: Profile, used: Set<string>, painToday: PainArea[] = [], protect: PainArea[] = []): Exercise | null {
+  const pain = new Set([...profile.pain, ...painToday, ...protect]);
   const has = (eq: Equipment[]) => eq.some((e) => profile.equipment.includes(e) || e === "bodyweight" || (e === "outdoor" && profile.equipment.includes("outdoor")));
   const rank = (e: Exercise) => (e.level === "new" ? 0 : e.level === "intermediate" ? 1 : 2);
   const lvl = (profile.level === "new" ? 0 : profile.level === "intermediate" ? 1 : 2);
@@ -93,20 +94,53 @@ function pick(pattern: Exercise["pattern"], profile: Profile, used: Set<string>,
   return candidates[0] ?? null;
 }
 
-/* Load estimate from baselines and the exercise ratio. */
-function estimateE1rm(ex: Exercise, profile: Profile): number | undefined {
+/** Best e1RM actually logged, per exercise slug. Empty on day one; after that
+ *  it is the only honest picture of what the athlete can lift. */
+export type MeasuredE1rm = Record<string, number>;
+
+/**
+ * Turn logged sets into the three anchor lifts the prescription is built on.
+ * A measured back squat should raise every quad movement, not just back squat,
+ * so each measured lift is divided back through its own ratio to recover the
+ * squat-equivalent it implies, and the strongest evidence wins.
+ */
+function anchorsFrom(measured: MeasuredE1rm): { squat?: number; hinge?: number; push?: number } {
+  const out: { squat?: number; hinge?: number; push?: number } = {};
+  for (const [slug, e1] of Object.entries(measured)) {
+    const ex = getExercise(slug);
+    if (!ex?.loadable || !ex.ratio || !e1) continue;
+    const key = ex.pattern === "hinge" ? "hinge" : ex.pattern === "push_h" ? "push" : ex.pattern === "squat" ? "squat" : undefined;
+    if (!key) continue;
+    const equivalent = key === "squat" ? e1 / ex.ratio : e1 / ex.ratio * (key === "hinge" ? 1.2 : 0.75);
+    out[key] = Math.max(out[key] ?? 0, equivalent);
+  }
+  return out;
+}
+
+/* Load estimate: what the athlete has actually lifted first, the onboarding
+   assessment only until there is real evidence to replace it. */
+function estimateE1rm(ex: Exercise, profile: Profile, measured: MeasuredE1rm = {}): number | undefined {
+  // Most specific evidence: this exact movement, logged.
+  const direct = measured[ex.slug];
+  if (direct && ex.loadable) return direct;
+
+  const a = anchorsFrom(measured);
   const b = profile.baselines;
-  const squat = b.squatE1rm ?? (b.hingeE1rm ? b.hingeE1rm / 1.2 : undefined) ?? (b.pushE1rm ? b.pushE1rm / 0.75 : undefined) ?? profile.weightKg * (profile.level === "new" ? 0.6 : profile.level === "intermediate" ? 1.0 : 1.4);
-  if (ex.pattern === "hinge" && b.hingeE1rm) return b.hingeE1rm * ((ex.ratio ?? 1) / 1.2);
-  if ((ex.pattern === "push_h") && b.pushE1rm) return b.pushE1rm * ((ex.ratio ?? 0.75) / 0.75);
+  const squatE1rm = a.squat ?? b.squatE1rm;
+  const hingeE1rm = a.hinge ?? b.hingeE1rm;
+  const pushE1rm = a.push ?? b.pushE1rm;
+
+  const squat = squatE1rm ?? (hingeE1rm ? hingeE1rm / 1.2 : undefined) ?? (pushE1rm ? pushE1rm / 0.75 : undefined) ?? profile.weightKg * (profile.level === "new" ? 0.6 : profile.level === "intermediate" ? 1.0 : 1.4);
+  if (ex.pattern === "hinge" && hingeE1rm) return hingeE1rm * ((ex.ratio ?? 1) / 1.2);
+  if ((ex.pattern === "push_h") && pushE1rm) return pushE1rm * ((ex.ratio ?? 0.75) / 0.75);
   return ex.ratio ? squat * ex.ratio : undefined;
 }
 
-function buildSets(slot: Slot, ex: Exercise, profile: Profile, week: number, goal: Goal): PrescribedSet[] {
+function buildSets(slot: Slot, ex: Exercise, profile: Profile, week: number, goal: Goal, measured: MeasuredE1rm = {}): PrescribedSet[] {
   const sets: PrescribedSet[] = [];
   const isMain = slot.block === "main";
   const pct = isMain ? mainPct(goal, week) : 0.62;
-  const e1 = ex.loadable ? estimateE1rm(ex, profile) : undefined;
+  const e1 = ex.loadable ? estimateE1rm(ex, profile, measured) : undefined;
   for (let i = 0; i < slot.sets; i++) {
     const reps = slot.reps[0] === slot.reps[1] ? slot.reps[0] : Math.round((slot.reps[0] + slot.reps[1]) / 2);
     const set: PrescribedSet = { rpe: slot.rpe, restSec: slot.rest };
@@ -122,15 +156,29 @@ function buildSets(slot: Slot, ex: Exercise, profile: Profile, week: number, goa
   return sets;
 }
 
-export function buildSession(profile: Profile, planId: string, week: number, day: number, date: string, kind: SessionKind, minutes: number, painToday: PainArea[] = []): Session {
+export function buildSession(profile: Profile, planId: string, week: number, day: number, date: string, kind: SessionKind, minutes: number, painToday: PainArea[] = [], measured: MeasuredE1rm = {}, injuries: InjuryAdaptation[] = []): Session {
   const used = new Set<string>();
   const slots = slotsFor(kind, profile.goal, week, minutes);
   const exercises: PrescribedExercise[] = [];
+  const protect = protectedAreas(injuries);
   for (const slot of slots) {
-    const ex = pick(slot.pattern, profile, used, painToday);
+    const ex = pick(slot.pattern, profile, used, painToday, protect);
     if (!ex) continue;
     used.add(ex.slug);
-    exercises.push({ id: uid(), slug: ex.slug, block: slot.block, sets: buildSets(slot, ex, profile, week, profile.goal), why: slot.why });
+
+    // Injury caps apply to the affected patterns only. Everything the injury
+    // does not touch keeps its full prescription — that is the whole point.
+    const limit = limitFor(ex, injuries);
+    if (limit.blocked) continue;
+    let sets = buildSets(slot, ex, profile, week, profile.goal, measured);
+    if (limit.loadCap < 1 || limit.volumeCap < 1) {
+      const keep = Math.max(1, Math.round(sets.length * limit.volumeCap));
+      sets = sets.slice(0, keep).map((s) => (s.loadKg ? { ...s, loadKg: roundLoad(s.loadKg * limit.loadCap, profile.units) } : s));
+    }
+    const why = limit.because
+      ? `${slot.why} Held at ${Math.round(limit.loadCap * 100)}% while your ${limit.because} settles.`
+      : slot.why;
+    exercises.push({ id: uid(), slug: ex.slug, block: slot.block, sets, why });
   }
   const { deload, meso, w } = MESO(week);
   const focus: Pillar = kind.startsWith("cardio") ? "endurance" : kind === "mobility" ? "mobility" : "strength";
@@ -144,7 +192,7 @@ export function buildSession(profile: Profile, planId: string, week: number, day
   };
 }
 
-export function generatePlan(profile: Profile, startDate: string): { plan: Plan; sessions: Session[] } {
+export function generatePlan(profile: Profile, startDate: string, measured: MeasuredE1rm = {}, injuries: InjuryAdaptation[] = []): { plan: Plan; sessions: Session[] } {
   const planId = uid();
   const kinds = weekTemplate(profile.daysPerWeek, profile.goal);
   const days = trainingDays(profile.daysPerWeek);
@@ -158,7 +206,7 @@ export function generatePlan(profile: Profile, startDate: string): { plan: Plan;
     kinds.forEach((kind, i) => {
       const day = days[i];
       const date = addDays(monday, (week - 1) * 7 + (day - 1));
-      sessions.push(buildSession(profile, planId, week, day, date, kind, profile.sessionMinutes));
+      sessions.push(buildSession(profile, planId, week, day, date, kind, profile.sessionMinutes, [], measured, injuries));
     });
     // Daily 12-minute mobility on off days (not logged as full sessions).
   }

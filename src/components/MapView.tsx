@@ -52,7 +52,13 @@ export function MapView({ points, follow, locate, locateKey = 0, onLocate, class
     (m.getSource("route") as maplibregl.GeoJSONSource)?.setData({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } });
     const last = points[points.length - 1];
     (m.getSource("head") as maplibregl.GeoJSONSource)?.setData({ type: "FeatureCollection", features: last ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [last.lng, last.lat] } }] : [] });
-    if (follow && last) m.easeTo({ center: [last.lng, last.lat], duration: 600 });
+    if (follow && last) {
+      // Drop to a running scale on the first fix. Left at the city zoom the map
+      // opens with, a few hundred metres of track is about ten pixels long and
+      // the recording looks like nothing is happening at all.
+      const zoom = m.getZoom();
+      m.easeTo({ center: [last.lng, last.lat], zoom: zoom < 15 ? 16 : zoom, duration: zoom < 15 ? 1100 : 600 });
+    }
     else if (!follow && coords.length > 1) {
       const b = coords.reduce((bb, c) => bb.extend(c as [number, number]), new maplibregl.LngLatBounds(coords[0] as [number, number], coords[0] as [number, number]));
       m.fitBounds(b, { padding: 40, duration: 600, maxZoom: 16 });

@@ -1,4 +1,4 @@
-import type { PrescribedSet, Units } from "../types";
+import type { PrescribedSet, UnitPrefs } from "../types";
 import { roundLoad } from "../units";
 
 /* ─────────────────────────────────────────────────────────────
@@ -8,7 +8,7 @@ import { roundLoad } from "../units";
 
 export interface SetOutcome { next: PrescribedSet; why: string | null }
 
-export function nextSetFromRpe(prev: PrescribedSet, logged: { rpe?: number; reps?: number; loadKg?: number }, next: PrescribedSet, units: Units): SetOutcome {
+export function nextSetFromRpe(prev: PrescribedSet, logged: { rpe?: number; reps?: number; loadKg?: number }, next: PrescribedSet, units: UnitPrefs): SetOutcome {
   if (!next || logged.rpe == null || prev.rpe == null) return { next, why: null };
   const gap = logged.rpe - prev.rpe;                     // + = harder than intended
   const repsShort = prev.reps != null && logged.reps != null ? prev.reps - logged.reps : 0;
@@ -38,7 +38,7 @@ export function nextSetFromRpe(prev: PrescribedSet, logged: { rpe?: number; reps
 }
 
 /** Suggested progression for the same exercise next week, from this week's best set. */
-export function nextWeekLoad(best: { loadKg: number; reps: number; rpe?: number }, units: Units) {
+export function nextWeekLoad(best: { loadKg: number; reps: number; rpe?: number }, units: UnitPrefs) {
   const rpe = best.rpe ?? 8;
   const mul = rpe <= 6.5 ? 1.05 : rpe <= 7.5 ? 1.03 : rpe <= 8.5 ? 1.015 : 1.0;
   return roundLoad(best.loadKg * mul, units);

@@ -11,12 +11,14 @@ import { activityXpBreakdown, awardActivity } from "@/lib/progress";
 import { IMG } from "@/lib/data/images";
 import { WORKOUTS, WORKOUT_MAP, ZONE_LABEL, expandSegments } from "@/lib/data/workouts";
 import { fmtDist, fmtDuration, fmtPace } from "@/lib/units";
-import { Screen, Section, Toast, Photo, ScreenSkeleton, Seg, Toggle } from "@/components/ui";
+import { Screen, Section, Toast, Photo, ScreenSkeleton, Seg, Toggle, Rail } from "@/components/ui";
 import { Page, Stagger, Item, Press, CountUp, Ring, motion, AnimatePresence } from "@/components/motion";
 import { Bars } from "@/components/charts";
-import { TYPES, SegmentBar, MiniRoute, ActivityRow, rateFor } from "@/components/move-bits";
+import { TYPES, SegmentBar, MiniRoute, ActivityRow, rateFor, sportIcon } from "@/components/move-bits";
+import { SPORT_GROUPS } from "@/lib/data/sports";
 import { LocateFixed } from "lucide-react";
-import type { Activity, ActivityType, CardioWorkout, Lap, TrackPoint } from "@/lib/types";
+import { StartCountdown } from "@/components/StartCountdown";
+import type { Activity, ActivityType, CardioWorkout, Lap, TrackPoint, UnitPrefs } from "@/lib/types";
 
 const MapView = dynamic(() => import("@/components/MapView").then((m) => m.MapView), { ssr: false, loading: () => <div className="w-full h-full skeleton !rounded-none" /> });
 
@@ -38,6 +40,8 @@ function Move() {
   const [loc, setLoc] = useState<"ok" | "denied" | "unavailable" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, setPending] = useState<Activity | null>(null);
+  const [counting, setCounting] = useState(false);
+  const [group, setGroup] = useState(() => SPORT_GROUPS.find((g) => g.sports.some((sp) => sp.v === (workout?.type ?? "run")))?.key ?? "run");
   const [tab, setTab] = useState<"record" | "workouts" | "history">("record");
   const watch = useRef<number | null>(null);
   const startedAt = useRef<string>("");
@@ -127,32 +131,60 @@ function Move() {
   return (
     <Page>
       <Screen className="px-0">
-        <div className="relative h-[56vh] min-h-[400px] -mt-[calc(var(--safe-top)+16px)] overflow-hidden lg:mt-0 lg:h-[560px] lg:rounded-[28px] lg:border lg:border-line">
+        <div className="bleed relative h-[56vh] min-h-[400px] -mt-[calc(var(--safe-top)+16px)] overflow-hidden lg:-mt-10 lg:h-[72vh] lg:min-h-[560px] mb-8 lg:mb-[var(--stack-loose)]">
           {rec === "idle" && points.length === 0 ? (
             <>
               <MapView points={[]} locate locateKey={locateKey} onLocate={setLoc} />
               <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(180deg,rgba(245,244,239,.55)_0%,transparent_22%,transparent_62%,rgba(245,244,239,.85)_100%)]" />
-              <div className="absolute left-4 right-4 top-[calc(var(--safe-top)+12px)] lg:top-5 lg:left-5 lg:right-5 flex justify-between items-start pointer-events-none">
+              <div className="absolute inset-x-0 top-[calc(var(--safe-top)+12px)] lg:top-7 pointer-events-none">
+                <div className="screen flex justify-between items-start gap-3">
                 <div className="flex gap-2 pointer-events-auto"><span className="chip chip--live backdrop-blur-md"><i className="live-dot" /> {loc === "ok" ? "Located" : loc === "denied" ? "Location blocked" : loc === "unavailable" ? "No GPS" : "GPS · ready"}</span><button type="button" className="chip chip--live backdrop-blur-md" onClick={() => setLocateKey((k) => k + 1)} aria-label="Locate me"><LocateFixed className="w-4 h-4" strokeWidth={2} /> Locate me</button></div>
-                {workout ? <Link href="/move" className="chip chip--live backdrop-blur-md pointer-events-auto">✕ Free record</Link> : <span className="chip chip--live backdrop-blur-md tnum">{activities.length} activit{activities.length === 1 ? "y" : "ies"} · {fmtDist(totalM, units)}</span>}
+                {/* The totals chip duplicates the cards below, so it gives way on a
+                    phone rather than pushing the GPS controls off-screen. Hiding it
+                    needs a wrapper: `.chip` sets display in globals.css, which wins
+                    over Tailwind's `hidden` utility in this project's layer order. */}
+                {workout ? <Link href="/move" className="chip chip--live backdrop-blur-md pointer-events-auto shrink-0">✕ Free record</Link> : <span className="hidden sm:block shrink-0"><span className="chip chip--live backdrop-blur-md tnum">{activities.length} activit{activities.length === 1 ? "y" : "ies"} · {fmtDist(totalM, units)}</span></span>}
+                </div>
               </div>
-              <div className="absolute inset-x-3 bottom-3 lg:inset-x-5 lg:bottom-5 card p-3 lg:p-4 grid gap-3 backdrop-blur-xl !bg-[rgba(255,255,255,.9)]">
+              {/* The start panel keeps a readable width instead of stretching the
+                  full bleed: a 600px-wide primary button reads as a banner, not a control. */}
+              <div className="absolute inset-x-0 bottom-3 lg:bottom-7">
+                <div className="screen">
+                <div className="card p-3 lg:p-4 grid gap-3 backdrop-blur-xl !bg-[rgba(255,255,255,.9)] lg:max-w-[520px]">
                 {workout ? (
                   <div className="grid gap-2">
                     <div className="flex items-start justify-between gap-3"><div><span className="meta">Guided · {workout.minutes} min · Zone {workout.zone} {ZONE_LABEL[workout.zone]}</span><p className="display text-2xl leading-none mt-1">{workout.name.split(" · ")[0]}</p></div><Link href={`/move/workout/${workout.id}`} className="chip chip--live">Details</Link></div>
                     <SegmentBar segments={segments} />
                   </div>
                 ) : (
-                  <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] -mx-1 px-1 py-0.5">
-                    {TYPES.map((t) => (
-                      <button key={t.v} type="button" aria-pressed={type === t.v} onClick={() => setType(t.v)} className={`shrink-0 flex items-center gap-2 h-11 pl-3 pr-4 rounded-full border text-sm transition-colors ${type === t.v ? "bg-volt border-volt text-ink font-medium" : "border-line-strong text-ink hover:border-ink"}`}>
-                        <t.icon className="w-[18px] h-[18px]" strokeWidth={1.8} />{t.label}
-                      </button>
-                    ))}
+                  // Twenty-eight sports don't fit in one grid, so they come in
+                  // groups: pick the family, then the sport. Two rows, never more.
+                  <div className="grid gap-2">
+                    <Rail active={group} className="gap-1.5">
+                      {SPORT_GROUPS.map((g) => (
+                        <button key={g.key} type="button" aria-pressed={group === g.key} onClick={() => setGroup(g.key)}
+                          className={`shrink-0 h-9 px-3 rounded-full border text-xs transition-colors ${group === g.key ? "bg-ink border-ink text-bone" : "border-line text-smoke hover:border-ink hover:text-ink"}`}>
+                          {g.label}
+                        </button>
+                      ))}
+                    </Rail>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {(SPORT_GROUPS.find((g) => g.key === group)?.sports ?? []).map((sp) => {
+                        const Icon = sportIcon(sp.v);
+                        return (
+                          <button key={sp.v} type="button" aria-pressed={type === sp.v} onClick={() => setType(sp.v)}
+                            className={`grid justify-items-center gap-1 py-2 px-1 min-h-[58px] rounded-xl border transition-colors ${type === sp.v ? "bg-volt border-volt text-ink font-medium" : "border-line-strong text-ink hover:border-ink"}`}>
+                            <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} /><span className="text-[10px] leading-none tracking-wide text-center">{sp.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-                <Press><button type="button" className="pill pill--volt pill--block pill--lg" onClick={start}>{workout ? "Start guided workout" : `Start ${typeLabel.toLowerCase()}`}</button></Press>
+                <Press><button type="button" className="pill pill--volt pill--block pill--lg" onClick={() => { setErr(null); setCounting(true); }}>{workout ? "Start guided workout" : `Start ${typeLabel.toLowerCase()}`}</button></Press>
                 <AnimatePresence>{err && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-danger">{err}</motion.p>}</AnimatePresence>
+                </div>
+                </div>
               </div>
             </>
           ) : (
@@ -179,7 +211,7 @@ function Move() {
         <div className="px-5 pt-4 min-w-0 overflow-x-clip lg:px-0">
           {rec === "idle" ? (
             <>
-              <div className="seg mb-4"><button type="button" aria-pressed={tab === "record"} onClick={() => setTab("record")}>Record</button><button type="button" aria-pressed={tab === "workouts"} onClick={() => setTab("workouts")}>Workouts</button><button type="button" aria-pressed={tab === "history"} onClick={() => setTab("history")}>History</button></div>
+              <div className="mb-4"><Seg value={tab} onChange={setTab} options={[{ v: "record", label: "Record" }, { v: "workouts", label: "Workouts" }, { v: "history", label: "History" }]} /></div>
               <AnimatePresence mode="wait">
                 {tab === "record" && (
                   <motion.div key="rec" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-4 min-w-0">
@@ -189,9 +221,9 @@ function Move() {
                       <div className="card p-3 grid"><span className="meta">Climbed</span><strong className="display text-[17px] lg:text-2xl tnum whitespace-nowrap">{Math.round(activities.reduce((a, b) => a + b.elevGainM, 0))} m</strong></div>
                     </div>
                     <Section title="Guided workouts" aside={<button type="button" className="text-xs text-smoke underline" onClick={() => setTab("workouts")}>All {WORKOUTS.length}</button>}>
-                      <div className="flex gap-3 overflow-x-auto -mx-5 px-5 pb-2 [scrollbar-width:none] min-w-0 max-w-[calc(100%+40px)] lg:mx-0 lg:px-0 lg:max-w-full">
+                      <Rail gutter className="gap-3 pb-2 lg:mx-0 lg:px-0">
                         {WORKOUTS.filter((w) => w.type === type).concat(WORKOUTS.filter((w) => w.type !== type)).slice(0, 8).map((w) => <WorkoutCard key={w.id} w={w} narrow />)}
-                      </div>
+                      </Rail>
                     </Section>
                   </motion.div>
                 )}
@@ -200,7 +232,7 @@ function Move() {
                 )}
                 {tab === "history" && (
                   <motion.div key="hist" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-5">
-                    <div className="card p-4"><span className="meta block mb-2">Weekly distance · 8 weeks</span><Bars data={weekly} format={(v) => `${(Math.round(v * 10) / 10).toLocaleString("en-US")} ${units === "imperial" ? "mi" : "km"}`} /></div>
+                    <div className="card p-4"><span className="meta block mb-2">Weekly distance · 8 weeks</span><Bars data={weekly} format={(v) => `${(Math.round(v * 10) / 10).toLocaleString("en-US")} ${units.distance}`} /></div>
                     <Section title="Activities" aside={<span className="text-xs text-smoke tnum">{activities.length}</span>}>
                       {activities.length === 0 ? (
                         <div className="card--photo"><Photo src={IMG.moveShoes} veil soft className="h-40" /><div className="card__body p-5 grid gap-2 -mt-14"><p className="display text-2xl">No routes <em>yet.</em></p><p className="text-sm text-smoke">Pick a sport, press start, keep the screen on. Your first route is drawn here with splits and elevation — and it counts toward today’s cardio.</p></div></div>
@@ -230,6 +262,7 @@ function Move() {
         </div>
 
         <AnimatePresence>{pending && <SaveSheet a={pending} units={units} onCancel={() => setPending(null)} onSave={save} onChange={setPending} />}</AnimatePresence>
+        <AnimatePresence>{counting && <StartCountdown label={workout ? workout.name.split(" · ")[0] : typeLabel} onDone={() => { setCounting(false); start(); }} />}</AnimatePresence>
         <Toast text={toast} />
       </Screen>
     </Page>
@@ -256,31 +289,31 @@ function WorkoutsList() {
   const list = WORKOUTS.filter((w) => !type || w.type === type);
   return (
     <>
-      <Seg value={type} onChange={setType} options={[{ v: "", label: "All" }, ...TYPES.filter((t) => WORKOUTS.some((w) => w.type === t.v)).map((t) => ({ v: t.v as string, label: t.label }))]} />
-      <Stagger className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4" delay={0.04}>{list.map((w) => <Item key={w.id}><WorkoutCard w={w} /></Item>)}</Stagger>
+      <Seg scroll value={type} onChange={setType} options={[{ v: "", label: "All" }, ...TYPES.filter((t) => WORKOUTS.some((w) => w.type === t.v)).map((t) => ({ v: t.v as string, label: t.label }))]} />
+      <Stagger className="grid grid-cols-2 md:grid-cols-3 gap-3 lg:gap-4" delay={0.04}>{list.map((w) => <Item key={w.id}><WorkoutCard w={w} /></Item>)}</Stagger>
     </>
   );
 }
 
-function weeklyDistance(acts: Activity[], units: "metric" | "imperial") {
+function weeklyDistance(acts: Activity[], units: UnitPrefs) {
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   return Array.from({ length: 8 }, (_, i) => {
     const start = new Date(monday); start.setDate(monday.getDate() - (7 - i) * 7);
     const end = new Date(start); end.setDate(start.getDate() + 7);
     const raw = acts.filter((a) => { const d = new Date(a.startedAt); return d >= start && d < end; }).reduce((s, a) => s + a.distanceM, 0);
-    return { label: i === 7 ? "now" : start.toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: units === "imperial" ? raw / 1609.344 : raw / 1000, raw };
+    return { label: i === 7 ? "now" : start.toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: units.distance === "mi" ? raw / 1609.344 : raw / 1000, raw };
   });
 }
 
-function SaveSheet({ a, units, onCancel, onSave, onChange }: { a: Activity; units: "metric" | "imperial"; onCancel: () => void; onSave: (a: Activity) => void; onChange: (a: Activity) => void }) {
+function SaveSheet({ a, units, onCancel, onSave, onChange }: { a: Activity; units: UnitPrefs; onCancel: () => void; onSave: (a: Activity) => void; onChange: (a: Activity) => void }) {
   const xp = activityXpBreakdown(a);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-ink/80 backdrop-blur-md grid items-end">
       <motion.div initial={{ y: 60 }} animate={{ y: 0 }} exit={{ y: 60 }} transition={{ type: "spring", stiffness: 300, damping: 30 }} className="bg-carbon border-t border-line rounded-t-3xl p-5 pb-[calc(var(--safe-bottom)+20px)] grid gap-4 max-h-[88vh] overflow-y-auto max-w-[560px] w-full mx-auto">
         <div className="flex items-center gap-3"><MiniRoute points={a.points} size={64} /><div className="flex-1"><span className="meta">Save activity</span><p className="display text-2xl">{fmtDist(a.distanceM, units)} · {fmtDuration(a.durationSec)}</p><p className="text-xs text-smoke">{fmtPace(a.avgPaceSecKm, units)} · ↑{Math.round(a.elevGainM)} m · {a.splits.length} km splits{a.laps ? ` · ${a.laps.length} laps` : ""}</p></div></div>
         <label className="field"><span className="meta">Title</span><input className="input" value={a.title} onChange={(e) => onChange({ ...a, title: e.target.value })} /></label>
-        <div className="field"><span className="meta">Sport</span><Seg value={a.type} onChange={(type) => onChange({ ...a, type })} options={TYPES.map((t) => ({ v: t.v, label: t.label }))} /></div>
+        <div className="field"><span className="meta">Sport</span><Seg scroll value={a.type} onChange={(type) => onChange({ ...a, type })} options={TYPES.map((t) => ({ v: t.v, label: t.label }))} /></div>
         {a.type === "swim" && (
           <div className="grid grid-cols-2 gap-3">
             <div className="field"><span className="meta">Pool</span><Seg value={a.meta?.poolM ?? 25} onChange={(poolM) => onChange({ ...a, meta: { ...a.meta, poolM }, distanceM: (a.meta?.laps ?? 0) * poolM || a.distanceM })} options={[{ v: 25 as const, label: "25 m" }, { v: 50 as const, label: "50 m" }]} /></div>

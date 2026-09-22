@@ -1,0 +1,30 @@
+{
+  "bronze": {
+    "sub1": "/ranks/bronze-1.webp",
+    "src": "/ranks/bronze-1.webp"
+  },
+  "copper": {
+    "sub1": "/ranks/copper-1.webp",
+    "src": "/ranks/copper-1.webp"
+  },
+  "emerald": {
+    "sub1": "/ranks/emerald-1.webp",
+    "src": "/ranks/emerald-1.webp"
+  },
+  "gold": {
+    "sub1": "/ranks/gold-1.webp",
+    "src": "/ranks/gold-1.webp"
+  },
+  "iron": {
+    "sub1": "/ranks/iron-1.webp",
+    "src": "/ranks/iron-1.webp"
+  },
+  "platine": {
+    "sub1": "/ranks/platine-1.webp",
+    "src": "/ranks/platine-1.webp"
+  },
+  "silver": {
+    "sub1": "/ranks/silver-1.webp",
+    "src": "/ranks/silver-1.webp"
+  }
+}

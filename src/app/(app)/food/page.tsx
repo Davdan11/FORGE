@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, todayISO, addDays } from "@/lib/db";
 import { getMeal, recipeCount } from "@/lib/nutrition/recipes";
-import { buildNutritionDay, dayTotals, groceryList, swapOptions, dailyTargets } from "@/lib/nutrition/engine";
+import { buildNutritionDay, dayTotals, eatenTotals, groceryList, swapOptions, dailyTargets } from "@/lib/nutrition/engine";
 import { awardMeal } from "@/lib/progress";
-import { Screen, Hero, Section, Bar, Toast, Photo, Check, ScreenSkeleton } from "@/components/ui";
+import { Screen, Hero, Section, Bar, Toast, Photo, Check, ScreenSkeleton, Seg } from "@/components/ui";
 import { Page, Stagger, Item, Press, Ring, CountUp, motion, AnimatePresence } from "@/components/motion";
 import type { DayPlanMeal, Meal, NutritionDay } from "@/lib/types";
 
@@ -16,7 +16,7 @@ const enc = (id: string) => encodeURIComponent(id);
 export default function FoodPage() {
   const today = todayISO();
   const profile = useLiveQuery(() => getProfile(), []);
-  const day = useLiveQuery(() => db.nutrition.get(today), [today]);
+  const day = useLiveQuery(() => db.nutrition.get(today).then((d) => d ?? null), [today]);
   const week = useLiveQuery(() => db.nutrition.where("date").between(today, addDays(today, 6), true, true).toArray(), [today]) ?? [];
   const [tab, setTab] = useState<"today" | "groceries">("today");
   const [swapFor, setSwapFor] = useState<DayPlanMeal | null>(null);
@@ -24,9 +24,21 @@ export default function FoodPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
+  // No menu for today yet (first visit of a new day): build it from the plan.
+  useEffect(() => {
+    if (!profile || day !== null) return;
+    (async () => {
+      const s = await db.sessions.where("date").equals(today).first();
+      const recent = (await db.nutrition.where("date").between(addDays(today, -3), addDays(today, -1), true, true).toArray()).flatMap((d) => d.meals.map((m) => m.mealId));
+      const yesterday = await db.nutrition.get(addDays(today, -1));
+      await db.nutrition.put({ ...buildNutritionDay(profile, today, s ?? null, yesterday ?? undefined, recent), dirty: 1 });
+    })();
+  }, [profile, day, today]);
+
   if (!profile || day === undefined) return <ScreenSkeleton />;
   if (!day) return <ScreenSkeleton />;
-  const t = dayTotals(day);
+  const t = eatenTotals(day);           // what is ticked off
+  const planned = dayTotals(day);       // what the day is built to deliver
   const tg = dailyTargets(profile, day.dayType);
   const next = day.meals.find((m) => !m.done);
   const hero = next ? getMeal(next.mealId) : getMeal(day.meals[0]?.mealId);
@@ -70,20 +82,25 @@ export default function FoodPage() {
       <Screen>
         <Hero image={hero?.image ?? ""} color height="h-[360px]" eyebrow={`${day.dayType === "rest" ? "Rest day" : day.dayType === "hard" ? "Hard day" : "Training day"} · ${day.targets.kcal} kcal · ${day.targets.protein} g protein`}
           title={next ? <>Next up<br /><em>{hero?.name.split(" with ")[0]}</em></> : <>Day <em>complete.</em></>}
-          right={<div className="seg"><button type="button" className="!min-h-9 !text-xs" aria-pressed={tab === "today"} onClick={() => setTab("today")}><span className="seg__label">Today</span></button><button type="button" className="!min-h-9 !text-xs" aria-pressed={tab === "groceries"} onClick={() => setTab("groceries")}><span className="seg__label">Groceries</span></button></div>}>
+          right={<Seg value={tab} onChange={setTab} options={[{ v: "today", label: "Today" }, { v: "groceries", label: "Groceries" }]} />}>
           {next && hero && <div className="flex items-center gap-2 mt-3 flex-wrap"><span className="chip chip--live backdrop-blur-md">{next.time}</span><span className="chip chip--live backdrop-blur-md tnum">{Math.round(hero.kcal * next.scale)} kcal</span><span className="chip chip--live backdrop-blur-md">{hero.minutes} min</span><Link href={`/food/${enc(hero.id)}?date=${day.date}`} className="pill pill--sm pill--volt ml-auto">Cook</Link></div>}
         </Hero>
 
         <AnimatePresence mode="wait">
           {tab === "today" ? (
-            <motion.div key="today" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-x-10 lg:items-start">
-              <div className="lg:order-2 lg:sticky lg:top-8">
+            <motion.div key="today" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
+              <div className="xl:order-2 xl:sticky xl:top-10">
               <div className="card p-4 grid gap-4 mb-4">
                 <div className="grid grid-cols-[auto_1fr] gap-4 items-center">
                 <Ring value={doneCount / Math.max(1, day.meals.length)} size={84} stroke={7}><span className="text-sm font-semibold tnum">{doneCount}/{day.meals.length}</span></Ring>
                 <div className="grid gap-2">
-                  <div className="flex justify-between items-baseline"><span className="meta">Calories</span><span className="tnum display text-2xl"><CountUp value={Math.round(t.kcal)} /><span className="text-sm text-smoke"> / {day.targets.kcal}</span></span></div>
+                  <div className="flex justify-between items-baseline"><span className="meta">Calories eaten</span><span className="tnum display text-2xl"><CountUp value={Math.round(t.kcal)} /><span className="text-sm text-smoke"> / {day.targets.kcal}</span></span></div>
                   <Bar value={t.kcal} max={day.targets.kcal} />
+                  <p className="text-[11px] text-smoke tnum">
+                    {doneCount === day.meals.length
+                      ? "Day complete."
+                      : `${Math.max(0, Math.round(day.targets.kcal - t.kcal)).toLocaleString("en-US")} kcal left · today's menu delivers ${Math.round(planned.kcal).toLocaleString("en-US")}.`}
+                  </p>
                 </div>
                 </div>
                 <div className="grid gap-2">
@@ -99,7 +116,7 @@ export default function FoodPage() {
               </div>
               </div>
 
-              <div className="lg:order-1 min-w-0">
+              <div className="xl:order-1 min-w-0">
               <Stagger className="grid gap-3">
                 {day.meals.map((m, i) => {
                   const meal = getMeal(m.mealId); if (!meal) return null;
@@ -109,7 +126,7 @@ export default function FoodPage() {
                       <div className="grid grid-cols-[44px_minmax(0,1fr)] lg:grid-cols-[56px_minmax(0,1fr)] gap-3">
                         <div className="relative border-r border-line pr-3 pt-1 text-right"><span className="text-xs tnum text-smoke">{m.time}</span><span className={`absolute -right-[5px] top-2.5 w-[9px] h-[9px] rounded-full border-2 border-paper ${m.done ? "bg-volt" : "bg-line-strong"}`} /></div>
                         <div className={`card overflow-hidden transition-opacity ${m.done ? "opacity-55" : ""}`}>
-                          <Link href={`/food/${enc(meal.id)}?date=${day.date}`} className="block relative h-44 lg:h-56">
+                          <Link href={`/food/${enc(meal.id)}?date=${day.date}`} className="block relative h-44 md:h-52 lg:h-56">
                             <Photo src={meal.image} color veil className="absolute inset-0" />
                             <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5 grid gap-1">
                               <span className="meta text-bone/80">{m.slot}{m.scale !== 1 ? ` · ×${m.scale}` : ""} · {meal.minutes} min</span>
@@ -149,7 +166,7 @@ export default function FoodPage() {
               </div>
             </motion.div>
           ) : (
-            <motion.div key="groceries" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-x-10 lg:items-start">
+            <motion.div key="groceries" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
               <Section title={`Next ${week.length} day${week.length > 1 ? "s" : ""}`} aside={<Press><button type="button" className="pill pill--sm" onClick={buildWeek}>Plan the week</button></Press>}>
                 {week.length < 2 ? (
                   <div className="card p-5 grid gap-2"><p className="display text-2xl">One list. <em>Whole week.</em></p><p className="text-sm text-smoke">Plan the week and every meal’s ingredients land here — no repeats, portions scaled to each day.</p></div>

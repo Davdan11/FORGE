@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
+import { normaliseUnits } from "./units";
 import type {
-  Profile, Plan, Session, LoggedSet, SessionLog, Readiness, Activity, NutritionDay, Stats, WeighIn,
+  Profile, Plan, Session, LoggedSet, SessionLog, Readiness, Activity, NutritionDay, Stats, WeighIn, Injury,
 } from "./types";
 
 /**
@@ -19,6 +20,7 @@ export type ActivityRow = Activity & Syncable;
 export type NutritionDayRow = NutritionDay & Syncable;
 export type StatsRow = Stats & Syncable;
 export type WeighInRow = WeighIn & Syncable;
+export type InjuryRow = Injury & Syncable;
 
 class ForgeDB extends Dexie {
   weights!: EntityTable<WeighInRow, "id">;
@@ -31,6 +33,7 @@ class ForgeDB extends Dexie {
   activities!: EntityTable<ActivityRow, "id">;
   nutrition!: EntityTable<NutritionDayRow, "id">;
   stats!: EntityTable<StatsRow, "id">;
+  injuries!: EntityTable<InjuryRow, "id">;
 
   constructor() {
     super("forge");
@@ -48,6 +51,9 @@ class ForgeDB extends Dexie {
     this.version(2).stores({
       activities: "id, startedAt, type, shared, workoutId",
       weights: "id, date",
+    });
+    this.version(3).stores({
+      injuries: "id, area, resolvedAt",
     });
   }
 }
@@ -79,7 +85,11 @@ export const isoWeek = (iso: string) => {
 
 export async function getProfile() {
   const all = await db.profile.toArray();
-  return all[0] ?? null;
+  const p = all[0];
+  if (!p) return null;
+  // Rows written before weight and distance became separable stored a single
+  // "metric" | "imperial" string. Read them without needing a migration pass.
+  return { ...p, units: normaliseUnits(p.units as unknown as Parameters<typeof normaliseUnits>[0]) };
 }
 
 /** Read-only (safe inside liveQuery): returns a default until the first award writes it. */

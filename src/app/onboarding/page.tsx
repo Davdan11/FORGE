@@ -4,12 +4,13 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { db, todayISO, uid } from "@/lib/db";
 import { generatePlan } from "@/lib/engine/plan";
+import { adaptationsFor } from "@/lib/engine/injury";
 import { buildNutritionDay } from "@/lib/nutrition/engine";
 import { lbToKg } from "@/lib/units";
 import { IMG, sessionImage } from "@/lib/data/images";
 import { Seg, MultiSeg, Photo } from "@/components/ui";
 import { motion, AnimatePresence, Press } from "@/components/motion";
-import type { Equipment, Goal, Level, PainArea, Profile, Sex, Units } from "@/lib/types";
+import type { Equipment, Goal, Level, PainArea, Profile, Sex, UnitPrefs } from "@/lib/types";
 
 const STEPS = ["You", "Goal", "Schedule", "Gear", "Baselines", "Food"] as const;
 const CLAIMS = ["We measure before we prescribe.", "One goal. Everything follows.", "The week you actually have.", "Train with what is in front of you.", "Honest numbers make a better block.", "Fuel is part of the plan."];
@@ -28,7 +29,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [busy, setBusy] = useState(false);
-  const [units, setUnits] = useState<Units>("metric");
+  const [units, setUnits] = useState<UnitPrefs>({ weight: "kg", distance: "km" });
   const [name, setName] = useState("");
   const [sex, setSex] = useState<Sex>("male");
   const [age, setAge] = useState(30);
@@ -50,7 +51,7 @@ export default function Onboarding() {
   const [dietary, setDietary] = useState<Profile["dietary"]>([]);
   const [mealsPerDay, setMealsPerDay] = useState<Profile["mealsPerDay"]>(4);
 
-  const kg = (v: string) => (v === "" ? undefined : units === "imperial" ? lbToKg(Number(v)) : Number(v));
+  const kg = (v: string) => (v === "" ? undefined : units.weight === "lb" ? lbToKg(Number(v)) : Number(v));
   const canNext = useMemo(() => (step === 0 ? name.trim().length > 0 : true), [step, name]);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
 
@@ -61,13 +62,13 @@ export default function Onboarding() {
     for (let i = 0; i < 4; i++) { setStage(i); await new Promise((r) => setTimeout(r, 650)); }
     const profile: Profile = {
       id: uid(), name: name.trim(), sex, age, units, goal, level,
-      heightCm: units === "imperial" ? height * 2.54 : height, weightKg: units === "imperial" ? lbToKg(weight) : weight,
+      heightCm: units.weight === "lb" ? height * 2.54 : height, weightKg: units.weight === "lb" ? lbToKg(weight) : weight,
       daysPerWeek: days, sessionMinutes: minutes, equipment, pain,
       eventName: goal === "perform" && eventName ? eventName : undefined, eventDate: goal === "perform" && eventDate ? eventDate : undefined,
-      baselines: { squatE1rm: kg(squat), hingeE1rm: kg(hinge), pushE1rm: kg(push), pullReps: pullReps ? Number(pullReps) : undefined, plankSec: plank ? Number(plank) : undefined, run12minM: run12 ? Number(run12) * (units === "imperial" ? 1609.344 : 1000) : undefined, hipScreen: hip * 20, shoulderScreen: shoulder * 20, ankleScreen: ankle * 20 },
+      baselines: { squatE1rm: kg(squat), hingeE1rm: kg(hinge), pushE1rm: kg(push), pullReps: pullReps ? Number(pullReps) : undefined, plankSec: plank ? Number(plank) : undefined, run12minM: run12 ? Number(run12) * (units.distance === "mi" ? 1609.344 : 1000) : undefined, hipScreen: hip * 20, shoulderScreen: shoulder * 20, ankleScreen: ankle * 20 },
       dietary, mealsPerDay, wakeTime, trainTime, notifications: false, createdAt: new Date().toISOString(),
     };
-    const { plan, sessions } = generatePlan(profile, todayISO());
+    const { plan, sessions } = generatePlan(profile, todayISO(), {}, adaptationsFor(await db.injuries.toArray(), todayISO()));
     await db.transaction("rw", db.profile, db.plans, db.sessions, db.nutrition, async () => {
       await db.profile.put({ ...profile, dirty: 1, updatedAt: new Date().toISOString() });
       await db.plans.put({ ...plan, dirty: 1 });
@@ -78,8 +79,8 @@ export default function Onboarding() {
     router.replace("/today");
   }
 
-  const unitW = units === "imperial" ? "lb" : "kg";
-  const unitH = units === "imperial" ? "in" : "cm";
+  const unitW = units.weight;
+  const unitH = units.weight === "lb" ? "in" : "cm";
   const variants = { enter: (d: number) => ({ opacity: 0, x: d * 40 }), center: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: d * -40 }) };
 
   return (
@@ -91,7 +92,7 @@ export default function Onboarding() {
         </AnimatePresence>
         <span className="on-photo absolute top-[calc(var(--safe-top)+16px)] left-5 lg:top-8 lg:left-8 display text-lg lg:text-2xl">FORGE<span className="text-volt">.</span></span>
         <div className="on-photo absolute inset-x-0 bottom-0 px-5 pb-4 lg:px-10 lg:pb-10 grid gap-3">
-          <p className="hidden lg:block display text-[3.4rem] leading-[0.95] max-w-[12ch]"><AnimatePresence mode="wait"><motion.span key={step} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.5 }} className="block">{CLAIMS[step]}</motion.span></AnimatePresence></p>
+          <p className="hidden md:block display display--lg leading-[0.95] max-w-[12ch]" style={{ fontSize: "var(--text-display-lg)" }}><AnimatePresence mode="wait"><motion.span key={step} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.5 }} className="block">{CLAIMS[step]}</motion.span></AnimatePresence></p>
           <p className="meta text-bone/80">Assessment · {step + 1} / {STEPS.length} · {STEPS[step]}</p>
           <div className="flex gap-1.5">{STEPS.map((st, i) => <span key={st} className={`h-1 flex-1 rounded-full transition-colors ${i < step ? "bg-volt" : i === step ? "bg-bone" : "bg-[rgba(236,231,223,.18)]"}`} />)}</div>
         </div>
@@ -102,10 +103,13 @@ export default function Onboarding() {
       <AnimatePresence mode="wait" custom={dir}>
         <motion.div key={step} custom={dir} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="grid gap-5">
           {step === 0 && (<>
-            <h1 className="display text-4xl lg:text-5xl">Let’s build <em>your</em> plan.</h1>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Let’s build <em>your</em> plan.</h1>
             <p className="text-smoke text-sm">Eight minutes. We measure before we prescribe.</p>
             <label className="field"><span className="meta">Name</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="What should we call you?" autoFocus /></label>
-            <div className="field"><span className="meta">Units</span><Seg value={units} onChange={setUnits} options={[{ v: "metric", label: "kg · km" }, { v: "imperial", label: "lb · mi" }]} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="field"><span className="meta">Body weight</span><Seg fill value={units.weight} onChange={(weight) => setUnits((u) => ({ ...u, weight }))} options={[{ v: "kg", label: "kg" }, { v: "lb", label: "lb" }]} /></div>
+              <div className="field"><span className="meta">Distance</span><Seg fill value={units.distance} onChange={(distance) => setUnits((u) => ({ ...u, distance }))} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} /></div>
+            </div>
             <div className="field"><span className="meta">Sex (for calorie math)</span><Seg value={sex} onChange={setSex} options={[{ v: "female", label: "Female" }, { v: "male", label: "Male" }, { v: "other", label: "Other" }]} /></div>
             <div className="grid grid-cols-3 gap-3">
               <label className="field"><span className="meta">Age</span><input className="input tnum" type="number" inputMode="numeric" value={age} onChange={(e) => setAge(Number(e.target.value))} /></label>
@@ -114,7 +118,7 @@ export default function Onboarding() {
             </div>
           </>)}
           {step === 1 && (<>
-            <h1 className="display text-4xl lg:text-5xl">What’s the <em>real</em> goal?</h1>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>What’s the <em>real</em> goal?</h1>
             <div className="grid grid-cols-2 gap-2 lg:gap-3">
               {GOALS.map((g) => (
                 <button key={g.v} type="button" aria-pressed={goal === g.v} onClick={() => setGoal(g.v)} className={`relative h-32 lg:h-36 rounded-[18px] overflow-hidden text-left border transition-colors ${goal === g.v ? "border-volt" : "border-line"}`}>
@@ -129,20 +133,20 @@ export default function Onboarding() {
             <p className="text-sm text-smoke">The goal sets calories, rep ranges and how much cardio sits next to the lifting. Change it any time — the block rebuilds.</p>
           </>)}
           {step === 2 && (<>
-            <h1 className="display text-4xl lg:text-5xl">How much <em>time</em> is real?</h1>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>How much <em>time</em> is real?</h1>
             <div className="field"><span className="meta">Sessions per week</span><Seg value={days} onChange={setDays} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} /></div>
             <div className="field"><span className="meta">Minutes per session</span><Seg value={minutes} onChange={setMinutes} options={[25, 40, 60, 75].map((m) => ({ v: m as Profile["sessionMinutes"], label: `${m} min` }))} /></div>
             <div className="grid grid-cols-2 gap-3"><label className="field"><span className="meta">Usual training time</span><input className="input" type="time" value={trainTime} onChange={(e) => setTrainTime(e.target.value)} /></label><label className="field"><span className="meta">Wake time</span><input className="input" type="time" value={wakeTime} onChange={(e) => setWakeTime(e.target.value)} /></label></div>
             <p className="text-sm text-smoke">A plan for the week you actually have beats a perfect plan for a week you don’t. Meals are timed around your training.</p>
           </>)}
           {step === 3 && (<>
-            <h1 className="display text-4xl lg:text-5xl">What’s in <em>front</em> of you?</h1>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>What’s in <em>front</em> of you?</h1>
             <div className="field"><span className="meta">Equipment you have most days</span><MultiSeg value={equipment} onChange={setEquipment} options={[{ v: "barbell", label: "Barbell" }, { v: "rack", label: "Rack" }, { v: "bench", label: "Bench" }, { v: "dumbbell", label: "Dumbbells" }, { v: "kettlebell", label: "Kettlebell" }, { v: "cable", label: "Cables" }, { v: "machine", label: "Machines" }, { v: "pullup_bar", label: "Pull-up bar" }, { v: "band", label: "Bands" }, { v: "rower", label: "Rower" }, { v: "bike", label: "Bike" }, { v: "treadmill", label: "Treadmill" }, { v: "outdoor", label: "Outdoors" }]} /></div>
             <div className="field"><span className="meta">Anything that hurts right now?</span><MultiSeg value={pain} onChange={setPain} options={[{ v: "knee", label: "Knee" }, { v: "back", label: "Lower back" }, { v: "shoulder", label: "Shoulder" }, { v: "hip", label: "Hip" }, { v: "wrist", label: "Wrist" }, { v: "ankle", label: "Ankle" }, { v: "elbow", label: "Elbow" }]} /></div>
             <p className="text-sm text-smoke">We never prescribe a movement that loads a flagged joint. Clear it in Settings when it’s better.</p>
           </>)}
           {step === 4 && (<>
-            <h1 className="display text-4xl lg:text-5xl">Baselines. <em>Skip</em> what you don’t know.</h1>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Baselines. <em>Skip</em> what you don’t know.</h1>
             <p className="text-sm text-smoke">Any recent set works: we convert it to an estimated 1RM. Leave blank and the engine starts conservative.</p>
             <div className="grid grid-cols-3 gap-3">
               <label className="field"><span className="meta">Squat ({unitW})</span><input className="input tnum" type="number" inputMode="decimal" value={squat} onChange={(e) => setSquat(e.target.value)} placeholder="—" /></label>
@@ -150,7 +154,7 @@ export default function Onboarding() {
               <label className="field"><span className="meta">Bench ({unitW})</span><input className="input tnum" type="number" inputMode="decimal" value={push} onChange={(e) => setPush(e.target.value)} placeholder="—" /></label>
               <label className="field"><span className="meta">Pull-ups</span><input className="input tnum" type="number" inputMode="numeric" value={pullReps} onChange={(e) => setPullReps(e.target.value)} placeholder="—" /></label>
               <label className="field"><span className="meta">Plank (s)</span><input className="input tnum" type="number" inputMode="numeric" value={plank} onChange={(e) => setPlank(e.target.value)} placeholder="—" /></label>
-              <label className="field"><span className="meta">12-min run ({units === "imperial" ? "mi" : "km"})</span><input className="input tnum" type="number" inputMode="decimal" step="0.1" value={run12} onChange={(e) => setRun12(e.target.value)} placeholder="—" /></label>
+              <label className="field"><span className="meta">12-min run ({units.distance})</span><input className="input tnum" type="number" inputMode="decimal" step="0.1" value={run12} onChange={(e) => setRun12(e.target.value)} placeholder="—" /></label>
             </div>
             <div className="grid gap-4 card p-4">
               <p className="meta text-ink">Movement screen — 1 (stiff) to 5 (free)</p>
@@ -160,7 +164,7 @@ export default function Onboarding() {
             </div>
           </>)}
           {step === 5 && (<>
-            <h1 className="display text-4xl lg:text-5xl">How do you <em>eat</em>?</h1>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>How do you <em>eat</em>?</h1>
             <div className="field"><span className="meta">Dietary pattern</span><MultiSeg value={dietary} onChange={setDietary} options={[{ v: "vegetarian", label: "Vegetarian" }, { v: "vegan", label: "Vegan" }, { v: "pescatarian", label: "Pescatarian" }, { v: "halal", label: "Halal" }, { v: "gluten_free", label: "Gluten-free" }, { v: "lactose_free", label: "Lactose-free" }]} /></div>
             <div className="field"><span className="meta">Meals per day</span><Seg value={mealsPerDay} onChange={setMealsPerDay} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
             <p className="text-sm text-smoke">Targets come from your body, goal and the kind of day it is. 30,000+ recipes with cook mode; meals never repeat within three days.</p>
@@ -171,7 +175,7 @@ export default function Onboarding() {
       <AnimatePresence>{busy && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[70] bg-ink text-bone grid place-items-center p-8">
           <div className="grid gap-6 w-full max-w-[380px]">
-            <span className="display text-5xl">Building<br /><em>your block.</em></span>
+            <span className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Building<br /><em>your block.</em></span>
             <ul className="grid gap-3">
               {["Reading your baselines", "Choosing movements you can actually do", "Periodising 12 weeks · 3 mesocycles", "Planning today’s meals"].map((s, i) => (
                 <motion.li key={s} initial={{ opacity: 0.25, x: -6 }} animate={{ opacity: stage >= i ? 1 : 0.25, x: 0 }} className="flex items-center gap-3 text-sm">

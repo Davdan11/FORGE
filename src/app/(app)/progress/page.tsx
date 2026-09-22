@@ -3,19 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Dumbbell, Activity, PersonStanding, UtensilsCrossed, Moon, Star, type LucideIcon } from "lucide-react";
 import { db, getProfile, getStats, todayISO } from "@/lib/db";
-import { BADGES, RANKS, levelFromXp, rankFor } from "@/lib/gamification";
+import { BADGES, RANKS, levelFromXp, rankFor, subRankFor, tierForLevel } from "@/lib/gamification";
+import { RankEmblem } from "@/components/RankEmblem";
+import { BadgeEmblem } from "@/components/BadgeEmblem";
 import { bestE1rmBySlug, logWeighIn } from "@/lib/progress";
 import { getExercise } from "@/lib/data/exercises";
 import { exerciseImage, sessionImage, IMG } from "@/lib/data/images";
 import { e1rm, fmtDist, fmtLoad, kgToLb, lbToKg, fmtDuration } from "@/lib/units";
-import { Screen, Hero, Section, Photo, Toast, ScreenSkeleton } from "@/components/ui";
-import { Page, Stagger, Item, Ring, CountUp, Reveal, Press } from "@/components/motion";
+import { Screen, Hero, Section, Photo, Toast, ScreenSkeleton, Seg } from "@/components/ui";
+import { Page, Stagger, Item , CountUp, Reveal, Press } from "@/components/motion";
 import { Bars, Sparkline, Heatmap } from "@/components/charts";
 import { MiniRoute } from "@/components/move-bits";
-
-const GLYPH: Record<string, LucideIcon> = { strength: Dumbbell, endurance: Activity, mobility: PersonStanding, nutrition: UtensilsCrossed, recovery: Moon, all: Star };
 
 export default function ProgressPage() {
   const profile = useLiveQuery(() => getProfile(), []);
@@ -53,7 +52,7 @@ export default function ProgressPage() {
   const readySeries = readiness.slice(-14);
   const wSeries = weights.slice(-30);
   const wDelta = wSeries.length > 1 ? wSeries[wSeries.length - 1].kg - wSeries[0].kg : 0;
-  const toUnitW = (kg: number) => (units === "imperial" ? `${Math.round(kgToLb(kg) * 10) / 10} lb` : `${Math.round(kg * 10) / 10} kg`);
+  const toUnitW = (kg: number) => (units.weight === "lb" ? `${Math.round(kgToLb(kg) * 10) / 10} lb` : `${Math.round(kg * 10) / 10} kg`);
   const today = todayISO();
   const week = plan ? Math.max(1, Math.min(12, Math.floor((new Date(today).getTime() - new Date(plan.startDate).getTime()) / 604800000) + 1)) : 1;
   const meso = Math.min(3, Math.ceil(week / 4));
@@ -63,7 +62,7 @@ export default function ProgressPage() {
 
   async function weigh() {
     const v = Number(w); if (!v) return;
-    const kg = units === "imperial" ? lbToKg(v) : v;
+    const kg = units.weight === "lb" ? lbToKg(v) : v;
     const xp = await logWeighIn(Math.round(kg * 10) / 10, todayISO());
     setW(""); setToast(`Logged ${toUnitW(kg)}. +${xp} XP.`); setTimeout(() => setToast(null), 3000);
   }
@@ -74,18 +73,19 @@ export default function ProgressPage() {
         <Hero image={sessionImage("push", 1400, 800)} height="h-[380px]" eyebrow={`${rankFor(lvl.level)} · level ${lvl.level} · ${stats.streakWeeks} week streak`} title={<>{profile.name}<br /><em>{goalLine(profile.goal)}</em></>}
           right={<Link href="/settings" className="chip chip--live backdrop-blur-md">Settings</Link>}>
           <div className="flex items-center gap-4 mt-4">
-            <Ring value={lvl.into / lvl.need} size={64} stroke={5}><span className="display text-xl tnum">{lvl.level}</span></Ring>
+            <Link href="/ranks" aria-label="Your rank and rewards"><RankEmblem tier={tierForLevel(lvl.level)} sub={subRankFor(lvl.level)} size={64} /></Link>
             <div className="grid gap-1 flex-1 max-w-[420px]">
               <div className="flex justify-between text-xs"><span className="text-bone/80">{lvl.into.toLocaleString("en-US")} / {lvl.need.toLocaleString("en-US")} XP</span><span className="text-smoke">next: {RANKS[Math.min(RANKS.length - 1, rankIdx + 1)]} at level {(rankIdx + 1) * 10 + 1}</span></div>
               <div className="bar"><i style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
+              <span className="flex gap-4"><Link href="/trends" className="text-xs underline text-bone/80">See your progress</Link><Link href="/ranks" className="text-xs underline text-bone/80">Rank and rewards</Link></span>
             </div>
           </div>
         </Hero>
 
-        <div className="seg mb-6 max-w-[420px]"><button type="button" aria-pressed={tab === "stats"} onClick={() => setTab("stats")}>Overview</button><button type="button" aria-pressed={tab === "feed"} onClick={() => setTab("feed")}>Feed · {shared.length}</button><button type="button" aria-pressed={tab === "badges"} onClick={() => setTab("badges")}>Badges · {earned.length}/{BADGES.length}</button></div>
+        <div className="mb-6 max-w-[420px]"><Seg value={tab} onChange={setTab} options={[{ v: "stats", label: "Overview" }, { v: "feed", label: `Feed · ${shared.length}` }, { v: "badges", label: `Badges · ${earned.length}/${BADGES.length}` }]} /></div>
 
         {tab === "stats" && (
-          <Stagger className="lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-x-10 lg:items-start">
+          <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
             <div className="min-w-0">
               {/* The block: where you are in the 12 weeks */}
               <Item>
@@ -142,8 +142,8 @@ export default function ProgressPage() {
                 <Section title="Body" aside={wSeries.length > 1 ? <span className={`text-xs tnum ${wDelta <= 0 ? "text-volt" : "text-bone"}`}>{wDelta > 0 ? "+" : ""}{toUnitW(wDelta)} · {wSeries.length} weigh-ins</span> : undefined}>
                   <div className="card p-4 grid gap-3">
                     <div className="flex items-baseline justify-between"><span className="meta">Current</span><span className="display text-3xl tnum">{toUnitW(wSeries[wSeries.length - 1]?.kg ?? profile.weightKg)}</span></div>
-                    {wSeries.length > 1 && <Sparkline values={wSeries.map((x) => (units === "imperial" ? kgToLb(x.kg) : x.kg))} labels={wSeries.map((x) => x.date)} height={48} format={(v) => `${Math.round(v * 10) / 10} ${units === "imperial" ? "lb" : "kg"}`} />}
-                    <div className="flex gap-2"><input className="input tnum flex-1" inputMode="decimal" placeholder={`This morning · ${units === "imperial" ? "lb" : "kg"}`} value={w} onChange={(e) => setW(e.target.value)} /><Press><button type="button" className="pill pill--bone" onClick={weigh} disabled={!Number(w)}>Log</button></Press></div>
+                    {wSeries.length > 1 && <Sparkline values={wSeries.map((x) => (units.weight === "lb" ? kgToLb(x.kg) : x.kg))} labels={wSeries.map((x) => x.date)} height={48} format={(v) => `${Math.round(v * 10) / 10} ${units.weight}`} />}
+                    <div className="flex gap-2"><input className="input tnum flex-1" inputMode="decimal" placeholder={`This morning · ${units.weight}`} value={w} onChange={(e) => setW(e.target.value)} /><Press><button type="button" className="pill pill--bone" onClick={weigh} disabled={!Number(w)}>Log</button></Press></div>
                     {readySeries.length > 1 && <div className="pt-2 border-t border-line"><div className="flex justify-between items-baseline mb-1"><span className="meta">Readiness · 14 check-ins</span><span className="text-xs tnum">{Math.round(readySeries.reduce((a, r) => a + r.score, 0) / readySeries.length)} avg</span></div><Sparkline values={readySeries.map((r) => r.score)} labels={readySeries.map((r) => r.date)} height={40} format={(v) => `${Math.round(v)} / 100`} /></div>}
                   </div>
                 </Section>
@@ -161,7 +161,7 @@ export default function ProgressPage() {
               {earned.length > 0 && (
                 <Item>
                   <Section title="Latest badges" aside={<button type="button" className="text-xs text-smoke underline" onClick={() => setTab("badges")}>All</button>}>
-                    <div className="flex gap-2 flex-wrap">{earned.slice(-6).map((b) => { const Icon = GLYPH[b.pillar] ?? Star; return <span key={b.id} className="card px-3 py-2 flex items-center gap-2 text-sm"><Icon className="w-4 h-4 text-volt" strokeWidth={1.8} />{b.name}</span>; })}</div>
+                    <div className="flex gap-3 flex-wrap">{earned.slice(-6).map((b) => <span key={b.id} className="grid justify-items-center gap-1.5 w-[84px]"><BadgeEmblem id={b.id} pillar={b.pillar} earned size={56} /><span className="text-[11px] leading-tight text-center">{b.name}</span></span>)}</div>
                   </Section>
                 </Item>
               )}
@@ -186,19 +186,29 @@ export default function ProgressPage() {
         )}
 
         {tab === "badges" && (
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3">
-            {BADGES.map((b, i) => { const on = stats.badges.includes(b.id); const p = b.progress?.(stats, ctx); const Icon = GLYPH[b.pillar] ?? Star; return (
-              <Reveal key={b.id} delay={i * 0.02}>
-                <li className={`card p-4 flex gap-3 items-start h-full ${on ? "border-line-strong" : "opacity-80"}`}>
-                  <span className={`badge-glyph ${on ? "badge-glyph--on" : ""} shrink-0`}><Icon className="w-5 h-5" strokeWidth={1.8} /></span>
-                  <span className="grid gap-1 flex-1 min-w-0">
-                    <span className="flex justify-between gap-2"><span className="text-sm font-medium leading-tight">{b.name}</span>{on && <span className="chip chip--volt">Earned</span>}</span>
-                    <span className="text-xs text-smoke">{b.desc}</span>
-                    {p && !on && <span className="grid gap-1 mt-1"><span className="bar"><i style={{ width: `${Math.min(100, (p[0] / p[1]) * 100)}%` }} /></span><span className="text-[11px] text-smoke tnum">{p[0].toLocaleString("en-US")} / {p[1].toLocaleString("en-US")}</span></span>}
-                  </span>
-                </li>
-              </Reveal>); })}
-          </ul>
+          <>
+            <p className="text-sm text-smoke mb-5 max-w-[60ch]">
+              {earned.length} of {BADGES.length} earned. Locked badges show how far along you are — most of them come from simply continuing.
+            </p>
+            <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {BADGES.map((b, i) => {
+                const on = stats.badges.includes(b.id);
+                const p = b.progress?.(stats, ctx);
+                return (
+                  <Reveal key={b.id} delay={i * 0.02}>
+                    <li className={`card h-full p-4 grid justify-items-center text-center gap-2 ${on ? "border-line-strong" : ""}`}>
+                      <BadgeEmblem id={b.id} pillar={b.pillar} earned={on} progress={p} size={76} />
+                      <span className="text-sm font-medium leading-tight">{b.name}</span>
+                      <span className="text-xs text-smoke leading-tight">{b.desc}</span>
+                      {on
+                        ? <span className="chip chip--volt mt-1">Earned</span>
+                        : p && <span className="text-[11px] text-smoke tnum mt-1">{Math.round(p[0]).toLocaleString("en-US")} / {p[1].toLocaleString("en-US")}</span>}
+                    </li>
+                  </Reveal>
+                );
+              })}
+            </ul>
+          </>
         )}
         <Toast text={toast} />
       </Screen>

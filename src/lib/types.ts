@@ -4,6 +4,13 @@
 
 export type Goal = "strength" | "build" | "recomp" | "cut" | "endurance" | "perform";
 export type Level = "new" | "intermediate" | "advanced";
+/** Weight and distance are chosen separately: plenty of places weigh in pounds
+ *  and run in kilometres — Québec among them — and forcing one system on both
+ *  makes the app wrong for them in one direction or the other. */
+export type WeightUnit = "kg" | "lb";
+export type DistanceUnit = "km" | "mi";
+export interface UnitPrefs { weight: WeightUnit; distance: DistanceUnit }
+/** Legacy single-system value, still found in rows written before the split. */
 export type Units = "metric" | "imperial";
 export type Sex = "female" | "male" | "other";
 export type Equipment =
@@ -47,6 +54,26 @@ export interface Exercise {
 
 export type PainArea = "knee" | "back" | "shoulder" | "hip" | "wrist" | "ankle" | "elbow";
 
+/** How much an injury is limiting the athlete right now. */
+export type InjurySeverity = 1 | 2 | 3;   // 1 niggle · 2 limits training · 3 limits daily life
+export type InjuryPhase = "protect" | "reload" | "return" | "clear";
+
+/** A running injury record. The engine reads these to shape the prescription;
+ *  it is training guidance, never a diagnosis. */
+export interface Injury {
+  id: string;
+  area: PainArea;
+  severity: InjurySeverity;
+  /** ISO date the athlete first logged it. */
+  since: string;
+  /** ISO date it last flared up. Drives the return ladder. */
+  lastFlareAt?: string;
+  note?: string;
+  /** Set when the athlete clears it; the engine then ignores it. */
+  resolvedAt?: string;
+}
+
+
 export interface Profile {
   id: string;             // local uuid, mirrored to Supabase user id on sign-in
   name: string;
@@ -54,7 +81,7 @@ export interface Profile {
   age: number;
   heightCm: number;
   weightKg: number;
-  units: Units;
+  units: UnitPrefs;
   goal: Goal;
   level: Level;
   daysPerWeek: 2 | 3 | 4 | 5 | 6;
@@ -179,7 +206,15 @@ export interface Readiness {
 }
 
 /* ── Cardio / GPS ──────────────────────────────────────────── */
-export type ActivityType = "run" | "ride" | "walk" | "hike" | "row" | "ruck" | "ski" | "trail" | "swim" | "other";
+export type ActivityType =
+  | "run" | "trail" | "walk" | "hike" | "ruck"
+  | "ride" | "mtb" | "gravel" | "skate"
+  | "ski" | "ski_alpine" | "snowboard" | "ice_skate"
+  | "swim" | "row" | "kayak" | "surf"
+  | "climb" | "boulder"
+  | "soccer" | "football" | "hockey" | "basketball" | "tennis" | "combat"
+  | "skydive" | "paraglide"
+  | "other";
 export interface TrackPoint { t: number; lat: number; lng: number; alt?: number; acc?: number; hr?: number }
 export interface Lap { label: string; seconds: number; distanceM: number; zone: number }
 export interface Activity {

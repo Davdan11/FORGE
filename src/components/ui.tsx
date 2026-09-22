@@ -1,12 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, CountUp } from "./motion";
 import { useScroll, useTransform, useReducedMotion } from "motion/react";
 
+/* ─────────────────────────────────────────────────────────────
+   Horizontal rail.
+
+   A row of chips wider than its box gets clipped, and a word
+   sliced down the middle reads as a broken layout — not as
+   "there is more this way". So the rail fades the edge it can
+   actually scroll toward, and only that edge: a fade on the left
+   when you are already at the start is a lie about the content.
+
+   It also keeps the selected chip in view, because a picker whose
+   current value sits off-screen is a picker you cannot read.
+   ───────────────────────────────────────────────────────────── */
+type Edge = "none" | "start" | "end" | "both";
+
+export function Rail({ children, className = "", active, gutter }: {
+  children: ReactNode;
+  className?: string;
+  /** Changing this scrolls the element marked aria-pressed / aria-selected back into view. */
+  active?: string | number;
+  /** Bleed to the screen edges so the clip lands on the viewport, not mid-card. */
+  gutter?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [edge, setEdge] = useState<Edge>("none");
+
+  const measure = useCallback((el: HTMLElement) => {
+    const max = el.scrollWidth - el.clientWidth;
+    // Sub-pixel layout means scrollLeft rarely lands exactly on 0 or max.
+    if (max <= 2) return setEdge("none");
+    const x = el.scrollLeft;
+    setEdge(x <= 2 ? "end" : x >= max - 2 ? "start" : "both");
+  }, []);
+
+  // A ref callback rather than an effect: it runs once the node has its real
+  // size, and it is allowed to set state. React 19 runs the returned cleanup
+  // when the node goes away.
+  const attach = useCallback((el: HTMLDivElement | null) => {
+    ref.current = el;
+    if (!el) return;
+    measure(el);
+    const ro = new ResizeObserver(() => measure(el));
+    ro.observe(el);
+    for (const child of Array.from(el.children)) ro.observe(child);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  useEffect(() => {
+    const on = ref.current?.querySelector<HTMLElement>('[aria-pressed="true"],[aria-selected="true"]');
+    on?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }, [active]);
+
+  return (
+    <div ref={attach} data-edge={edge} onScroll={(e) => measure(e.currentTarget)}
+      className={`rail ${gutter ? "rail--gutter" : ""} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 export function Screen({ children, className = "" }: { children?: ReactNode; className?: string }) {
-  return <div className={`flex-1 w-full max-w-[560px] lg:max-w-[1200px] mx-auto px-5 lg:px-10 pb-nav pt-[calc(var(--safe-top)+16px)] lg:pt-8 ${className}`}>{children}</div>;
+  return <div className={`screen flex-1 pb-nav pt-[calc(var(--safe-top)+16px)] lg:pt-10 ${className}`}>{children}</div>;
 }
 
 /** Remote photo with fade-in once loaded. */
@@ -23,25 +82,43 @@ export function Photo({ src, alt = "", className = "", veil, soft, color, kb, st
 }
 
 /** Full-bleed photo header: parallax on scroll, title rises from a mask. */
-export function Hero({ image, eyebrow, title, right, back, height = "h-[300px]", color, children }: { image: string; eyebrow?: ReactNode; title: ReactNode; right?: ReactNode; back?: string; height?: string; color?: boolean; children?: ReactNode }) {
+export function Hero({ image, eyebrow, title, right, back, height = "h-[300px]", color, stats, children }: { image: string; eyebrow?: ReactNode; title: ReactNode; right?: ReactNode; back?: string; height?: string; color?: boolean; stats?: { label: string; value: ReactNode }[]; children?: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 400], [0, reduce ? 0 : 120]);
   const fade = useTransform(scrollY, [0, 260], [1, reduce ? 1 : 0.25]);
   return (
-    <header ref={ref} className={`on-photo relative overflow-hidden -mx-5 -mt-[calc(var(--safe-top)+16px)] lg:mx-0 lg:mt-0 lg:rounded-[28px] lg:border lg:border-line ${height} lg:min-h-[420px] mb-6 lg:mb-8`}>
-      <motion.div style={{ y }} className="absolute inset-0 scale-[1.06]"><Photo src={image} className="absolute inset-0" veil color={color} /></motion.div>
-      <div className="absolute inset-x-0 top-0 pt-[calc(var(--safe-top)+16px)] lg:pt-6 px-5 lg:px-8 flex justify-between items-start">
-        {back ? <Link href={back} className="chip chip--live backdrop-blur-md">← Back</Link> : <span />}
-        {right}
-      </div>
-      <motion.div style={{ opacity: fade }} className="absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-8 lg:pb-8">
-        {eyebrow && <motion.p initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }} className="meta text-bone/80 mb-2">{eyebrow}</motion.p>}
-        <div className="overflow-hidden pb-[.08em] -mb-[.08em]">
-          <motion.h1 initial={reduce ? false : { y: "105%" }} animate={{ y: 0 }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }} className="display text-[2.4rem] lg:text-[4.2rem] leading-[0.92]">{title}</motion.h1>
+    <header ref={ref} className={`on-photo bleed relative overflow-hidden -mt-[calc(var(--safe-top)+16px)] lg:-mt-10 ${height} lg:h-auto lg:min-h-[78vh] mb-8 lg:mb-[var(--stack-section)]`}>
+      <motion.div style={{ y }} className="absolute inset-0 scale-[1.06]">
+        <Photo src={image} className="absolute inset-0" color={color} />
+        <div className="photo__veil photo__veil--hero" />
+      </motion.div>
+      <div className="absolute inset-x-0 top-0 pt-[calc(var(--safe-top)+16px)] lg:pt-8">
+        <div className="screen flex justify-between items-start">
+          {back ? <Link href={back} className="chip chip--live backdrop-blur-md">← Back</Link> : <span />}
+          {right}
         </div>
-        {children && <motion.div initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>{children}</motion.div>}
+      </div>
+      <motion.div style={{ opacity: fade }} className="absolute inset-x-0 bottom-0 pb-7 lg:pb-14">
+        <div className="screen">
+          {eyebrow && <motion.p initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }} className="eyebrow mb-5">{eyebrow}</motion.p>}
+          <div className="overflow-hidden pb-[.14em] -mb-[.14em]">
+            <motion.h1 initial={reduce ? false : { y: "115%" }} animate={{ y: 0 }} transition={{ duration: 1.15, ease: [0.16, 1, 0.3, 1] }} className="display display--xl leading-[0.9] max-w-[14ch]" style={{ fontSize: "var(--text-display-xl)" }}>{title}</motion.h1>
+          </div>
+          {children && <motion.div initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }} className="mt-6">{children}</motion.div>}
+          {stats && stats.length > 0 && (
+            <motion.dl initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
+              className="hidden lg:flex mt-12 border-t border-[rgba(246,243,236,.28)] pt-5 w-fit">
+              {stats.map((s) => (
+                <div key={s.label} className="flex flex-col px-8 first:pl-0 border-l border-[rgba(246,243,236,.18)] first:border-l-0">
+                  <dd className="display leading-none tnum order-1" style={{ fontSize: "var(--text-display-md)" }}>{s.value}</dd>
+                  <dt className="eyebrow order-2 mt-2.5 before:hidden">{s.label}</dt>
+                </div>
+              ))}
+            </motion.dl>
+          )}
+        </div>
       </motion.div>
     </header>
   );
@@ -53,23 +130,22 @@ export function TopBar({ title, eyebrow, right, back }: { title: ReactNode; eyeb
       <div className="min-w-0">
         {back && <Link href={back} className="meta inline-flex items-center gap-1 mb-2 text-ink min-h-11">← Back</Link>}
         {eyebrow && !back && <p className="meta mb-2">{eyebrow}</p>}
-        <h1 className="display text-[2.2rem] leading-[0.92]">{title}</h1>
+        <h1 className="display display--lg leading-[0.92]" style={{ fontSize: "var(--text-display-md)" }}>{title}</h1>
       </div>
       {right}
     </header>
   );
 }
 
-export function Section({ title, aside, children, className = "" }: { title?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string }) {
+export function Section({ title, aside, children, className = "", space = "base" }: { title?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string; space?: "tight" | "base" | "loose" }) {
+  const gap = { tight: "var(--stack-tight)", base: "var(--stack)", loose: "var(--stack-loose)" }[space];
   return (
-    <section className={`mb-8 min-w-0 ${className}`}>
+    <section className={`min-w-0 ${className}`} style={{ marginBottom: gap }}>
       {(title || aside) && (
-        <div className="grid gap-2 mb-3">
-          <div className="flex items-baseline justify-between gap-3">
-            {title && <h2 className="meta text-ink">{title}</h2>}
-            {aside}
-          </div>
-          <div className="section-rule" />
+        <div className="section-head">
+          {title && <h2 className="meta text-ink shrink-0">{title}</h2>}
+          <span className="section-head__rule" />
+          {aside}
         </div>
       )}
       {children}
@@ -123,10 +199,10 @@ export function Toast({ text }: { text: string | null }) {
 }
 
 /** Segmented control with a sliding indicator. */
-export function Seg<T extends string | number>({ value, options, onChange }: { value: T; options: { v: T; label: string }[]; onChange: (v: T) => void }) {
+export function Seg<T extends string | number>({ value, options, onChange, fill, scroll }: { value: T; options: { v: T; label: string }[]; onChange: (v: T) => void; fill?: boolean; scroll?: boolean }) {
   const group = useId();
   return (
-    <div className="seg" role="group">
+    <div className={`seg ${fill ? "seg--fill" : ""} ${scroll ? "seg--scroll" : ""}`} role="group">
       {options.map((o) => {
         const on = value === o.v;
         return (

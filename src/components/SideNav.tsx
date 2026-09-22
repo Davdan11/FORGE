@@ -6,8 +6,9 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "motion/react";
 import { Activity, Dumbbell, MapPin, UtensilsCrossed, User, CalendarDays, Settings, type LucideIcon } from "lucide-react";
 import { getProfile, getStats } from "@/lib/db";
+import { subRankFor, tierForLevel } from "@/lib/gamification";
+import { RankEmblem } from "./RankEmblem";
 import { levelFromXp, rankFor } from "@/lib/gamification";
-import { Ring } from "./motion";
 
 /* Desktop shell navigation (≥ lg). Mirrors BottomNav items. */
 const ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
@@ -33,7 +34,7 @@ export function SideNav() {
           const on = path === it.href || path.startsWith(it.href + "/") || (it.href === "/today" && path.startsWith("/session"));
           return (
             <li key={it.href} className="relative">
-              {on && <motion.span layoutId="side-pill" className="absolute inset-0 rounded-2xl bg-[rgba(236,231,223,.07)] border border-[rgba(236,231,223,.1)]" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+              {on && <motion.span layoutId="side-pill" className="absolute inset-0 rounded-[var(--r-control)] bg-carbon border border-line shadow-[var(--e2)]" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
               <Link href={it.href} aria-current={on ? "page" : undefined} className={`relative flex items-center gap-3 px-3 h-11 rounded-2xl text-[13px] tracking-wide transition-colors ${on ? "text-volt" : "text-smoke hover:text-ink"}`}>
                 <it.icon className="w-5 h-5" strokeWidth={on ? 2 : 1.7} aria-hidden="true" />
                 {it.label}
@@ -43,9 +44,20 @@ export function SideNav() {
         })}
       </ul>
       {profile && lvl && (
-        <Link href="/progress" className="mt-auto flex items-center gap-3 px-2">
-          <Ring value={lvl.into / lvl.need} size={44} stroke={4}><span className="text-xs font-semibold tnum">{lvl.level}</span></Ring>
-          <span className="grid leading-tight"><span className="text-sm font-medium truncate">{profile.name}</span><span className="text-[11px] text-smoke">{rankFor(lvl.level)} · {lvl.into.toLocaleString("en-US")} / {lvl.need.toLocaleString("en-US")} XP</span></span>
+        // The rank the athlete has earned belongs next to their name, not a
+        // bare progress ring. Progress moves to the bar underneath.
+        <Link href="/ranks" className="mt-auto grid gap-2 px-2 min-w-0">
+          <span className="flex items-center gap-3 min-w-0">
+            <RankEmblem tier={tierForLevel(lvl.level)} sub={subRankFor(lvl.level)} size={40} className="shrink-0" />
+            <span className="grid leading-tight min-w-0">
+              <span className="text-sm font-medium truncate">{profile.name}</span>
+              <span className="text-[11px] text-smoke truncate">{rankFor(lvl.level)} · level {lvl.level}</span>
+            </span>
+          </span>
+          <span className="grid gap-1">
+            <span className="bar"><i style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></span>
+            <span className="text-[10px] text-smoke tnum">{lvl.into.toLocaleString("en-US")} / {lvl.need.toLocaleString("en-US")} XP</span>
+          </span>
         </Link>
       )}
     </aside>

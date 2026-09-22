@@ -7,7 +7,7 @@ import { db, getProfile, todayISO, type SessionRow } from "@/lib/db";
 import { goalLabel } from "@/lib/engine/plan";
 import { getExercise } from "@/lib/data/exercises";
 import { sessionImage } from "@/lib/data/images";
-import { Screen, Hero, Section, Photo, ScreenSkeleton } from "@/components/ui";
+import { Screen, Hero, Section, Photo, ScreenSkeleton, Rail } from "@/components/ui";
 import { Page, Stagger, Item, Ring, CountUp, motion, AnimatePresence } from "@/components/motion";
 
 export default function PlanPage() {
@@ -30,16 +30,18 @@ export default function PlanPage() {
       <Screen>
         <Hero image={sessionImage("full")} height="h-[300px]" back="/today" eyebrow={`${goalLabel(plan.goal)} · ${profile.daysPerWeek} days · ${profile.sessionMinutes} min · ${plan.startDate} → ${endDate}`} title={<>Twelve weeks.<br /><em>One block.</em></>}
           right={<span className="chip chip--live backdrop-blur-md tnum">{doneCount}/{sessions.length} done</span>}>
-          <div className="grid grid-cols-12 gap-1 mt-4 max-w-[520px]">{Array.from({ length: 12 }, (_, i) => <button key={i} type="button" onClick={() => setPicked(i + 1)} aria-label={`Week ${i + 1}`} className={`h-2 rounded-full transition-colors ${i + 1 < currentWeek ? "bg-volt" : i + 1 === currentWeek ? "bg-bone" : "bg-[rgba(236,231,223,.2)]"} ${i + 1 === week ? "outline outline-2 outline-offset-2 outline-bone/60" : ""}`} />)}</div>
+          {/* Read-only progress indicator. It used to be 12 buttons 8px tall —
+              an unhittable duplicate of the W1…W12 row below, which is 44px. */}
+          <div className="grid grid-cols-12 gap-1 mt-4 max-w-[520px]" role="presentation">{Array.from({ length: 12 }, (_, i) => <span key={i} className={`h-2 rounded-full ${i + 1 < currentWeek ? "bg-volt" : i + 1 === currentWeek ? "bg-bone" : "bg-[rgba(236,231,223,.2)]"} ${i + 1 === week ? "outline outline-2 outline-offset-2 outline-bone/60" : ""}`} />)}</div>
         </Hero>
 
-        <Stagger className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-x-10 lg:items-start">
+        <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
           <div className="min-w-0">
             <Item>
-              <div className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-3 mb-4 [scrollbar-width:none] lg:mx-0 lg:px-0 lg:flex-wrap">
+              <Rail active={week} gutter className="gap-2 pb-3 mb-4 lg:mx-0 lg:px-0 lg:flex-wrap lg:overflow-visible">
                 {Array.from({ length: 12 }, (_, i) => { const n = i + 1; const wsn = sessions.filter((s) => s.week === n); const done = wsn.length > 0 && wsn.every((s) => s.status === "done"); return (
                   <button key={n} type="button" aria-pressed={n === week} onClick={() => setPicked(n)} className={`shrink-0 h-11 px-4 rounded-full border text-sm tnum transition-colors ${n === week ? "bg-volt border-volt text-ink font-medium" : done ? "border-line-strong text-bone" : n === currentWeek ? "border-ink text-ink" : "border-line-strong text-smoke"}`}>W{n}{n % 4 === 0 ? " ·" : ""}{n === currentWeek ? " now" : ""}</button>); })}
-              </div>
+              </Rail>
             </Item>
 
             <AnimatePresence mode="wait">

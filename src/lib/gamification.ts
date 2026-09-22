@@ -1,24 +1,117 @@
 import type { Badge, Stats } from "./types";
 
-/* XP curve: level n needs 400·n^1.35 XP to reach n+1. */
-export const xpForLevel = (level: number) => Math.round(400 * Math.pow(level, 1.35));
+/* ─────────────────────────────────────────────────────────────
+   THE LADDER.
+
+   Seventy levels across seven tiers. The cost of a level grows
+   linearly, so the cumulative cost grows as a square — steep
+   enough that the top is a real commitment, flat enough that the
+   top is actually reachable.
+
+   Measured against a committed athlete (four sessions a week,
+   meals logged, daily check-in ≈ 2,100 XP a week):
+
+     Bronze    ~1 month        Platinum  ~13 months
+     Silver    ~3.5 months     Diamond   ~20 months
+     Gold      ~7.5 months     Forge     ~28 months
+
+   Roughly 1.7× those figures for someone training less often.
+   Reaching Gold in a fortnight would take 4,900 XP a day against
+   about 360 that a real day produces, so the tiers that carry a
+   physical reward cannot be rushed.
+   ───────────────────────────────────────────────────────────── */
+
+export const LEVELS_PER_TIER = 10;
+export const MAX_LEVEL = 70;
+
+/** XP needed to go from `level` to the next one. */
+export const xpForLevel = (level: number) => 280 + 130 * level;
+
+/** Total XP needed to arrive at `level` from zero. */
+export function xpToReach(level: number) {
+  let total = 0;
+  for (let n = 1; n < level; n++) total += xpForLevel(n);
+  return total;
+}
 
 export function levelFromXp(xp: number) {
   let level = 1;
-  let remaining = xp;
-  while (remaining >= xpForLevel(level)) {
+  let remaining = Math.max(0, xp);
+  while (level < MAX_LEVEL && remaining >= xpForLevel(level)) {
     remaining -= xpForLevel(level);
     level++;
   }
   return { level, into: remaining, need: xpForLevel(level) };
 }
 
-export const RANKS = ["Iron", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Forge"] as const;
-export function rankFor(level: number) {
-  const tier = Math.min(RANKS.length - 1, Math.floor((level - 1) / 10));
-  const sub = 4 - Math.floor(((level - 1) % 10) / 2.5);
-  return `${RANKS[tier]} ${["I", "II", "III", "IV"][Math.max(0, Math.min(3, sub - 1))]}`;
+export interface Reward {
+  /** What the athlete actually receives. */
+  item: string;
+  /** One line on why it exists, shown under the item. */
+  note: string;
+  /** Needs a shipping address rather than being granted in-app. */
+  physical: boolean;
 }
+
+export interface Tier {
+  key: string;
+  name: string;
+  /** First level in the tier. */
+  from: number;
+  /** Emblem colours: rim, face, and the light that catches the bevel. */
+  metal: { rim: string; face: string; shine: string };
+  reward?: Reward;
+}
+
+export const TIERS: Tier[] = [
+  { key: "iron", name: "Iron", from: 1,
+    metal: { rim: "#4a4c50", face: "#7e8288", shine: "#bfc3c8" } },
+  { key: "copper", name: "Copper", from: 11,
+    metal: { rim: "#6e3315", face: "#b0592c", shine: "#e59a63" },
+    reward: { item: "Enamel pin + sticker set", note: "A month in. The first thing you own that says you train here.", physical: true } },
+  { key: "bronze", name: "Bronze", from: 21,
+    metal: { rim: "#7a441d", face: "#b9743a", shine: "#e6ab73" },
+    reward: { item: "Insulated water bottle", note: "Three months. You are not experimenting any more.", physical: true } },
+  { key: "silver", name: "Silver", from: 31,
+    metal: { rim: "#6f7883", face: "#aab4c0", shine: "#e8eef5" },
+    reward: { item: "Training tee", note: "Half a year of work. Earned, not bought.", physical: true } },
+  { key: "gold", name: "Gold", from: 41,
+    metal: { rim: "#8a6410", face: "#d7a327", shine: "#fbe08a" },
+    reward: { item: "Gym bag", note: "A full year. Most people never see this tier.", physical: true } },
+  { key: "emerald", name: "Emerald", from: 51,
+    metal: { rim: "#134f33", face: "#2f9c66", shine: "#8fe3b6" },
+    reward: { item: "Gift card, store of your choice", note: "Two years of showing up. Spend it on whatever you train for.", physical: true } },
+  { key: "platine", name: "Platine", from: 61,
+    metal: { rim: "#5f6c72", face: "#b6c9cb", shine: "#f0fbfb" },
+    reward: { item: "Forge jacket", note: "The last tier. There is nothing after this but the work.", physical: true } },
+];
+
+export const tierForLevel = (level: number): Tier =>
+  [...TIERS].reverse().find((t) => level >= t.from) ?? TIERS[0];
+
+/** Roman sub-rank inside a tier: I at the bottom, IV at the top. */
+export function subRankFor(level: number) {
+  const tier = tierForLevel(level);
+  const into = Math.min(LEVELS_PER_TIER - 1, level - tier.from);
+  return ["I", "II", "III", "IV"][Math.floor(into / (LEVELS_PER_TIER / 4))] ?? "IV";
+}
+
+export function rankFor(level: number) {
+  return `${tierForLevel(level).name} ${subRankFor(level)}`;
+}
+
+/** The next tier that carries a reward, and how far away it is. */
+export function nextRewardFor(level: number, xp: number) {
+  const tier = TIERS.find((t) => t.from > level && t.reward);
+  if (!tier) return null;
+  return { tier, levelsAway: tier.from - level, xpAway: Math.max(0, xpToReach(tier.from) - xp) };
+}
+
+/** Tiers the athlete has reached, newest first — what they can claim. */
+export const earnedTiers = (level: number) => TIERS.filter((t) => t.reward && level >= t.from).reverse();
+
+/** Legacy alias: some screens still read the plain list of names. */
+export const RANKS = TIERS.map((t) => t.name);
 
 /* XP sources. Deliberately rewards the boring, compounding stuff. */
 export const XP = {

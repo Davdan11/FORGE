@@ -27,7 +27,7 @@ Install as an app: Chrome/Edge → "Install FORGE"; iOS Safari → Share → Add
 | Nutrition engine (targets by goal/day type, no-repeat meals, groceries, nudges) | `src/lib/nutrition/engine.ts` | ✅ |
 | XP, levels, ranks, badges, streaks | `src/lib/gamification.ts`, `src/lib/progress.ts` | ✅ |
 | PWA (manifest, service worker, offline shell, notifications) | `public/` | ✅ |
-| Supabase auth + sync | `src/lib/supabase`, `src/lib/sync.ts`, `supabase/schema.sql` | ✅ push sync; pull/merge is v0.2 |
+| Supabase auth + sync (push + pull, last-write-wins) · local JSON export/restore · persistent storage request | `src/lib/supabase`, `src/lib/sync.ts`, `src/lib/backup.ts`, `supabase/schema.sql` | ✅ |
 | Today: week ring, recovery clock, sleep debt + 7-day readiness trend, main-lift preview with e1RM delta, muscles/tonnage planned, quick actions | `src/app/(app)/today` | ✅ v0.5 |
 | Guided 12-minute mobility flow (six moves, timer, side switch buzz, XP) | `src/components/MobilityFlow.tsx` | ✅ v0.5 |
 | Session: live tonnage, warm-up ramp, plate calculator, tempo coach (rig animates at prescribed tempo), ±2.5 kg / ±1 rep steppers, last-time + best e1RM, next-up card, session note, muscles in summary | `src/app/(app)/session/[id]`, `src/lib/units.ts` (`platesFor`) | ✅ v0.5 |
@@ -51,6 +51,14 @@ Install as an app: Chrome/Edge → "Install FORGE"; iOS Safari → Share → Add
 5. Restart `npm run dev`. Settings → Account → send a magic link → Sync now.
 
 Without it, everything still works locally.
+
+## Tests
+
+```bash
+npm test
+```
+
+64 tests over the pure decision logic — `units.ts` (plate maths, e1RM, rounding to what exists on a bar), `engine/plan.ts` (twelve-week shape, pain and equipment constraints, determinism), `engine/readiness.ts` (score bounds and monotonicity, the 40/65 auto-regulation thresholds), `nutrition/engine.ts` (targets, no repeats, diet filters) and `backup.ts` (every way a restore file can be rejected before it wipes a device).
 
 ## Structure
 

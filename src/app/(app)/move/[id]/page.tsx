@@ -35,14 +35,23 @@ export default function ActivityPage() {
 
   return (
     <Page>
-      <Screen className="px-0">
-        <div className="relative h-[46vh] min-h-[320px] -mt-[calc(var(--safe-top)+16px)]">
+      <Screen>
+        <div className="bleed relative h-[46vh] min-h-[320px] -mt-[calc(var(--safe-top)+16px)] lg:-mt-10 lg:h-auto lg:min-h-[62vh] mb-8 lg:mb-[var(--stack-loose)]">
           <MapView points={a.points} />
-          <div className="absolute left-3 top-[calc(var(--safe-top)+12px)]"><Link href="/move" className="chip chip--live backdrop-blur-md">← Back</Link></div>
-          <div className="absolute right-3 top-[calc(var(--safe-top)+12px)] flex gap-2"><span className="chip chip--volt">+{a.xp} XP</span>{a.shared && <span className="chip chip--live backdrop-blur-md">On profile</span>}</div>
-          <div className="on-photo absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-ink to-transparent pointer-events-none"><h1 className="display text-3xl">{a.title}</h1><p className="meta">{new Date(a.startedAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} · <span className="capitalize">{a.type}</span>{a.feel ? ` · felt ${FEEL[a.feel].toLowerCase()}` : ""}</p></div>
+          <div className="absolute inset-x-0 top-[calc(var(--safe-top)+12px)] lg:top-7">
+            <div className="screen flex justify-between items-start gap-3">
+              <Link href="/move" className="chip chip--live backdrop-blur-md shrink-0">← Back</Link>
+              <div className="flex gap-2 shrink-0"><span className="chip chip--volt">+{a.xp} XP</span>{a.shared && <span className="chip chip--live backdrop-blur-md">On profile</span>}</div>
+            </div>
+          </div>
+          <div className="on-photo absolute inset-x-0 bottom-0 pb-6 lg:pb-12 pt-24 bg-gradient-to-t from-ink to-transparent pointer-events-none">
+            <div className="screen">
+              <p className="eyebrow mb-4">{new Date(a.startedAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} · <span className="capitalize">{a.type}</span>{a.feel ? ` · felt ${FEEL[a.feel].toLowerCase()}` : ""}</p>
+              <h1 className="display display--lg leading-[0.92] max-w-[16ch]" style={{ fontSize: "var(--text-display-lg)" }}>{a.title}</h1>
+            </div>
+          </div>
         </div>
-        <div className="px-5 pt-5">
+        <div>
           <Stagger>
             <Item>
               <div className="flex gap-3 mb-5">
@@ -51,12 +60,12 @@ export default function ActivityPage() {
               </div>
             </Item>
             <Item>
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <Stat label="Distance" value={fmtDist(a.distanceM, u)} accent />
                 <Stat label="Time" value={fmtDuration(a.durationSec)} sub={a.movingSec ? `moving ${fmtDuration(a.movingSec)}` : undefined} />
                 <Stat label={rateFor(a, u).label} value={rateFor(a, u).value} sub={rateFor(a, u).sub} />
                 <Stat label="Elevation" count={Math.round(a.elevGainM)} suffix=" m" sub={a.elevLossM != null ? `↓ ${Math.round(a.elevLossM)} m` : "gain"} />
-                {speedKmh ? <Stat label="Max speed" value={u === "imperial" ? `${(speedKmh / 1.609).toFixed(1)} mph` : `${speedKmh.toFixed(1)} km/h`} /> : null}
+                {speedKmh ? <Stat label="Max speed" value={u.distance === "mi" ? `${(speedKmh / 1.609).toFixed(1)} mph` : `${speedKmh.toFixed(1)} km/h`} /> : null}
                 {a.type === "swim" && a.meta?.laps ? <Stat label="Laps" count={a.meta.laps} sub={`${a.meta.poolM ?? 25} m pool`} /> : a.meta?.discipline ? <Stat label="Discipline" value={a.meta.discipline.replace("xc-", "XC ")} /> : a.meta?.bike ? <Stat label="Bike" value={a.meta.bike} /> : <Stat label="Points" count={a.points.length} sub="GPS samples" />}
               </div>
             </Item>

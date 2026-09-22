@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js build output
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Full-resolution artwork sources — optimised copies live in public/
+art-source/
+
+# Local tooling (launch configs hold machine-specific absolute paths)
+.claude/
+.vscode/
+.idea/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Test output
+coverage/
+
+# macOS
+.DS_Store

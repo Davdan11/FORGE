@@ -1,5 +1,6 @@
 import type { PainArea, Profile, Readiness, Session } from "../types";
-import { buildSession } from "./plan";
+import { buildSession, type MeasuredE1rm } from "./plan";
+import type { InjuryAdaptation } from "./injury";
 import { roundLoad } from "../units";
 import { getExercise } from "../data/exercises";
 
@@ -28,7 +29,7 @@ export interface Adjustment { session: Session; changes: string[]; reason: strin
  * Rewrite today's session from readiness + real-life constraints.
  * Keeps the *intent* of the block; changes the means.
  */
-export function autoRegulate(profile: Profile, planned: Session, r: Readiness): Adjustment {
+export function autoRegulate(profile: Profile, planned: Session, r: Readiness, measured: MeasuredE1rm = {}, injuries: InjuryAdaptation[] = []): Adjustment {
   const changes: string[] = [];
   let session: Session = structuredClone(planned);
   const minutes = r.minutesAvailable ?? planned.minutes;
@@ -43,7 +44,7 @@ export function autoRegulate(profile: Profile, planned: Session, r: Readiness): 
       equipment: equipmentToday === "full" ? profile.equipment : equipmentToday === "dumbbells" ? ["dumbbell", "bench", "band", "bodyweight"] : ["bodyweight", "band"],
       pain: [...new Set([...profile.pain, ...pain])],
     };
-    session = { ...buildSession(p, planned.planId, planned.week, planned.day, planned.date, planned.kind, minutes, pain), id: planned.id };
+    session = { ...buildSession(p, planned.planId, planned.week, planned.day, planned.date, planned.kind, minutes, pain, measured, injuries), id: planned.id };
     if (equipmentToday !== "full") changes.push(`Rewritten for ${equipmentToday === "dumbbells" ? "dumbbells only" : "no equipment"} — same patterns, different tools.`);
     if (pain.length) changes.push(`Movements loading the ${pain.join(", ")} swapped out for today.`);
     if (minutes < planned.minutes - 10) changes.push(`Cut to ${minutes} min: accessories trimmed, main lift kept.`);

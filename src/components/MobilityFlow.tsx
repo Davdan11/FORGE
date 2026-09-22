@@ -57,7 +57,7 @@ export function MobilityFlow({ onClose }: { onClose: (xp: number | null) => void
         ) : (
           <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 grid content-center justify-items-center gap-4 px-6 text-center">
             <p className="meta">Flow complete</p>
-            <p className="display text-6xl text-volt">+<CountUp value={done} /><span className="text-2xl"> XP</span></p>
+            <p className="numeral text-volt">+<CountUp value={done} /><span className="text-2xl"> XP</span></p>
             <p className="text-sm text-smoke max-w-[34ch]">Twelve minutes banked. Hips, shoulders and ankles will thank you at the next heavy session.</p>
             <Press><button type="button" className="pill pill--bone pill--lg" onClick={() => onClose(done)}>Back to today</button></Press>
           </motion.div>

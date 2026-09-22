@@ -14,7 +14,7 @@ export default function Root() {
   return (
     <main className="flex-1 grid place-items-center">
       <div className="grid justify-items-center gap-3">
-        <span className="display text-6xl text-ink overflow-hidden flex">
+        <span className="display display--lg text-ink overflow-hidden flex" style={{ fontSize: "var(--text-display-lg)" }}>
           {"FORGE".split("").map((c, i) => (
             <motion.i key={i} className="not-italic inline-block" initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ duration: 0.7, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}>{c}</motion.i>
           ))}

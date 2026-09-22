@@ -1,5 +1,13 @@
 import { db, getStats, getProfile, isoWeek, todayISO } from "./db";
 import { XP, levelFromXp, evaluateBadges } from "./gamification";
+import { verifyActivity, type Verification } from "./verify";
+
+export const LEVEL_UP_EVENT = "forge:levelup";
+/** Fired when an award pushes the athlete past a level boundary. */
+function announceLevelUp(level: number) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<number>(LEVEL_UP_EVENT, { detail: level }));
+}
 import { e1rm } from "./units";
 import type { Activity, SessionLog } from "./types";
 
@@ -41,7 +49,11 @@ async function finalize(newBadgesExtra: { activityDistanceM?: number } = {}) {
   const ctx = { bestE1rm: best, bodyweightKg: profile?.weightKg ?? 80, best5kSec: best5k, zone2Min: zone2Min + acts.reduce((a, b) => a + b.durationSec / 60, 0) };
   const earned = evaluateBadges(stats, ctx);
   stats.badges.push(...earned);
+  // The award path is the one place that knows a level was crossed, so it
+  // announces it here rather than having the UI poll the stats row.
+  const levelBefore = stats.level;
   stats.level = levelFromXp(stats.xp).level;
+  if (stats.level > levelBefore) announceLevelUp(stats.level);
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   void newBadgesExtra;
   return { stats, earned };
@@ -64,29 +76,46 @@ export async function awardSession(log: SessionLog, opts: { adjusted: boolean; s
   return { xp, prs, earned };
 }
 
-export function activityXpBreakdown(a: Pick<Activity, "durationSec" | "elevGainM" | "workoutId" | "shared">) {
+/**
+ * XP for a recorded activity, paid on verified effort rather than elapsed time.
+ *
+ * A route that was driven earns the base and nothing else; twenty minutes spent
+ * sitting in a café is simply not in `movingSec`. The breakdown is returned so
+ * the save sheet can show exactly what counted and what did not.
+ */
+export function activityXpBreakdown(
+  a: Pick<Activity, "durationSec" | "elevGainM" | "workoutId" | "shared" | "type"> & { points?: Activity["points"] },
+  verification?: Verification,
+) {
+  const v = verification ?? verifyActivity(a.points ?? [], a.type, a.durationSec);
+  const minutes = Math.round(v.movingSec / 60);
   const parts = [
     { label: "Activity", xp: XP.activityBase },
-    { label: `${Math.round(a.durationSec / 60)} min moving`, xp: Math.round((a.durationSec / 60) * XP.cardioMinute) },
+    { label: `${minutes} min moving`, xp: Math.round(minutes * XP.cardioMinute) },
   ];
-  if (a.elevGainM >= 100) parts.push({ label: `${Math.round(a.elevGainM)} m climbed`, xp: Math.floor(a.elevGainM / 100) * XP.elevPer100m });
+  // Climbing credit follows the same rule: only the part that was verified.
+  const climbed = Math.round(a.elevGainM * v.credit);
+  if (climbed >= 100) parts.push({ label: `${climbed} m climbed`, xp: Math.floor(climbed / 100) * XP.elevPer100m });
   if (a.workoutId) parts.push({ label: "Guided workout", xp: XP.guidedWorkout });
   if (a.shared) parts.push({ label: "Shared to profile", xp: XP.shareActivity });
-  return { parts, total: parts.reduce((s, p) => s + p.xp, 0) };
+  const skipped = v.flags.map((f) => f.message);
+  return { parts, skipped, verification: v, total: parts.reduce((s, p) => s + p.xp, 0) };
 }
 
 export async function awardActivity(a: Activity) {
   const stats = await getStats();
-  const { total: xp } = activityXpBreakdown(a);
+  const { total: xp, verification } = activityXpBreakdown(a);
   stats.xp += xp;
-  stats.totals.distanceM += a.distanceM;
+  // Lifetime distance counts what the track supports, so leaderboards and
+  // badges cannot be reached by driving.
+  stats.totals.distanceM += verification.verifiedDistanceM || (verification.credit > 0 ? a.distanceM : 0);
   stats.totals.activities = (stats.totals.activities ?? 0) + 1;
-  stats.totals.elevGainM = (stats.totals.elevGainM ?? 0) + a.elevGainM;
+  stats.totals.elevGainM = (stats.totals.elevGainM ?? 0) + Math.round(a.elevGainM * verification.credit);
   if (a.shared) stats.totals.shared = (stats.totals.shared ?? 0) + 1;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   await touchStreak();
   const { earned } = await finalize();
-  return { xp, earned };
+  return { xp, earned, verification };
 }
 
 /** Share an already-saved activity to the profile feed. */

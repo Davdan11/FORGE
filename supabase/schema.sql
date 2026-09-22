@@ -30,6 +30,8 @@ select forge_table('readiness');
 select forge_table('activities');
 select forge_table('nutrition');
 select forge_table('stats');
+select forge_table('weights');
+select forge_table('injuries');
 
 -- Public leaderboard view (opt-in later): level + streak only, no personal data.
 create table if not exists leaderboard (

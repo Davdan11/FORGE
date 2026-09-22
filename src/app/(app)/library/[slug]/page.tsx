@@ -23,19 +23,21 @@ export default function ExercisePage() {
   return (
     <Page>
       <Screen>
-        <div className="relative -mx-5 -mt-[calc(var(--safe-top)+16px)] lg:mx-0 lg:mt-0 lg:rounded-[28px] lg:border lg:border-line overflow-hidden mb-6 h-[460px] lg:h-[520px]">
+        <div className="bleed relative -mt-[calc(var(--safe-top)+16px)] lg:-mt-10 overflow-hidden mb-8 lg:mb-[var(--stack-section)] h-[460px] lg:h-auto lg:min-h-[72vh]">
           <MoveMedia ex={ex} fill />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/45 to-ink/10" />
-          <div className="on-photo absolute inset-x-0 top-0 pt-[calc(var(--safe-top)+16px)] lg:pt-6 px-5 lg:px-8 flex justify-between items-start"><Link href="/library" className="chip chip--live backdrop-blur-md">← Back</Link></div>
-          <div className="on-photo absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-8 lg:pb-8">
-            <p className="meta text-bone/80 mb-2">{ex.pattern.replace("_", " ")} · {ex.equipment.join(" · ")}</p>
-            <h1 className="display text-[2.4rem] lg:text-[4rem] leading-[0.92]">{ex.name}</h1>
-            <div className="flex flex-wrap gap-1.5 mt-3">{ex.primary.map((m) => <span key={m} className="chip chip--volt">{m}</span>)}{ex.secondary.map((m) => <span key={m} className="chip chip--live">{m}</span>)}{ex.tempo && <span className="chip chip--live">Tempo {ex.tempo}</span>}</div>
+          <div className="photo__veil photo__veil--hero" />
+          <div className="on-photo absolute inset-x-0 top-0 pt-[calc(var(--safe-top)+16px)] lg:pt-8"><div className="screen flex justify-between items-start"><Link href="/library" className="chip chip--live backdrop-blur-md">← Back</Link></div></div>
+          <div className="on-photo absolute inset-x-0 bottom-0 pb-7 lg:pb-14">
+            <div className="screen">
+              <p className="eyebrow mb-5">{ex.pattern.replace("_", " ")} · {ex.equipment.join(" · ")}</p>
+              <h1 className="display display--xl leading-[0.9] max-w-[14ch]" style={{ fontSize: "var(--text-display-xl)" }}>{ex.name}</h1>
+              <div className="flex flex-wrap gap-1.5 mt-6">{ex.primary.map((m) => <span key={m} className="chip chip--volt">{m}</span>)}{ex.secondary.map((m) => <span key={m} className="chip chip--live">{m}</span>)}{ex.tempo && <span className="chip chip--live">Tempo {ex.tempo}</span>}</div>
+            </div>
           </div>
         </div>
 
-        <Stagger className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-x-10 lg:items-start">
-          <div className="min-w-0 lg:order-2">
+        <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
+          <div className="min-w-0 xl:order-2">
           <Item>
             <Section title="In your block" aside={<span className="text-xs text-smoke tnum">{upcoming.length} session{upcoming.length === 1 ? "" : "s"}</span>}>
               {upcoming.length === 0 ? <p className="text-sm text-smoke mb-6">Not in the remaining weeks — swap it in from any session.</p> : (
@@ -51,7 +53,7 @@ export default function ExercisePage() {
             </Section>
           </Item>
           </div>
-          <div className="min-w-0 lg:order-1">
+          <div className="min-w-0 xl:order-1">
           <Item>
             <Section title="Cues">
               <ol className="grid gap-3">{ex.cues.map((c, i) => <li key={c} className="card p-3 flex gap-3 text-sm"><span className="display text-xl text-volt tnum w-6">{i + 1}</span>{c}</li>)}</ol>

@@ -11,9 +11,9 @@ import { MoveMedia } from "@/components/MoveMedia";
 import { nextSetFromRpe } from "@/lib/engine/autoregulate";
 import { awardSession, bestE1rmBySlug } from "@/lib/progress";
 import { fmtLoad, kgToLb, lbToKg, fmtDuration, platesFor, roundLoad, e1rm } from "@/lib/units";
-import { Screen, Hero, Toast, ScreenSkeleton } from "@/components/ui";
+import { Screen, Hero, Toast, ScreenSkeleton, Rail } from "@/components/ui";
 import { Page, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
-import type { LoggedSet, PrescribedExercise, PrescribedSet, Units } from "@/lib/types";
+import type { LoggedSet, PrescribedExercise, PrescribedSet, UnitPrefs } from "@/lib/types";
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>();
@@ -123,19 +123,19 @@ export default function SessionPage() {
           </div>
         )}
 
-        <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-8 lg:items-start">
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-3 -mx-5 px-5 [scrollbar-width:none] lg:flex-col lg:overflow-visible lg:mx-0 lg:px-0 lg:sticky lg:top-8">
+        <div className="xl:grid xl:grid-cols-[var(--rail-nav)_minmax(0,1fr)] xl:gap-10 xl:items-start">
+        <Rail active={active} gutter className="gap-2 pb-3 mb-3 xl:flex-col xl:overflow-visible xl:mx-0 xl:px-0 xl:sticky xl:top-10">
           {session.exercises.map((e, i) => {
             const n = byEx[e.id]?.length ?? 0; const meta = getExercise(e.slug);
             return (
-              <button key={e.id} type="button" onClick={() => setActive(i)} className={`shrink-0 flex items-center gap-2 pl-1 pr-3 py-1 min-h-11 rounded-full border transition-colors lg:w-full lg:min-h-14 lg:pl-1.5 lg:pr-4 ${i === active ? "bg-volt border-volt text-ink" : n >= e.sets.length ? "border-line-strong" : "border-line text-smoke"}`}>
+              <button key={e.id} type="button" aria-pressed={i === active} onClick={() => setActive(i)} className={`shrink-0 flex items-center gap-2 pl-1 pr-3 py-1 min-h-11 rounded-full border transition-colors xl:w-full xl:min-h-14 xl:pl-1.5 xl:pr-4 ${i === active ? "bg-volt border-volt text-ink" : n >= e.sets.length ? "border-line-strong" : "border-line text-smoke"}`}>
                 {meta && <span className="w-9 h-9 rounded-full overflow-hidden relative shrink-0"><MoveMedia ex={meta} fill /></span>}
-                <span className="text-xs lg:text-sm font-medium whitespace-nowrap lg:flex-1 lg:text-left">{meta?.name}</span>
+                <span className="text-xs xl:text-sm font-medium whitespace-nowrap xl:flex-1 xl:text-left xl:min-w-0 xl:truncate">{meta?.name}</span>
                 <span className="text-[10px] tnum opacity-70">{n}/{e.sets.length}</span>
               </button>
             );
           })}
-        </div>
+        </Rail>
 
         <div className="min-w-0">
         <AnimatePresence mode="wait">
@@ -185,7 +185,7 @@ export default function SessionPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[60] bg-ink/95 text-bone backdrop-blur-md grid place-items-center p-6 overflow-y-auto">
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 22 }} className="w-full max-w-[420px] grid gap-5 text-center justify-items-center">
               <p className="meta">Session logged</p>
-              <p className="display text-6xl text-volt">+<CountUp value={summary.xp} duration={1.4} /><span className="text-2xl"> XP</span></p>
+              <p className="numeral text-volt">+<CountUp value={summary.xp} duration={1.4} /><span className="text-2xl"> XP</span></p>
               <div className="grid grid-cols-3 gap-3 w-full">
                 <div className="card p-3"><span className="meta">Sets</span><strong className="display text-2xl block"><CountUp value={summary.sets} /></strong></div>
                 <div className="card p-3"><span className="meta">Volume</span><strong className="display text-2xl block"><CountUp value={Math.round(summary.volume)} suffix=" kg" /></strong></div>
@@ -209,7 +209,7 @@ function Clock({ from }: { from: string }) {
   return <>{fmtDuration(s)}</>;
 }
 
-function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap }: { ex: PrescribedExercise; logged: LoggedSet[]; units: Units; disabled: boolean; sessionId: string; onLog: (i: number, v: { reps?: number; seconds?: number; loadKg?: number; rpe?: number }) => void; onSwap: () => void }) {
+function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap }: { ex: PrescribedExercise; logged: LoggedSet[]; units: UnitPrefs; disabled: boolean; sessionId: string; onLog: (i: number, v: { reps?: number; seconds?: number; loadKg?: number; rpe?: number }) => void; onSwap: () => void }) {
   const meta = getExercise(ex.slug);
   const [showWhy, setShowWhy] = useState(false);
   const [tempo, setTempo] = useState(false);
@@ -277,7 +277,7 @@ function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap }:
   );
 }
 
-function PlateCalc({ loadKg, units }: { loadKg: number; units: Units }) {
+function PlateCalc({ loadKg, units }: { loadKg: number; units: UnitPrefs }) {
   const p = platesFor(loadKg, units);
   return (
     <div className="px-4 py-3 grid gap-2 text-sm">
@@ -292,9 +292,9 @@ function PlateCalc({ loadKg, units }: { loadKg: number; units: Units }) {
   );
 }
 
-function SetRow({ i, set, logged, units, disabled, timed, loadable, onLog }: { i: number; set: PrescribedSet; logged?: LoggedSet; units: Units; disabled: boolean; timed: boolean; loadable: boolean; onLog: (v: { reps?: number; seconds?: number; loadKg?: number; rpe?: number }) => void }) {
-  const toUnit = (kg?: number) => (kg == null ? 0 : units === "imperial" ? Math.round(kgToLb(kg)) : Math.round(kg * 2) / 2);
-  const step = units === "imperial" ? 5 : 2.5;
+function SetRow({ i, set, logged, units, disabled, timed, loadable, onLog }: { i: number; set: PrescribedSet; logged?: LoggedSet; units: UnitPrefs; disabled: boolean; timed: boolean; loadable: boolean; onLog: (v: { reps?: number; seconds?: number; loadKg?: number; rpe?: number }) => void }) {
+  const toUnit = (kg?: number) => (kg == null ? 0 : units.weight === "lb" ? Math.round(kgToLb(kg)) : Math.round(kg * 2) / 2);
+  const step = units.weight === "lb" ? 5 : 2.5;
   const [load, setLoad] = useState<number>(toUnit(set.loadKg));
   const [reps, setReps] = useState<number>(set.reps ?? set.seconds ?? 0);
   const [rpe, setRpe] = useState<number | null>(null);
@@ -312,7 +312,7 @@ function SetRow({ i, set, logged, units, disabled, timed, loadable, onLog }: { i
   const commit = () => {
     const v: { reps?: number; seconds?: number; loadKg?: number; rpe?: number } = { rpe: rpe ?? undefined };
     if (timed) v.seconds = reps || set.seconds; else v.reps = reps || set.reps;
-    if (loadable && load > 0) v.loadKg = units === "imperial" ? lbToKg(load) : load;
+    if (loadable && load > 0) v.loadKg = units.weight === "lb" ? lbToKg(load) : load;
     onLog(v);
   };
   return (
@@ -320,7 +320,7 @@ function SetRow({ i, set, logged, units, disabled, timed, loadable, onLog }: { i
       <div className="grid grid-cols-[28px_1fr] items-start gap-3">
         <span className="meta pt-6">{i + 1}</span>
         <div className="grid gap-2 sm:grid-cols-2">
-        {loadable ? <Stepper disabled={disabled} value={load} onChange={setLoad} delta={step} label={units === "imperial" ? "lb" : "kg"} hint={set.pct ? `${Math.round(set.pct * 100)}%` : undefined} /> : <span className="text-xs text-smoke self-end pb-3 min-h-11 flex items-center">bodyweight</span>}
+        {loadable ? <Stepper disabled={disabled} value={load} onChange={setLoad} delta={step} label={units.weight} hint={set.pct ? `${Math.round(set.pct * 100)}%` : undefined} /> : <span className="text-xs text-smoke self-end pb-3 min-h-11 flex items-center">bodyweight</span>}
         <Stepper disabled={disabled} value={reps} onChange={setReps} delta={timed ? 5 : 1} label={timed ? "seconds" : "reps"} hint={set.rpe ? `RPE ${set.rpe}` : undefined} />
         </div>
       </div>

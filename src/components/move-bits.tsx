@@ -1,33 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { Footprints, TreePine, Bike, PersonStanding, Mountain, Backpack, Sailboat, Snowflake, Waves, Activity as ActivityIcon, type LucideIcon } from "lucide-react";
-import type { Activity, ActivityType, TrackPoint, WorkoutSegment } from "@/lib/types";
+import {
+  RunIcon, TrailIcon, RideIcon, WalkIcon, HikeIcon, RuckIcon, RowIcon, SkiIcon, SwimIcon, OtherIcon,
+  MtbIcon, GravelIcon, SkateIcon, SkiAlpineIcon, SnowboardIcon, IceSkateIcon, KayakIcon, SurfIcon,
+  ClimbIcon, BoulderIcon, SoccerIcon, FootballIcon, HockeyIcon, BasketballIcon, TennisIcon, CombatIcon,
+  SkydiveIcon, ParaglideIcon,
+} from "./sport-icons";
+import { SPORTS } from "@/lib/data/sports";
+import type { SVGProps } from "react";
+
+type SportIcon = (p: SVGProps<SVGSVGElement> & { strokeWidth?: number }) => React.ReactElement;
+import type { Activity, ActivityType, TrackPoint, WorkoutSegment, UnitPrefs } from "@/lib/types";
 import { fmtDist, fmtDuration } from "@/lib/units";
 
-export const TYPES: { v: ActivityType; label: string; icon: LucideIcon }[] = [
-  { v: "run", label: "Run", icon: Footprints },
-  { v: "trail", label: "Trail", icon: TreePine },
-  { v: "ride", label: "Ride", icon: Bike },
-  { v: "walk", label: "Walk", icon: PersonStanding },
-  { v: "hike", label: "Hike", icon: Mountain },
-  { v: "ruck", label: "Ruck", icon: Backpack },
-  { v: "row", label: "Row", icon: Sailboat },
-  { v: "ski", label: "Ski", icon: Snowflake },
-  { v: "swim", label: "Swim", icon: Waves },
-  { v: "other", label: "Other", icon: ActivityIcon },
-];
+/** Icon per sport; the catalogue in lib/data/sports.ts is the source of truth
+ *  for which sports exist, what they measure and how fast is plausible. */
+const ICON: Record<ActivityType, SportIcon> = {
+  run: RunIcon, trail: TrailIcon, walk: WalkIcon, hike: HikeIcon, ruck: RuckIcon,
+  ride: RideIcon, mtb: MtbIcon, gravel: GravelIcon, skate: SkateIcon,
+  ski: SkiIcon, ski_alpine: SkiAlpineIcon, snowboard: SnowboardIcon, ice_skate: IceSkateIcon,
+  swim: SwimIcon, row: RowIcon, kayak: KayakIcon, surf: SurfIcon,
+  climb: ClimbIcon, boulder: BoulderIcon,
+  soccer: SoccerIcon, football: FootballIcon, hockey: HockeyIcon,
+  basketball: BasketballIcon, tennis: TennisIcon, combat: CombatIcon,
+  skydive: SkydiveIcon, paraglide: ParaglideIcon,
+  other: OtherIcon,
+};
+
+export const sportIcon = (t: ActivityType): SportIcon => ICON[t] ?? OtherIcon;
+
+export const TYPES: { v: ActivityType; label: string; icon: SportIcon }[] =
+  SPORTS.map((s) => ({ v: s.v, label: s.label, icon: sportIcon(s.v) }));
 
 /** Sports where speed reads better than pace. */
 export const SPEED_SPORTS: ActivityType[] = ["ride", "ski", "row"];
 export const isSpeedSport = (t: ActivityType) => SPEED_SPORTS.includes(t);
 /** Primary rate metric for a sport: pace per km/mi, pace per 100 m (swim) or speed. */
-export function rateFor(a: { type: ActivityType; distanceM: number; durationSec: number }, units: "metric" | "imperial"): { label: string; value: string; sub: string } {
+export function rateFor(a: { type: ActivityType; distanceM: number; durationSec: number }, units: UnitPrefs): { label: string; value: string; sub: string } {
   if (a.distanceM < 10 || a.durationSec < 5) return { label: "Pace", value: "—", sub: "" };
   if (a.type === "swim") { const s = a.durationSec / (a.distanceM / 100); return { label: "Pace", value: `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`, sub: "per 100 m" }; }
-  if (isSpeedSport(a.type)) { const kmh = (a.distanceM / a.durationSec) * 3.6; return { label: "Avg speed", value: units === "imperial" ? (kmh / 1.609).toFixed(1) : kmh.toFixed(1), sub: units === "imperial" ? "mph" : "km/h" }; }
-  const secKm = a.durationSec / (a.distanceM / 1000); const s = units === "imperial" ? secKm * 1.609344 : secKm;
-  return { label: "Avg pace", value: `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`, sub: units === "imperial" ? "per mile" : "per km" };
+  if (isSpeedSport(a.type)) { const kmh = (a.distanceM / a.durationSec) * 3.6; return { label: "Avg speed", value: units.distance === "mi" ? (kmh / 1.609).toFixed(1) : kmh.toFixed(1), sub: units.distance === "mi" ? "mph" : "km/h" }; }
+  const secKm = a.durationSec / (a.distanceM / 1000); const s = units.distance === "mi" ? secKm * 1.609344 : secKm;
+  return { label: "Avg pace", value: `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`, sub: units.distance === "mi" ? "per mile" : "per km" };
 }
 
 /** Segment timeline coloured by zone (single hue, opacity steps). */
@@ -52,7 +67,7 @@ export function MiniRoute({ points, size = 56 }: { points: TrackPoint[]; size?: 
   return <svg viewBox={`0 0 ${size} ${size}`} className="rounded-xl bg-graphite border border-line shrink-0" style={{ width: size, height: size }}><path d={d} fill="none" stroke="var(--volt)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-export function ActivityRow({ a, units }: { a: Activity; units: "metric" | "imperial" }) {
+export function ActivityRow({ a, units }: { a: Activity; units: UnitPrefs }) {
   return (
     <Link href={`/move/${a.id}`} className="card p-2 flex items-center gap-3">
       <MiniRoute points={a.points} />

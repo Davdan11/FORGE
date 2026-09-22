@@ -101,12 +101,28 @@ export function buildNutritionDay(p: Profile, date: string, session: Session | n
   return { id: date, date, dayType, targets: { kcal: targets.kcal, protein: targets.protein, carbs: targets.carbs, fat: targets.fat }, meals, waterMl: Math.round(p.weightKg * 35 + (train ? 500 : 0)) };
 }
 
-export function dayTotals(day: NutritionDay) {
-  return day.meals.reduce((acc, m) => {
+function sumMeals(meals: NutritionDay["meals"]) {
+  return meals.reduce((acc, m) => {
     const meal = getMeal(m.mealId); if (!meal) return acc;
     acc.kcal += meal.kcal * m.scale; acc.protein += meal.protein * m.scale; acc.carbs += meal.carbs * m.scale; acc.fat += meal.fat * m.scale; acc.sugar += (meal.sugar ?? 0) * m.scale; acc.fiber += (meal.fiber ?? 0) * m.scale;
     return acc;
   }, { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0 });
+}
+
+/** What the whole planned day adds up to — used to check the plan hits target. */
+export function dayTotals(day: NutritionDay) {
+  return sumMeals(day.meals);
+}
+
+/**
+ * What has actually been eaten so far: ticked meals only.
+ *
+ * Progress bars have to start empty and fill as the day is logged. Summing the
+ * whole plan made them full before the first bite, so ticking a meal changed
+ * nothing and the card read as though the day were already done.
+ */
+export function eatenTotals(day: NutritionDay) {
+  return sumMeals(day.meals.filter((m) => m.done));
 }
 
 export function groceryList(days: NutritionDay[]) {
