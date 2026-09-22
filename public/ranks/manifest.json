@@ -1,30 +1,58 @@
 {
   "bronze": {
     "sub1": "/ranks/bronze-1.webp",
+    "sub2": "/ranks/bronze-2.webp",
+    "sub3": "/ranks/bronze-3.webp",
+    "sub4": "/ranks/bronze-4.webp",
+    "sub5": "/ranks/bronze-5.webp",
     "src": "/ranks/bronze-1.webp"
   },
   "copper": {
     "sub1": "/ranks/copper-1.webp",
+    "sub2": "/ranks/copper-2.webp",
+    "sub3": "/ranks/copper-3.webp",
+    "sub4": "/ranks/copper-4.webp",
+    "sub5": "/ranks/copper-5.webp",
     "src": "/ranks/copper-1.webp"
   },
   "emerald": {
     "sub1": "/ranks/emerald-1.webp",
+    "sub2": "/ranks/emerald-2.webp",
+    "sub3": "/ranks/emerald-3.webp",
+    "sub4": "/ranks/emerald-4.webp",
+    "sub5": "/ranks/emerald-5.webp",
     "src": "/ranks/emerald-1.webp"
   },
   "gold": {
     "sub1": "/ranks/gold-1.webp",
+    "sub2": "/ranks/gold-2.webp",
+    "sub3": "/ranks/gold-3.webp",
+    "sub4": "/ranks/gold-4.webp",
+    "sub5": "/ranks/gold-5.webp",
     "src": "/ranks/gold-1.webp"
   },
   "iron": {
     "sub1": "/ranks/iron-1.webp",
+    "sub2": "/ranks/iron-2.webp",
+    "sub3": "/ranks/iron-3.webp",
+    "sub4": "/ranks/iron-4.webp",
+    "sub5": "/ranks/iron-5.webp",
     "src": "/ranks/iron-1.webp"
   },
   "platine": {
     "sub1": "/ranks/platine-1.webp",
+    "sub2": "/ranks/platine-2.webp",
+    "sub3": "/ranks/platine-3.webp",
+    "sub4": "/ranks/platine-4.webp",
+    "sub5": "/ranks/platine-5.webp",
     "src": "/ranks/platine-1.webp"
   },
   "silver": {
     "sub1": "/ranks/silver-1.webp",
+    "sub2": "/ranks/silver-2.webp",
+    "sub3": "/ranks/silver-3.webp",
+    "sub4": "/ranks/silver-4.webp",
+    "sub5": "/ranks/silver-5.webp",
     "src": "/ranks/silver-1.webp"
   }
 }

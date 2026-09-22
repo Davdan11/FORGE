@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildNutritionDay, dailyTargets, dayTotals, groceryList } from "./engine";
 import { getMeal } from "./recipes";
+import { generatePlan } from "../engine/plan";
 import type { Profile } from "../types";
 
 const make = (over: Partial<Profile> = {}): Profile => ({
@@ -137,5 +138,47 @@ describe("groceryList", () => {
 
   it("returns nothing for an empty week rather than throwing", () => {
     expect(groceryList([])).toEqual([]);
+  });
+});
+
+describe("foods people do not eat", () => {
+  const days = ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09", "2026-01-10", "2026-01-11"];
+  const served = (p: Profile) => days.flatMap((d) => buildNutritionDay(p, d, null).meals.map((m) => getMeal(m.mealId)!));
+  const lines = (p: Profile) => served(p).flatMap((m) => m.ingredients.map((i) => i.item.toLowerCase()));
+
+  it("never serves an avoided food on any day of a week", () => {
+    const p = make({ avoidFoods: ["nuts", "peanuts", "shellfish", "eggs"] });
+    for (const line of lines(p)) expect(line).not.toMatch(/\b(almonds?|walnuts?|cashews?|peanuts?|shrimp|prawns?|eggs?)\b/);
+  });
+
+  it("keeps plant milks and nut butters apart from dairy", () => {
+    const p = make({ avoidFoods: ["dairy"] });
+    for (const line of lines(p)) expect(line.replace(/\b(oat|almond|soy|coconut|rice|peanut|nut)\s+(milk|butter|yogurt|cream)\b/g, "")).not.toMatch(/\b(milk|yogurt|cheese|feta|whey|butter|skyr|paneer|halloumi)\b/);
+  });
+
+  it("treats halal as no pork, which it used to ignore", () => {
+    for (const line of lines(make({ dietary: ["halal"] }))) expect(line).not.toMatch(/\b(pork|bacon|ham)\b/);
+  });
+
+  it("builds a full keto day of low-carb meals with a carb target under 50 g", () => {
+    const p = make({ dietary: ["keto"] });
+    const t = dailyTargets(p, "train");
+    expect(t.carbs).toBeLessThan(50);
+    expect(t.protein * 4 + t.carbs * 4 + t.fat * 9).toBeGreaterThan(t.kcal * 0.95);
+    const session = generatePlan(p, "2026-01-05").sessions[0];
+    for (const d of days) {
+      const rest = buildNutritionDay(p, d, null);
+      expect(rest.meals).toHaveLength(4);
+      const train = buildNutritionDay(p, d, session);
+      expect(train.meals).toHaveLength(6); // + pre and post
+    }
+    const day = buildNutritionDay(p, "2026-01-05", session);
+    for (const m of day.meals) { const meal = getMeal(m.mealId)!; expect((meal.carbs * 4) / meal.kcal).toBeLessThanOrEqual(0.12); }
+  });
+
+  it("feeds a physical job more than a desk job", () => {
+    const desk = dailyTargets(make({ lifestyle: { sleep: "7_8", stress: "moderate", work: "desk" } }), "rest");
+    const physical = dailyTargets(make({ lifestyle: { sleep: "7_8", stress: "moderate", work: "physical" } }), "rest");
+    expect(physical.kcal).toBeGreaterThan(desk.kcal * 1.08);
   });
 });

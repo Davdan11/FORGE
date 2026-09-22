@@ -89,11 +89,14 @@ export const TIERS: Tier[] = [
 export const tierForLevel = (level: number): Tier =>
   [...TIERS].reverse().find((t) => level >= t.from) ?? TIERS[0];
 
-/** Roman sub-rank inside a tier: I at the bottom, IV at the top. */
+/** Sub-ranks per tier. The rank artwork is drawn at five, I to V. */
+export const SUB_RANKS = ["I", "II", "III", "IV", "V"] as const;
+
+/** Roman sub-rank inside a tier: I at the bottom, V at the top, two levels each. */
 export function subRankFor(level: number) {
   const tier = tierForLevel(level);
   const into = Math.min(LEVELS_PER_TIER - 1, level - tier.from);
-  return ["I", "II", "III", "IV"][Math.floor(into / (LEVELS_PER_TIER / 4))] ?? "IV";
+  return SUB_RANKS[Math.floor(into / (LEVELS_PER_TIER / SUB_RANKS.length))] ?? "V";
 }
 
 export function rankFor(level: number) {

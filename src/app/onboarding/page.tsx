@@ -1,19 +1,37 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { db, todayISO, uid } from "@/lib/db";
 import { generatePlan } from "@/lib/engine/plan";
 import { adaptationsFor } from "@/lib/engine/injury";
 import { buildNutritionDay } from "@/lib/nutrition/engine";
 import { lbToKg } from "@/lib/units";
-import { IMG, sessionImage } from "@/lib/data/images";
+import { ART, IMG, sessionImage } from "@/lib/data/images";
 import { Seg, MultiSeg, Photo } from "@/components/ui";
 import { motion, AnimatePresence, Press } from "@/components/motion";
-import type { Equipment, Goal, Level, PainArea, Profile, Sex, UnitPrefs } from "@/lib/types";
+import { AccountPanel } from "@/components/AccountPanel";
+import { isConfigured } from "@/lib/supabase/client";
+import { currentUser, firstName, restoreAccount } from "@/lib/auth";
+import { syncNow } from "@/lib/sync";
 
-const STEPS = ["You", "Goal", "Schedule", "Gear", "Baselines", "Food"] as const;
-const CLAIMS = ["We measure before we prescribe.", "One goal. Everything follows.", "The week you actually have.", "Train with what is in front of you.", "Honest numbers make a better block.", "Fuel is part of the plan."];
+/* Remembered when someone chooses to start without an account, so the
+   question is not asked again on this device. Settings can still sign in. */
+const SKIPPED = "forge.accountSkipped";
+import type { AvoidFood, Equipment, Goal, Level, Lifestyle, PainArea, Profile, Sex, TrainingPlace, UnitPrefs } from "@/lib/types";
+
+const STEPS = ["You", "Goal", "Schedule", "Gear", "Recovery", "Food"] as const;
+const CLAIMS = ["We measure before we prescribe.", "One goal. Everything follows.", "The week you actually have.", "Train with what is in front of you.", "Recovery happens outside the gym.", "Fuel is part of the plan."];
+const PLACES: { v: TrainingPlace; name: string; line: string }[] = [
+  { v: "full_gym", name: "Full gym", line: "Racks, cables, machines. Nothing to list." },
+  { v: "home_gym", name: "Home gym", line: "Tell us what you have." },
+  { v: "no_gym", name: "No gym", line: "Bodyweight, outdoors, anywhere." },
+];
+const FULL_GYM: Equipment[] = ["barbell", "rack", "bench", "dumbbell", "kettlebell", "cable", "machine", "pullup_bar", "band", "rower", "bike", "treadmill", "outdoor"];
+const HOME_KIT: { v: Equipment; label: string }[] = [{ v: "dumbbell", label: "Dumbbells" }, { v: "kettlebell", label: "Kettlebell" }, { v: "barbell", label: "Barbell" }, { v: "rack", label: "Rack" }, { v: "bench", label: "Bench" }, { v: "pullup_bar", label: "Pull-up bar" }, { v: "band", label: "Bands" }, { v: "cable", label: "Cables" }, { v: "bike", label: "Bike" }, { v: "rower", label: "Rower" }, { v: "treadmill", label: "Treadmill" }];
+const AREAS: { v: PainArea; label: string }[] = [{ v: "knee", label: "Knee" }, { v: "back", label: "Lower back" }, { v: "shoulder", label: "Shoulder" }, { v: "hip", label: "Hip" }, { v: "wrist", label: "Wrist" }, { v: "ankle", label: "Ankle" }, { v: "elbow", label: "Elbow" }];
+const AVOID: { v: AvoidFood; label: string }[] = [{ v: "nuts", label: "Nuts" }, { v: "peanuts", label: "Peanuts" }, { v: "shellfish", label: "Shellfish" }, { v: "fish", label: "Fish" }, { v: "eggs", label: "Eggs" }, { v: "dairy", label: "Dairy" }, { v: "soy", label: "Soy" }, { v: "pork", label: "Pork" }, { v: "red_meat", label: "Red meat" }];
 const GOALS: { v: Goal; name: string; line: string; image: string }[] = [
   { v: "strength", name: "Get strong", line: "Heavy compounds, low reps, long rests.", image: sessionImage("lower", 600, 600) },
   { v: "build", name: "Build muscle", line: "Volume, tempo, food to grow.", image: sessionImage("upper", 600, 600) },
@@ -27,6 +45,9 @@ const PHOTOS = [IMG.onboarding, IMG.dark, IMG.progress, IMG.group, IMG.moveEmpty
 export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  // Account first: "ask" shows the sign-in screen, "done" the assessment.
+  const [account, setAccount] = useState<"checking" | "ask" | "restoring" | "done">(isConfigured ? "checking" : "done");
+  const [signedIn, setSignedIn] = useState(false);
   const [dir, setDir] = useState(1);
   const [busy, setBusy] = useState(false);
   const [units, setUnits] = useState<UnitPrefs>({ weight: "kg", distance: "km" });
@@ -43,15 +64,36 @@ export default function Onboarding() {
   const [minutes, setMinutes] = useState<Profile["sessionMinutes"]>(60);
   const [trainTime, setTrainTime] = useState("18:00");
   const [wakeTime, setWakeTime] = useState("07:00");
-  const [equipment, setEquipment] = useState<Equipment[]>(["barbell", "dumbbell", "rack", "bench", "cable", "pullup_bar", "outdoor"]);
-  const [pain, setPain] = useState<PainArea[]>([]);
-  const [squat, setSquat] = useState(""); const [hinge, setHinge] = useState(""); const [push, setPush] = useState("");
-  const [pullReps, setPullReps] = useState(""); const [plank, setPlank] = useState(""); const [run12, setRun12] = useState("");
-  const [hip, setHip] = useState(3); const [shoulder, setShoulder] = useState(3); const [ankle, setAnkle] = useState(3);
+  const [place, setPlace] = useState<TrainingPlace>("full_gym");
+  const [homeKit, setHomeKit] = useState<Equipment[]>(["dumbbell", "bench"]);
+  const [injured, setInjured] = useState<PainArea[]>([]);
+  const [healed, setHealed] = useState<PainArea[]>([]);
+  const [lifestyle, setLifestyle] = useState<Lifestyle>({ sleep: "7_8", stress: "moderate", work: "desk" });
   const [dietary, setDietary] = useState<Profile["dietary"]>([]);
+  const [avoidFoods, setAvoidFoods] = useState<AvoidFood[]>([]);
   const [mealsPerDay, setMealsPerDay] = useState<Profile["mealsPerDay"]>(4);
 
-  const kg = (v: string) => (v === "" ? undefined : units.weight === "lb" ? lbToKg(Number(v)) : Number(v));
+  useEffect(() => {
+    if (!isConfigured) return;
+    currentUser().then((u) => {
+      if (u) { setSignedIn(true); setName((n) => n || firstName(u)); setAccount("done"); return; }
+      let skipped = false;
+      try { skipped = localStorage.getItem(SKIPPED) === "1"; } catch { /* private mode */ }
+      setAccount(skipped ? "done" : "ask");
+    }).catch(() => setAccount("done"));
+  }, []);
+
+  const onSignedIn = useCallback(async (u: User) => {
+    setAccount("restoring");
+    setSignedIn(true);
+    // An existing account on a new phone: bring everything back and skip the
+    // assessment. A new account: carry on, with the name the provider gave.
+    const { hasProfile } = await restoreAccount().catch(() => ({ hasProfile: false }));
+    if (hasProfile) { router.replace("/today"); return; }
+    setName((n) => n || firstName(u));
+    setAccount("done");
+  }, [router]);
+
   const canNext = useMemo(() => (step === 0 ? name.trim().length > 0 : true), [step, name]);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
 
@@ -60,13 +102,17 @@ export default function Onboarding() {
     setBusy(true);
     // Cinematic build: staged messages while the engine works.
     for (let i = 0; i < 4; i++) { setStage(i); await new Promise((r) => setTimeout(r, 650)); }
+    const equipment: Equipment[] = place === "full_gym" ? FULL_GYM : place === "home_gym" ? [...homeKit, "outdoor"] : ["outdoor"];
     const profile: Profile = {
       id: uid(), name: name.trim(), sex, age, units, goal, level,
       heightCm: units.weight === "lb" ? height * 2.54 : height, weightKg: units.weight === "lb" ? lbToKg(weight) : weight,
-      daysPerWeek: days, sessionMinutes: minutes, equipment, pain,
+      daysPerWeek: days, sessionMinutes: minutes, trainingPlace: place, equipment,
+      pain: injured.filter((a) => !healed.includes(a)), injuryHistory: injured.filter((a) => healed.includes(a)),
       eventName: goal === "perform" && eventName ? eventName : undefined, eventDate: goal === "perform" && eventDate ? eventDate : undefined,
-      baselines: { squatE1rm: kg(squat), hingeE1rm: kg(hinge), pushE1rm: kg(push), pullReps: pullReps ? Number(pullReps) : undefined, plankSec: plank ? Number(plank) : undefined, run12minM: run12 ? Number(run12) * (units.distance === "mi" ? 1609.344 : 1000) : undefined, hipScreen: hip * 20, shoulderScreen: shoulder * 20, ankleScreen: ankle * 20 },
-      dietary, mealsPerDay, wakeTime, trainTime, notifications: false, createdAt: new Date().toISOString(),
+      // No lifts asked up front: loads start from bodyweight and training age,
+      // and the first logged sets replace the estimate within a week.
+      baselines: {}, lifestyle,
+      dietary, avoidFoods, mealsPerDay, wakeTime, trainTime, notifications: false, createdAt: new Date().toISOString(),
     };
     const { plan, sessions } = generatePlan(profile, todayISO(), {}, adaptationsFor(await db.injuries.toArray(), todayISO()));
     await db.transaction("rw", db.profile, db.plans, db.sessions, db.nutrition, async () => {
@@ -76,12 +122,41 @@ export default function Onboarding() {
       const today = todayISO();
       await db.nutrition.put({ ...buildNutritionDay(profile, today, sessions.find((x) => x.date === today) ?? null), dirty: 1 });
     });
+    // Put the new profile and block on the account straight away.
+    if (signedIn) await syncNow().catch(() => {});
     router.replace("/today");
   }
 
   const unitW = units.weight;
   const unitH = units.weight === "lb" ? "in" : "cm";
   const variants = { enter: (d: number) => ({ opacity: 0, x: d * 40 }), center: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: d * -40 }) };
+
+  if (account !== "done") {
+    return (
+      <div className="min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_560px]">
+        <div className="relative h-[300px] lg:h-dvh lg:sticky lg:top-0 overflow-hidden">
+          <Photo src={ART.today} color veil className="absolute inset-0" />
+          <span className="on-photo absolute top-[calc(var(--safe-top)+16px)] left-5 lg:top-8 lg:left-8 display text-lg lg:text-2xl">FORGE<span className="text-volt">.</span></span>
+          <p className="on-photo absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-10 lg:pb-10 display display--lg leading-[0.95] max-w-[14ch]" style={{ fontSize: "var(--text-display-lg)" }}>Train. Log. <em>Level up.</em></p>
+        </div>
+        <div className="px-5 pb-10 pt-8 lg:px-12 lg:py-12 lg:min-h-dvh lg:flex lg:flex-col lg:justify-center">
+          {account === "checking" ? <div className="skeleton h-64" /> : account === "restoring" ? (
+            <div className="grid gap-3"><h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Welcome <em>back.</em></h1><p className="text-sm text-smoke">Bringing your training onto this device…</p><div className="bar"><motion.i initial={{ width: "10%" }} animate={{ width: "90%" }} transition={{ duration: 6 }} /></div></div>
+          ) : (
+            <div className="grid gap-6 max-w-[440px]">
+              <div className="grid gap-2">
+                <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Create your <em>account.</em></h1>
+                <p className="text-sm text-smoke">Your block, every session, your XP and your rank, saved to your account and on every phone you sign in on. Already have one? Same buttons.</p>
+              </div>
+              <AccountPanel onSignedIn={onSignedIn} />
+              <button type="button" className="text-sm text-smoke underline justify-self-start" onClick={() => { try { localStorage.setItem(SKIPPED, "1"); } catch { /* private mode */ } setAccount("done"); }}>Continue without an account</button>
+              <p className="text-xs text-smoke">Without an account everything stays on this phone only. You can create one later in Settings.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_560px]">
@@ -143,32 +218,40 @@ export default function Onboarding() {
             <p className="text-sm text-smoke">A plan for the week you actually have beats a perfect plan for a week you don’t. Meals are timed around your training.</p>
           </>)}
           {step === 3 && (<>
-            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>What’s in <em>front</em> of you?</h1>
-            <div className="field"><span className="meta">Equipment you have most days</span><MultiSeg value={equipment} onChange={setEquipment} options={[{ v: "barbell", label: "Barbell" }, { v: "rack", label: "Rack" }, { v: "bench", label: "Bench" }, { v: "dumbbell", label: "Dumbbells" }, { v: "kettlebell", label: "Kettlebell" }, { v: "cable", label: "Cables" }, { v: "machine", label: "Machines" }, { v: "pullup_bar", label: "Pull-up bar" }, { v: "band", label: "Bands" }, { v: "rower", label: "Rower" }, { v: "bike", label: "Bike" }, { v: "treadmill", label: "Treadmill" }, { v: "outdoor", label: "Outdoors" }]} /></div>
-            <div className="field"><span className="meta">Anything that hurts right now?</span><MultiSeg value={pain} onChange={setPain} options={[{ v: "knee", label: "Knee" }, { v: "back", label: "Lower back" }, { v: "shoulder", label: "Shoulder" }, { v: "hip", label: "Hip" }, { v: "wrist", label: "Wrist" }, { v: "ankle", label: "Ankle" }, { v: "elbow", label: "Elbow" }]} /></div>
-            <p className="text-sm text-smoke">We never prescribe a movement that loads a flagged joint. Clear it in Settings when it’s better.</p>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Where do you <em>train</em>?</h1>
+            <div className="grid gap-2">
+              {PLACES.map((pl) => (
+                <button key={pl.v} type="button" aria-pressed={place === pl.v} onClick={() => setPlace(pl.v)} className={`card p-4 text-left flex items-center justify-between gap-3 transition-colors ${place === pl.v ? "border-volt" : ""}`}>
+                  <span className="grid gap-0.5"><span className="display text-lg leading-none">{pl.name}</span><span className="text-sm text-smoke">{pl.line}</span></span>
+                  <span className={`w-5 h-5 shrink-0 rounded-full grid place-items-center border ${place === pl.v ? "bg-volt border-volt" : "border-line-strong"}`}>{place === pl.v && <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="#0A0A0A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L19 7" /></svg>}</span>
+                </button>
+              ))}
+            </div>
+            {place === "home_gym" && <div className="field"><span className="meta">What’s in your home gym?</span><MultiSeg value={homeKit} onChange={setHomeKit} options={HOME_KIT} /></div>}
+            <div className="field"><span className="meta">Any injuries, now or in the past?</span><MultiSeg value={injured} onChange={(v) => { setInjured(v); setHealed((h) => h.filter((a) => v.includes(a))); }} options={AREAS} /></div>
+            {injured.length > 0 && (
+              <div className="grid gap-3 card p-4">
+                {injured.map((a) => (
+                  <div key={a} className="flex items-center justify-between gap-3">
+                    <span className="text-sm">{AREAS.find((x) => x.v === a)?.label}</span>
+                    <Seg value={healed.includes(a) ? "healed" : "hurts"} onChange={(v) => setHealed((h) => (v === "healed" ? [...h.filter((x) => x !== a), a] : h.filter((x) => x !== a)))} options={[{ v: "hurts", label: "Still hurts" }, { v: "healed", label: "Healed" }]} />
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-sm text-smoke">{injured.length ? "If it still hurts, nothing that loads it is prescribed. If it has healed, you get the gentler version of each movement when there is one." : "Old injuries count: that is where new ones usually start."}</p>
           </>)}
           {step === 4 && (<>
-            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Baselines. <em>Skip</em> what you don’t know.</h1>
-            <p className="text-sm text-smoke">Any recent set works: we convert it to an estimated 1RM. Leave blank and the engine starts conservative.</p>
-            <div className="grid grid-cols-3 gap-3">
-              <label className="field"><span className="meta">Squat ({unitW})</span><input className="input tnum" type="number" inputMode="decimal" value={squat} onChange={(e) => setSquat(e.target.value)} placeholder="—" /></label>
-              <label className="field"><span className="meta">Deadlift ({unitW})</span><input className="input tnum" type="number" inputMode="decimal" value={hinge} onChange={(e) => setHinge(e.target.value)} placeholder="—" /></label>
-              <label className="field"><span className="meta">Bench ({unitW})</span><input className="input tnum" type="number" inputMode="decimal" value={push} onChange={(e) => setPush(e.target.value)} placeholder="—" /></label>
-              <label className="field"><span className="meta">Pull-ups</span><input className="input tnum" type="number" inputMode="numeric" value={pullReps} onChange={(e) => setPullReps(e.target.value)} placeholder="—" /></label>
-              <label className="field"><span className="meta">Plank (s)</span><input className="input tnum" type="number" inputMode="numeric" value={plank} onChange={(e) => setPlank(e.target.value)} placeholder="—" /></label>
-              <label className="field"><span className="meta">12-min run ({units.distance})</span><input className="input tnum" type="number" inputMode="decimal" step="0.1" value={run12} onChange={(e) => setRun12(e.target.value)} placeholder="—" /></label>
-            </div>
-            <div className="grid gap-4 card p-4">
-              <p className="meta text-ink">Movement screen — 1 (stiff) to 5 (free)</p>
-              <Screen1 label="Deep squat, heels down" value={hip} onChange={setHip} />
-              <Screen1 label="Arms overhead, ribs down" value={shoulder} onChange={setShoulder} />
-              <Screen1 label="Knee over toes, heel down" value={ankle} onChange={setAnkle} />
-            </div>
+            <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Life <em>outside</em> the gym.</h1>
+            <div className="field"><span className="meta">Sleep on a normal night</span><Seg fill value={lifestyle.sleep} onChange={(sleep) => setLifestyle((l) => ({ ...l, sleep }))} options={[{ v: "under_6", label: "Under 6 h" }, { v: "6_7", label: "6–7 h" }, { v: "7_8", label: "7–8 h" }, { v: "over_8", label: "8 h +" }]} /></div>
+            <div className="field"><span className="meta">Stress these days</span><Seg fill value={lifestyle.stress} onChange={(stress) => setLifestyle((l) => ({ ...l, stress }))} options={[{ v: "low", label: "Low" }, { v: "moderate", label: "Moderate" }, { v: "high", label: "High" }]} /></div>
+            <div className="field"><span className="meta">Your days are mostly</span><Seg fill value={lifestyle.work} onChange={(work) => setLifestyle((l) => ({ ...l, work }))} options={[{ v: "desk", label: "Sitting" }, { v: "on_feet", label: "On my feet" }, { v: "physical", label: "Physical work" }]} /></div>
+            <p className="text-sm text-smoke">Muscle is built while you recover. Short sleep, heavy stress or a physical job mean fewer sets per session, and a physical job means more food. Every four weeks the next block is rewritten from how the last one actually went.</p>
           </>)}
           {step === 5 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>How do you <em>eat</em>?</h1>
-            <div className="field"><span className="meta">Dietary pattern</span><MultiSeg value={dietary} onChange={setDietary} options={[{ v: "vegetarian", label: "Vegetarian" }, { v: "vegan", label: "Vegan" }, { v: "pescatarian", label: "Pescatarian" }, { v: "halal", label: "Halal" }, { v: "gluten_free", label: "Gluten-free" }, { v: "lactose_free", label: "Lactose-free" }]} /></div>
+            <div className="field"><span className="meta">Way of eating</span><MultiSeg value={dietary} onChange={setDietary} options={[{ v: "vegetarian", label: "Vegetarian" }, { v: "vegan", label: "Vegan" }, { v: "pescatarian", label: "Pescatarian" }, { v: "keto", label: "Keto" }, { v: "halal", label: "Halal" }, { v: "gluten_free", label: "Gluten-free" }, { v: "lactose_free", label: "Lactose-free" }]} /></div>
+            <div className="field"><span className="meta">Foods you don’t eat</span><MultiSeg value={avoidFoods} onChange={setAvoidFoods} options={AVOID} /></div>
             <div className="field"><span className="meta">Meals per day</span><Seg value={mealsPerDay} onChange={setMealsPerDay} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
             <p className="text-sm text-smoke">Targets come from your body, goal and the kind of day it is. 30,000+ recipes with cook mode; meals never repeat within three days.</p>
           </>)}
@@ -178,9 +261,9 @@ export default function Onboarding() {
       <AnimatePresence>{busy && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[70] bg-ink text-bone grid place-items-center p-8">
           <div className="grid gap-6 w-full max-w-[380px]">
-            <span className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Building<br /><em>your block.</em></span>
+            <span className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Building<br /><em>your training.</em></span>
             <ul className="grid gap-3">
-              {["Reading your baselines", "Choosing movements you can actually do", "Periodising 12 weeks · 3 mesocycles", "Planning today’s meals"].map((s, i) => (
+              {["Reading your profile", "Choosing movements you can actually do", "Writing your first three blocks", "Planning today’s meals"].map((s, i) => (
                 <motion.li key={s} initial={{ opacity: 0.25, x: -6 }} animate={{ opacity: stage >= i ? 1 : 0.25, x: 0 }} className="flex items-center gap-3 text-sm">
                   <span className={`w-5 h-5 rounded-full grid place-items-center border ${stage > i ? "bg-volt border-volt" : stage === i ? "border-volt" : "border-line"}`}>{stage > i && <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="#0A0A0A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17l9-10" /></svg>}{stage === i && <motion.span className="w-2 h-2 rounded-full bg-volt" animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 0.9 }} />}</span>
                   {s}
@@ -197,19 +280,10 @@ export default function Onboarding() {
         {step < STEPS.length - 1 ? (
           <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={!canNext} onClick={() => go(step + 1)}>Continue</button></Press>
         ) : (
-          <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={busy} onClick={finish}>{busy ? "Building your block…" : "Build my 12 weeks"}</button></Press>
+          <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={busy} onClick={finish}>{busy ? "Building your training…" : "Create my training"}</button></Press>
         )}
       </div>
       </div>
-    </div>
-  );
-}
-
-function Screen1({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <div className="grid gap-2">
-      <span className="text-sm">{label}</span>
-      <div className="seg">{[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" aria-pressed={value === n} onClick={() => onChange(n)}>{n}</button>)}</div>
     </div>
   );
 }

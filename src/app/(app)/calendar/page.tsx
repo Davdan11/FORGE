@@ -105,7 +105,7 @@ export default function CalendarPage() {
             <Item>
               <Section title={pickedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}>
                 {!day?.session && !day?.meals && (day?.activities.length ?? 0) === 0 ? (
-                  <div className="card p-4"><p className="text-sm text-smoke">Nothing planned on this day yet. Meals are built the morning of, and the block covers the next twelve weeks.</p></div>
+                  <div className="card p-4"><p className="text-sm text-smoke">Nothing planned on this day yet. Meals are built the morning of. Training is planned at least eight weeks ahead, and each new block is written from how the last one went.</p></div>
                 ) : (
                   <div className="grid gap-3">
                     {day?.session && (

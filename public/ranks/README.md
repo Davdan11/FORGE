@@ -1,17 +1,20 @@
 # Rank artwork
 
-One file per tier, named after its key in `src/lib/gamification.ts`:
+Seven tiers, five sub-ranks each (I–V, two levels per sub-rank), named after
+the tier key in `src/lib/gamification.ts` and the sub-rank number:
 
-    public/ranks/iron.png    bronze.png    silver.png    gold.png
-    public/ranks/platinum.png    diamond.png    forge.png
+    public/ranks/iron-1.png … iron-5.png
+    copper · bronze · silver · gold · emerald · platine
 
-Then run `npm run art`. Missing tiers keep the drawn shield.
+Then run `npm run art:optimise`: it resizes to 512 px WebP, moves the originals
+to `art-source/` (outside `public/`, not shipped) and rebuilds the manifest.
+A tier with only `<tier>-1` uses that file for every sub-rank; a tier with no
+file keeps the drawn shield.
 
 **Format**
 
-- PNG or WebP, transparent background
-- 512×564 (the shield is taller than it is wide, 1:1.1)
-- Renders from 56 px up to 150 px
+- PNG or WebP, transparent background, square
+- Renders from 32 px up to 190 px
 
-The roman sub-rank (I–IV) is drawn by the app over the shield only when no
-artwork is supplied, so bake it in or leave it off as you prefer.
+The roman numeral is baked into the supplied set. The app draws one over the
+shield only when there is no artwork.

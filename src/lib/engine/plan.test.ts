@@ -99,3 +99,11 @@ describe("generatePlan", () => {
     expect(a).toEqual(b);
   });
 });
+
+describe("exercise choice", () => {
+  it("never makes a single-joint movement the main lift", () => {
+    for (const equipment of [["machine", "cable", "dumbbell", "bench"], ["dumbbell"], ["machine"]] as const)
+      for (const s of generatePlan(make({ equipment: [...equipment] }), "2026-01-05").sessions)
+        for (const ex of s.exercises.filter((e) => e.block === "main")) expect(getExercise(ex.slug)?.isolation).not.toBe(true);
+  });
+});

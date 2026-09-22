@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { Activity, Dumbbell, MapPin, UtensilsCrossed, User, Users, Bike, type LucideIcon } from "lucide-react";
+import { FeedIcon, FoodIcon, IndoorIcon, LibraryIcon, MoveIcon, ProfileIcon, TodayIcon, type NavIcon } from "./NavIcons";
 
-const ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/today", label: "Today", icon: Activity },
-  { href: "/library", label: "Library", icon: Dumbbell },
-  { href: "/move", label: "Move", icon: MapPin },
-  { href: "/indoor", label: "Indoor", icon: Bike },
-  { href: "/food", label: "Food", icon: UtensilsCrossed },
-  { href: "/feed", label: "Feed", icon: Users },
-  { href: "/progress", label: "Profile", icon: User },
+const ITEMS: { href: string; label: string; icon: NavIcon }[] = [
+  { href: "/today", label: "Today", icon: TodayIcon },
+  { href: "/library", label: "Library", icon: LibraryIcon },
+  { href: "/move", label: "Move", icon: MoveIcon },
+  { href: "/indoor", label: "Indoor", icon: IndoorIcon },
+  { href: "/food", label: "Food", icon: FoodIcon },
+  { href: "/feed", label: "Feed", icon: FeedIcon },
+  { href: "/progress", label: "Profile", icon: ProfileIcon },
 ];
 
 export function BottomNav() {

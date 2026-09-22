@@ -50,6 +50,9 @@ export interface Exercise {
   model3d?: string;
   image?: string;
   painFlags?: PainArea[];
+  /** Works one muscle through one joint. Good accessory work, never the
+   *  main lift of a session. */
+  isolation?: boolean;
 }
 
 export type PainArea = "knee" | "back" | "shoulder" | "hip" | "wrist" | "ankle" | "elbow";
@@ -74,6 +77,15 @@ export interface Injury {
 }
 
 
+export type TrainingPlace = "full_gym" | "home_gym" | "no_gym";
+export type AvoidFood = "nuts" | "peanuts" | "shellfish" | "fish" | "eggs" | "dairy" | "soy" | "pork" | "red_meat";
+export interface Lifestyle {
+  sleep: "under_6" | "6_7" | "7_8" | "over_8";
+  stress: "low" | "moderate" | "high";
+  /** How the day is spent outside training. */
+  work: "desk" | "on_feet" | "physical";
+}
+
 export interface Profile {
   id: string;             // local uuid, mirrored to Supabase user id on sign-in
   name: string;
@@ -87,7 +99,16 @@ export interface Profile {
   daysPerWeek: 2 | 3 | 4 | 5 | 6;
   sessionMinutes: 25 | 40 | 60 | 75;
   equipment: Equipment[];
+  /** Where the training happens. A full gym has everything; only a home gym
+   *  needs the inventory. Absent on profiles written before it existed. */
+  trainingPlace?: TrainingPlace;
+  /** Hurts now: movements that load these joints are never prescribed. */
   pain: PainArea[];
+  /** Hurt before and healed. Not excluded — the engine prefers the kinder
+   *  variant when one exists, because old injuries are where new ones start. */
+  injuryHistory?: PainArea[];
+  /** Recovery outside the gym. Sets volume and energy needs. */
+  lifestyle?: Lifestyle;
   /** Optional dated target: race, competition, event. */
   eventName?: string;
   eventDate?: string;     // ISO date
@@ -103,7 +124,9 @@ export interface Profile {
     shoulderScreen?: number;
     ankleScreen?: number;
   };
-  dietary: ("vegetarian" | "vegan" | "pescatarian" | "halal" | "gluten_free" | "lactose_free")[];
+  dietary: ("vegetarian" | "vegan" | "pescatarian" | "halal" | "gluten_free" | "lactose_free" | "keto")[];
+  /** Foods never served, whatever the diet: allergies, dislikes, beliefs. */
+  avoidFoods?: AvoidFood[];
   mealsPerDay: 3 | 4 | 5;
   wakeTime: string;       // "07:00"
   trainTime: string;      // "18:00"
@@ -135,7 +158,7 @@ export interface PrescribedExercise {
 export interface Session {
   id: string;
   planId: string;
-  week: number;             // 1-12
+  week: number;             // 1-based, counted from the plan start
   day: number;              // 1-7
   date: string;             // ISO date
   kind: SessionKind;
@@ -150,13 +173,36 @@ export interface Session {
   readinessAtStart?: number;
 }
 
+/** Four weeks: three loading, one deload. */
+export interface PlanBlock {
+  name: string;
+  weeks: number[];
+  intent: string;
+  intensity: string;
+  /** What the previous block showed and what changed because of it.
+   *  Set when the block is rebuilt from real training. */
+  review?: BlockReview;
+}
+export interface BlockReview {
+  at: string;
+  sessionsDone: number;
+  sessionsPlanned: number;
+  /** Logged RPE minus prescribed RPE, averaged. + means harder than planned. */
+  rpeGap?: number;
+  changes: string[];
+  /** What the engine applied to the block (see BlockTuning in engine/plan). */
+  tuning: { loadMul: number; accessorySets: number; rpe: number };
+}
+
 export interface Plan {
   id: string;
   profileId: string;
   goal: Goal;
   startDate: string;
-  weeks: 12;
-  blocks: { name: string; weeks: number[]; intent: string; intensity: string }[];
+  /** Weeks programmed so far. The programme never ends: a new block is
+   *  appended before the last one runs out. */
+  weeks: number;
+  blocks: PlanBlock[];
   season?: { eventName: string; eventDate: string; phases: { name: string; from: string; to: string }[] };
   createdAt: string;
 }
@@ -305,6 +351,8 @@ export interface Stats {
   streakWeeks: number;
   lastActiveWeek?: string;
   badges: string[];         // badge ids
+  /** Sport challenges already paid for (see lib/challenges.ts), newest last. */
+  challengesDone?: string[];
   totals: { sessions: number; volumeKg: number; distanceM: number; mobilityMin: number; mealsLogged: number; activities?: number; shared?: number; elevGainM?: number };
 }
 export interface Badge {
