@@ -1,6 +1,7 @@
 "use client";
 
 import { parseHeartRate, parseCyclingPower, parseCsc, parseIndoorBike, type Reading, type Rev, type CscState } from "./ble-parse";
+import { isNativeShell } from "../native";
 
 /* ─────────────────────────────────────────────────────────────
    Talking to the hardware.
@@ -57,6 +58,20 @@ export function bluetoothAvailability(): Availability {
     // Distinguish the two reasons it is missing, because the answers differ:
     // one is "use a different browser", the other is "this browser will never
     // have it, wait for the app".
+    // Inside the shell the honest answer is different, and it was wrong here
+    // until the app was actually run on a phone: wrapping the web app in
+    // Capacitor does NOT hand the WebView a Bluetooth API. iOS has CoreBluetooth
+    // and the WebView cannot reach it; a native plugin has to bridge the two.
+    // Telling someone to wait for the app, inside the app, is worse than saying
+    // nothing.
+    if (isNativeShell()) {
+      return {
+        ok: false,
+        nativeWouldFix: false,
+        reason: "Sensor support is not built into this version yet — it needs a native Bluetooth bridge. Set your effort by hand for now.",
+      };
+    }
+
     const ua = navigator.userAgent;
     const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && "ontouchend" in document);
     const safari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
@@ -64,7 +79,7 @@ export function bluetoothAvailability(): Availability {
       return {
         ok: false,
         nativeWouldFix: true,
-        reason: "Safari has no Bluetooth support, on any Apple device. Sensors will work in the FORGE app once it ships to the App Store — in the browser, use Chrome on Android, Mac or Windows.",
+        reason: "Safari has no Bluetooth support, on any Apple device. Use Chrome on Android, Mac or Windows — or wait for sensor support in the app.",
       };
     }
     return { ok: false, nativeWouldFix: false, reason: "This browser has no Bluetooth support. Chrome, Edge or Opera will work." };

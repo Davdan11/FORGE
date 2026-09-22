@@ -16,7 +16,7 @@ import { Page, Stagger, Item, Press, CountUp, Ring, motion, AnimatePresence } fr
 import { Bars } from "@/components/charts";
 import { TYPES, SegmentBar, MiniRoute, ActivityRow, rateFor, sportIcon } from "@/components/move-bits";
 import { SPORT_GROUPS } from "@/lib/data/sports";
-import { LocateFixed } from "lucide-react";
+import { LocateFixed, Bike } from "lucide-react";
 import { StartCountdown } from "@/components/StartCountdown";
 import type { Activity, ActivityType, CardioWorkout, Lap, TrackPoint, UnitPrefs } from "@/lib/types";
 
@@ -211,7 +211,15 @@ function Move() {
         <div className="px-5 pt-4 min-w-0 overflow-x-clip lg:px-0">
           {rec === "idle" ? (
             <>
-              <div className="mb-4"><Seg value={tab} onChange={setTab} options={[{ v: "record", label: "Record" }, { v: "workouts", label: "Workouts" }, { v: "history", label: "History" }]} /></div>
+              {/* Indoor lives here rather than in the bottom bar. The bar already holds
+                  six items and a seventh crowds a phone — and this is the more honest
+                  home anyway: Move is movement, outside or in the basement. Without
+                  this the whole indoor mode was unreachable on a phone, which is how
+                  it was found. */}
+              <div className="mb-4 flex items-center gap-2 flex-wrap">
+                <Seg value={tab} onChange={setTab} options={[{ v: "record", label: "Record" }, { v: "workouts", label: "Workouts" }, { v: "history", label: "History" }]} />
+                <Link href="/indoor" className="chip ml-auto"><Bike className="w-3.5 h-3.5" strokeWidth={2} />Indoor</Link>
+              </div>
               <AnimatePresence mode="wait">
                 {tab === "record" && (
                   <motion.div key="rec" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-4 min-w-0">
