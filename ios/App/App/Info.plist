@@ -82,5 +82,15 @@
 			</array>
 		</dict>
 	</array>
+	<!-- GPS recording (src/lib/gps.ts). "Always" is asked only so a run keeps
+	     recording with the phone locked; FORGE never tracks outside a recording. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FORGE records your route, distance and pace while you run, ride or hike.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>So a run keeps recording with your phone locked in your pocket. FORGE only uses your location while an activity is being recorded.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>

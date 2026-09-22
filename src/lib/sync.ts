@@ -47,7 +47,8 @@ export async function syncNow(): Promise<string> {
     if (dirty.length) {
       const stamped = dirty.map((r: Record<string, unknown>) => ({ ...r, updatedAt: (r.updatedAt as string) ?? new Date().toISOString() }));
       const rows = stamped.map((r: Record<string, unknown>) => ({ id: r.id, user_id: user.id, data: { ...r, dirty: undefined }, updated_at: r.updatedAt as string }));
-      const { error } = await supabase.from(remoteName(t)).upsert(rows, { onConflict: "id" });
+      // The key is (user_id, id): see supabase/schema.sql.
+      const { error } = await supabase.from(remoteName(t)).upsert(rows, { onConflict: "user_id,id" });
       if (error) return `Sync failed pushing ${t}: ${error.message}`;
       await table.bulkPut(stamped.map((r: Record<string, unknown>) => ({ ...r, dirty: 0 })));
       pushed += dirty.length;

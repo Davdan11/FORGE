@@ -5,14 +5,19 @@
 
 create extension if not exists "pgcrypto";
 
+-- Rows are keyed per user, (user_id, id): local ids are only unique on one
+-- device. Stats is always "me" and a day of nutrition, readiness or weigh-in
+-- is keyed by its date, so on "id" alone the second athlete to sync collides
+-- with the first and RLS rejects the write.
 create or replace function forge_table(name text) returns void language plpgsql as $$
 begin
   execute format('
     create table if not exists %I (
-      id text primary key,
+      id text not null,
       user_id uuid not null references auth.users(id) on delete cascade,
       data jsonb not null,
-      updated_at timestamptz not null default now()
+      updated_at timestamptz not null default now(),
+      primary key (user_id, id)
     );
     alter table %I enable row level security;
     drop policy if exists "%I_owner" on %I;

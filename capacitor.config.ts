@@ -26,6 +26,10 @@ const config: CapacitorConfig = {
   },
   android: {
     backgroundColor: "#0a0a0a",
+    // Without it Android stops delivering background GPS to the WebView after
+    // about five minutes, and a long run ends at minute five. Required by
+    // @capacitor-community/background-geolocation (see src/lib/gps.ts).
+    useLegacyBridge: true,
   },
 };
 

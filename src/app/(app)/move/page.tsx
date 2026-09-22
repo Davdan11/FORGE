@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, todayISO, uid } from "@/lib/db";
 import { acceptPoint, summarise } from "@/lib/geo";
+import { clearDraft, openLocationSettings, readDraft, saveDraft, startGps, type StopGps, type TrackDraft } from "@/lib/gps";
+import { isNativeShell } from "@/lib/native";
 import { activityXpBreakdown, awardActivity, awardChallenges } from "@/lib/progress";
 import { SportChallenges } from "@/components/Challenges";
 import { sportSpec } from "@/lib/data/sports";
@@ -45,7 +47,12 @@ function Move() {
   const [counting, setCounting] = useState(false);
   const [group, setGroup] = useState(() => SPORT_GROUPS.find((g) => g.sports.some((sp) => sp.v === (workout?.type ?? "run")))?.key ?? "run");
   const [tab, setTab] = useState<"record" | "workouts" | "history">("record");
-  const watch = useRef<number | null>(null);
+  const gps = useRef<StopGps | null>(null);
+  const lastDraft = useRef(0);
+  // A run the system killed before it was saved (see lib/gps).
+  // Read once on mount. Safe to read during render: the page shows a skeleton
+  // until the profile loads, so nothing here is in the prerendered HTML.
+  const [draft, setDraft] = useState<TrackDraft | null>(() => (typeof window === "undefined" ? null : readDraft()));
   const startedAt = useRef<string>("");
   const pausedAt = useRef<number>(0);
   const pausedTotal = useRef<number>(0);
@@ -83,20 +90,33 @@ function Move() {
   }, [rec, segments]);
 
   function start() {
-    if (!("geolocation" in navigator)) { setErr("No GPS available on this device."); return; }
+    clearDraft(); setDraft(null);
     setErr(null); setPoints([]); setElapsed(0); pausedTotal.current = 0; lapsRef.current = []; distRef.current = 0; lapStartDist.current = 0; setSegIdx(0); setSegLeft(segments[0]?.seconds ?? 0);
     startedAt.current = new Date().toISOString();
     setRec("live"); setTab("record");
-    navigator.wakeLock?.request("screen").then((w) => (wake.current = w)).catch(() => {});
-    watch.current = navigator.geolocation.watchPosition(
-      (pos) => { const p: TrackPoint = { t: pos.timestamp, lat: pos.coords.latitude, lng: pos.coords.longitude, alt: pos.coords.altitude ?? undefined, acc: pos.coords.accuracy }; setPoints((prev) => { if (!acceptPoint(prev[prev.length - 1], p)) return prev; const next = [...prev, p]; distRef.current = summarise(next).distanceM; return next; }); },
-      (e) => setErr(e.code === 1 ? "Location permission denied. Allow it in your browser settings." : "GPS signal lost — keep moving, it'll pick up."),
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
-    );
+    // In a browser the screen has to stay on or the GPS stops. The app records
+    // from a background service instead, so the phone can go in a pocket.
+    if (!isNativeShell()) navigator.wakeLock?.request("screen").then((w) => (wake.current = w)).catch(() => {});
+    const began = startedAt.current, sport = type, workoutId = workout?.id;
+    const label = TYPES.find((t) => t.v === type)?.label ?? "Activity";
+    startGps(
+      (p) => setPoints((prev) => {
+        if (!acceptPoint(prev[prev.length - 1], p)) return prev;
+        const next = [...prev, p];
+        distRef.current = summarise(next).distanceM;
+        // Every 15 s is plenty: a crash costs at most 15 s of track.
+        if (p.t - lastDraft.current > 15000) { lastDraft.current = p.t; saveDraft({ type: sport, startedAt: began, pausedMs: pausedTotal.current, points: next, workoutId }); }
+        return next;
+      }),
+      (problem) => setErr(problem === "denied"
+        ? (isNativeShell() ? "FORGE can't use your location. Allow it in Settings → Apps → FORGE → Location." : "Location permission denied. Allow it in your browser settings.")
+        : problem === "unavailable" ? "No GPS available on this device." : "GPS signal lost — keep moving, it'll pick up."),
+      { title: `FORGE · ${label} recording`, message: "Your route is being recorded. Tap to return to FORGE." },
+    ).then((stopFn) => { gps.current = stopFn; }).catch(() => setErr("Couldn't start the GPS. Check that location is on."));
   }
   function pause() { if (rec === "live") { pausedAt.current = Date.now(); setRec("paused"); } else { pausedTotal.current += Date.now() - pausedAt.current; setRec("live"); } }
   function stop() {
-    if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
+    gps.current?.().catch(() => {}); gps.current = null;
     wake.current?.release().catch(() => {});
     const s = summarise(points);
     const durationSec = Math.round((Date.now() - new Date(startedAt.current).getTime() - pausedTotal.current) / 1000);
@@ -112,6 +132,17 @@ function Move() {
     const when = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
     setPending({ id: uid(), type, startedAt: startedAt.current, endedAt: new Date().toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points, splits: s.splits, laps: lapsRef.current.length ? lapsRef.current : undefined, title: workout ? workout.name : `${when} ${label}`, workoutId: workout?.id, shared: true, xp: 0 });
   }
+  /** Turn a run the system killed into the usual save sheet. */
+  function recover(d: TrackDraft) {
+    const s = summarise(d.points);
+    const last = d.points[d.points.length - 1].t;
+    const durationSec = Math.max(1, Math.round((last - new Date(d.startedAt).getTime() - d.pausedMs) / 1000));
+    const label = TYPES.find((t) => t.v === d.type)?.label ?? "Activity";
+    setType(d.type);
+    setDraft(null);
+    setPending({ id: uid(), type: d.type, startedAt: d.startedAt, endedAt: new Date(last).toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points: d.points, splits: s.splits, title: `${label} (recovered)`, workoutId: d.workoutId, shared: true, xp: 0 });
+  }
+
   async function save(a: Activity) {
     const today = todayISO();
     const session = await db.sessions.where("date").equals(today).first();
@@ -121,7 +152,7 @@ function Move() {
     // After the write: challenges read the saved activities.
     const won = await awardChallenges(withSession.type, profile?.units.distance ?? "km");
     if (session?.kind.startsWith("cardio") && session.status !== "done") await db.sessions.update(session.id, { status: "done", dirty: 1 });
-    setPending(null); setPoints([]); setTab("history");
+    setPending(null); setPoints([]); setTab("history"); clearDraft();
     setToast(`Saved. +${xp + won.xp} XP${won.titles.length ? ` · challenge: ${won.titles.join(", ")}` : ""}${earned.length ? ` · badge: ${earned.join(", ")}` : ""}${session?.kind.startsWith("cardio") ? " · today's cardio done" : ""}`);
     setTimeout(() => setToast(null), 4500);
   }
@@ -189,7 +220,7 @@ function Move() {
                   </div>
                 )}
                 <Press><button type="button" className="pill pill--volt pill--block pill--lg" onClick={() => { setErr(null); setCounting(true); }}>{workout ? "Start guided workout" : `Start ${typeLabel.toLowerCase()}`}</button></Press>
-                <AnimatePresence>{err && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-danger">{err}</motion.p>}</AnimatePresence>
+                <AnimatePresence>{err && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-danger">{err}{isNativeShell() && err.startsWith("FORGE can't use your location") && <> <button type="button" className="underline" onClick={() => openLocationSettings()}>Open settings</button></>}</motion.p>}</AnimatePresence>
                 </div>
                 </div>
               </div>
@@ -230,6 +261,15 @@ function Move() {
               <AnimatePresence mode="wait">
                 {tab === "record" && (
                   <motion.div key="rec" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-4 min-w-0">
+                    {draft && rec === "idle" && (
+                      <div className="card p-4 grid gap-3 !border-volt" role="status">
+                        <div className="grid gap-0.5">
+                          <span className="meta">Unfinished activity</span>
+                          <p className="text-sm">Your {(TYPES.find((t) => t.v === draft.type)?.label ?? "activity").toLowerCase()} from {new Date(draft.startedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} stopped before it was saved — {fmtDist(summarise(draft.points).distanceM, units)} recorded.</p>
+                        </div>
+                        <div className="flex gap-2"><button type="button" className="pill pill--sm pill--volt" onClick={() => recover(draft)}>Save it</button><button type="button" className="pill pill--sm" onClick={() => { clearDraft(); setDraft(null); }}>Discard</button></div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-3 gap-2 lg:gap-3 tnum">
                       <div className="card p-3 lg:p-4 grid"><span className="meta whitespace-nowrap">This week</span><strong className="display text-[17px] lg:text-2xl tnum whitespace-nowrap">{fmtDist(weekly[weekly.length - 1]?.raw ?? 0, units)}</strong></div>
                       <div className="card p-3 grid"><span className="meta">Activities</span><strong className="display text-lg lg:text-2xl tnum"><CountUp value={activities.length} /></strong></div>
@@ -273,7 +313,7 @@ function Move() {
           )}
         </div>
 
-        <AnimatePresence>{pending && <SaveSheet a={pending} units={units} onCancel={() => setPending(null)} onSave={save} onChange={setPending} />}</AnimatePresence>
+        <AnimatePresence>{pending && <SaveSheet a={pending} units={units} onCancel={() => { setPending(null); clearDraft(); }} onSave={save} onChange={setPending} />}</AnimatePresence>
         <AnimatePresence>{counting && <StartCountdown label={workout ? workout.name.split(" · ")[0] : typeLabel} onDone={() => { setCounting(false); start(); }} />}</AnimatePresence>
         <Toast text={toast} />
       </Screen>
