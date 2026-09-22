@@ -174,14 +174,46 @@ world on a simulator; 235 tests.
 
 ---
 
+## Indoor: trainers and treadmills, the first hardware test
+
+Control goes through the FTMS Control Point (`src/lib/indoor/ftms.ts`, bytes
+tested against the spec, never against a machine). Slope mode sends the road's
+grade at most once a second and only when it moved 0.5 %; ERG sends watts from
+the workout or a slider. On a treadmill, incline and belt speed are **off by
+default** and switched on by the runner.
+
+With the first trainer (Wahoo KICKR, Tacx Neo/Flux, Elite Direto/Suito, Saris
+H3, Zwift Hub — anything that advertises FTMS):
+
+1. Close Zwift, the maker's app and anything else that might hold it: FTMS
+   gives control to one app at a time. A refusal shows "Read-only" on screen.
+2. Indoor → Ride → Free ride → Smart trainer. Expect "connected", then the
+   power dial in green ("Measured power").
+3. Ride La Montagne. The resistance must rise on the climbs within a second
+   or two. If it never changes, the control point write is failing.
+4. Switch to ERG, set 150 W, then 250 W. The trainer must hold the watts
+   whatever the cadence.
+5. Ride Sweet spot 3×10 for a few minutes: the target must change at each block.
+6. End, save, and check the activity says "measured" and earned full XP.
+
+Treadmill: same, with Run → Smart treadmill; turn on "Follow the hills" and
+watch the incline follow the road (0–15 %). Belt speed from a workout moves
+the belt by itself — test it standing on the side rails first.
+
+---
+
 ## Open work
 
 1. **Android build** — the project is generated and untested.
 2. **Reward claiming** — `reward_claims` table with a shipping address and RLS.
    Ranks and badges are plumbed; the back end is not.
-3. **Multiplayer presence** — Supabase Realtime, so the indoor pacers are
-   joined by actual people. The privacy rule holds: a virtual position on a
-   fictional course reveals nothing, so indoor sessions must never carry GPS.
+3. **Multiplayer presence** — built (`src/lib/indoor/live.ts`): one Realtime
+   channel per course and sport, presence for who is there, a position
+   broadcast once a second, extrapolated between messages. Signed-in only.
+   Verified: two clients on the real project see each other's presence and
+   receive each other's broadcast. Not verified: two phones riding together.
+   The privacy rule holds: only a distance on a fictional road is sent, never
+   GPS, and nothing is stored.
 4. **3D assets** — see `public/models/README.md` for the contract, the budgets
    and the licence table. Start with **one** object and look at it before
    making fifty.

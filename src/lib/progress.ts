@@ -120,6 +120,41 @@ export async function awardActivity(a: Activity) {
 }
 
 /**
+ * XP for an indoor session.
+ *
+ * There is no GPS track to verify, so `verifyActivity` would pay nothing. The
+ * effort's provenance stands in for it instead: measured power or belt speed
+ * pays in full, an estimate from heart rate pays 60 %, and effort typed on a
+ * slider pays nothing — the same rule the ride screen shows while riding.
+ */
+export function indoorXpBreakdown(a: Pick<Activity, "durationSec" | "elevGainM"> & { movingSec?: number; workout?: boolean }, credit: number) {
+  const minutes = Math.round((a.movingSec ?? a.durationSec) / 60);
+  const parts = [
+    { label: "Indoor session", xp: XP.activityBase },
+    { label: `${minutes} min moving`, xp: Math.round(minutes * XP.cardioMinute) },
+  ];
+  if (a.elevGainM >= 100) parts.push({ label: `${Math.round(a.elevGainM)} m climbed`, xp: Math.floor(a.elevGainM / 100) * XP.elevPer100m });
+  if (a.workout) parts.push({ label: "Structured workout", xp: XP.guidedWorkout });
+  const raw = parts.reduce((s, p) => s + p.xp, 0);
+  return { parts, credit, total: Math.round(raw * credit) };
+}
+
+export async function awardIndoor(a: Activity, credit: number) {
+  const { total: xp } = indoorXpBreakdown({ ...a, workout: !!a.meta?.indoor?.workoutDone }, credit);
+  const stats = await getStats();
+  stats.xp += xp;
+  // Lifetime distance and climb count in proportion to how well they were
+  // measured: a slider can move the avatar, not the totals.
+  stats.totals.distanceM += Math.round(a.distanceM * credit);
+  stats.totals.activities = (stats.totals.activities ?? 0) + 1;
+  stats.totals.elevGainM = (stats.totals.elevGainM ?? 0) + Math.round(a.elevGainM * credit);
+  await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
+  if (credit > 0) await touchStreak();
+  const { earned } = await finalize();
+  return { xp, earned };
+}
+
+/**
  * Pay for any sport challenge an activity has just completed. Reads the saved
  * activities, so call it after the activity is written. Each challenge is paid
  * once: its id goes into `stats.challengesDone`.

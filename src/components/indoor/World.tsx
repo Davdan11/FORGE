@@ -43,7 +43,11 @@ export interface Rider {
   me?: boolean;
   /** Pedal revolutions per minute, used to drive the model's legs. */
   cadence?: number;
+  /** A pacer bot, or a real person riding the same course right now. */
+  kind?: "bot" | "person";
 }
+
+export type WorldMode = "ride" | "run";
 
 /* ── the rider model ──────────────────────────────────────────
    Drop a glTF at /models/cyclist.glb and every avatar becomes
@@ -86,7 +90,7 @@ function loadRiderModel(): Promise<Loaded> {
  * physics writes into a ref, this loop reads it, and React is left to handle
  * the numbers on the dial at a human rate.
  */
-export function World({ course, riders, className = "" }: { course: Course; riders: RefObject<Rider[]>; className?: string }) {
+export function World({ course, riders, mode = "ride", className = "" }: { course: Course; riders: RefObject<Rider[]>; mode?: WorldMode; className?: string }) {
   const mount = useRef<HTMLDivElement | null>(null);
   const live = riders;
 
@@ -160,7 +164,8 @@ export function World({ course, riders, className = "" }: { course: Course; ride
     // primitives and upgrades itself the moment the model lands.
     let model: Loaded = null;
     let cancelled = false;
-    loadRiderModel().then((m) => { if (!cancelled) model = m; });
+    // The cyclist model is a cyclist: runners stay on the primitive runner.
+    if (mode === "ride") loadRiderModel().then((m) => { if (!cancelled) model = m; });
 
     let raf = 0;
     const clock = new THREE.Clock();
@@ -177,7 +182,7 @@ export function World({ course, riders, className = "" }: { course: Course; ride
         if (r.me) me = r;
         let avatar = avatars.get(r.id);
         if (!avatar) {
-          const built = buildAvatar(r.me === true, model);
+          const built = buildAvatar(r.me === true, model, mode, r.kind);
           avatar = built.object;
           if (built.mixer) mixers.set(r.id, built.mixer);
           avatars.set(r.id, avatar);
@@ -197,6 +202,13 @@ export function World({ course, riders, className = "" }: { course: Course; ride
           // a fixed rate while the numbers say 95 rpm is worse than no legs.
           mixer.timeScale = (r.cadence ?? 80) / 60;
           mixer.update(dt);
+        } else if (mode === "run") {
+          // Stride from distance, not time: a runner standing still has still legs.
+          const phase = r.distanceM * 2.2;
+          const body = avatar.children[0];
+          body.position.y = 0.55 + Math.abs(Math.sin(phase)) * 0.07;
+          const legs = body.userData.legs as THREE.Object3D[] | undefined;
+          if (legs) { legs[0].rotation.x = Math.sin(phase) * 0.6; legs[1].rotation.x = -Math.sin(phase) * 0.6; }
         } else {
           // Primitive fallback: a small bob, enough to read as effort.
           avatar.children[0].position.y = 0.9 + Math.sin(clock.elapsedTime * 6 + r.distanceM) * 0.04;
@@ -252,7 +264,7 @@ export function World({ course, riders, className = "" }: { course: Course; ride
     // `live` is a ref: its identity never changes, so listing it would only
     // suggest the scene should be rebuilt when the riders change, which is the
     // one thing this design exists to avoid.
-  }, [course, live]);
+  }, [course, live, mode]);
 
   return <div ref={mount} className={`overflow-hidden ${className}`} aria-label="Virtual course" role="img" />;
 }
@@ -447,7 +459,8 @@ function buildTrees(course: Course, count = 800) {
   return group;
 }
 
-function buildAvatar(me: boolean, model: Loaded): { object: THREE.Object3D; mixer?: THREE.AnimationMixer } {
+function buildAvatar(me: boolean, model: Loaded, mode: WorldMode = "ride", kind?: Rider["kind"]): { object: THREE.Object3D; mixer?: THREE.AnimationMixer } {
+  if (mode === "run") return { object: buildPrimitiveRunner(me, kind) };
   if (model) {
     // SkeletonUtils.clone, not Object3D.clone: a plain clone shares the
     // skeleton, so every rider on the course pedals in lockstep with the
@@ -459,7 +472,47 @@ function buildAvatar(me: boolean, model: Loaded): { object: THREE.Object3D; mixe
     mixer.clipAction(model.clips[0]).play();
     return { object, mixer };
   }
-  return { object: buildPrimitiveAvatar(me) };
+  return { object: buildPrimitiveAvatar(me, kind) };
+}
+
+/** Real people in blue, bots in grey, you in volt: who is who, at a glance. */
+const colourFor = (me: boolean, kind?: Rider["kind"]) => (me ? VOLT : kind === "person" ? 0x4aa3df : 0x6d7b86);
+
+/** An upright runner: torso, head, and two legs that swing with the stride. */
+function buildPrimitiveRunner(me: boolean, kind?: Rider["kind"]) {
+  const group = new THREE.Group();
+  const body = new THREE.Group();
+  const colour = colourFor(me, kind);
+  const mat = new THREE.MeshStandardMaterial({ color: colour, roughness: 0.45, emissive: me ? VOLT : 0x000000, emissiveIntensity: me ? 0.3 : 0 });
+
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.5, 4, 8), mat);
+  torso.position.y = 0.55;
+  torso.rotation.x = 0.12;   // a slight forward lean, as runners do
+  torso.castShadow = true;
+  body.add(torso);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd9c2a8, roughness: 0.7 }));
+  head.position.set(0, 1.15, 0.05);
+  head.castShadow = true;
+  body.add(head);
+
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x2a2f33, roughness: 0.7 });
+  const legs: THREE.Object3D[] = [];
+  for (const x of [0.1, -0.1]) {
+    // Pivot at the hip so the leg swings rather than spins about its middle.
+    const hip = new THREE.Group();
+    hip.position.set(x, 0.22, 0);
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.62, 3, 6), legMat);
+    leg.position.y = -0.4;
+    leg.castShadow = true;
+    hip.add(leg);
+    body.add(hip);
+    legs.push(hip);
+  }
+  body.userData.legs = legs;
+  body.position.y = 0.55;
+  group.add(body);
+  return group;
 }
 
 /** Deep clone that gives each copy its own skeleton. */
@@ -490,11 +543,11 @@ function tintVolt(object: THREE.Object3D) {
   });
 }
 
-function buildPrimitiveAvatar(me: boolean) {
+function buildPrimitiveAvatar(me: boolean, kind?: Rider["kind"]) {
   const group = new THREE.Group();
   const body = new THREE.Group();
 
-  const colour = me ? VOLT : 0x6d7b86;
+  const colour = colourFor(me, kind);
   const rider = new THREE.Mesh(
     new THREE.CapsuleGeometry(0.22, 0.62, 4, 8),
     new THREE.MeshStandardMaterial({ color: colour, roughness: 0.45, emissive: me ? VOLT : 0x000000, emissiveIntensity: me ? 0.3 : 0 }),

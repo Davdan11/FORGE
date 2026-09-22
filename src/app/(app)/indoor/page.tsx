@@ -1,27 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Bluetooth, BluetoothOff, Gauge, Heart, Mountain, ChevronDown, ChevronUp } from "lucide-react";
-import { db, getProfile } from "@/lib/db";
+import { Pencil, Users } from "lucide-react";
+import { db, getProfile, uid } from "@/lib/db";
 import { generateCourse, courseFromActivity, at, type Course } from "@/lib/indoor/course";
-import { step, ROAD_BIKE, powerFromHr, powerFromSpeed, declaredPower, guessFtp, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
-import { sensorAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
+import { guessFtp } from "@/lib/indoor/physics";
+import { BUILT_IN_WORKOUTS, flatten, guessThresholdKmh, stressScore, totalSec, type StructuredWorkout } from "@/lib/indoor/workouts";
+import { peekRoom } from "@/lib/indoor/live";
+import { activityKcal, hrSummary } from "@/lib/heart";
+import { awardChallenges, awardIndoor, indoorXpBreakdown } from "@/lib/progress";
+import { isConfigured, supabase } from "@/lib/supabase/client";
 import { fmtDist, fmtDuration } from "@/lib/units";
-import { Screen, Hero, Photo, Section, ScreenSkeleton, Toast } from "@/components/ui";
+import { Screen, Hero, Photo, Section, ScreenSkeleton, Toast, Seg, Stat } from "@/components/ui";
 import { ART } from "@/lib/data/images";
 import { Page, Press } from "@/components/motion";
-import type { Rider } from "@/components/indoor/World";
-import { startPacers, stepPacers, placeInBunch, gapToNext, type PacerState } from "@/lib/indoor/pacers";
-import type { Profile as AthleteProfile, UnitPrefs } from "@/lib/types";
-
-// Three.js is ~600 KB. It has no business in the bundle of anyone who never
-// opens this screen, and it cannot run on the server at all.
-const World = dynamic(() => import("@/components/indoor/World").then((m) => m.World), {
-  ssr: false,
-  loading: () => <div className="w-full h-full skeleton !rounded-none" />,
-});
+import { Ride, type RideResult, type Sport } from "@/components/indoor/Ride";
+import { WorkoutBuilder, pace } from "@/components/indoor/WorkoutBuilder";
+import { WorkoutChart } from "@/components/indoor/WorkoutChart";
+import type { Activity, Profile as AthleteProfile, UnitPrefs } from "@/lib/types";
 
 const BUILT_IN = [
   { id: "vallee", name: "Vallée", lengthM: 12_000, hilliness: 0.35 },
@@ -29,13 +26,18 @@ const BUILT_IN = [
   { id: "plaine", name: "La Plaine", lengthM: 20_000, hilliness: 0.08 },
 ];
 
+type View = { v: "pick" } | { v: "ride" } | { v: "build"; w: StructuredWorkout; isNew: boolean } | { v: "summary"; r: RideResult };
+
 export default function IndoorPage() {
   const profile = useLiveQuery(() => getProfile(), []);
   const ridesRaw = useLiveQuery(() => db.activities.where("type").anyOf("ride", "run", "trail").reverse().limit(12).toArray(), []);
-  const rides = useMemo(() => ridesRaw ?? [], [ridesRaw]);
+  // Indoor sessions have no track to turn into a course.
+  const rides = useMemo(() => (ridesRaw ?? []).filter((r) => !r.meta?.indoor), [ridesRaw]);
 
+  const [sport, setSport] = useState<Sport>("ride");
   const [courseId, setCourseId] = useState("vallee");
-  const [riding, setRiding] = useState(false);
+  const [workoutId, setWorkoutId] = useState<string | null>(null);
+  const [view, setView] = useState<View>({ v: "pick" });
   const [toast, setToast] = useState<string | null>(null);
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3400); };
 
@@ -46,53 +48,272 @@ export default function IndoorPage() {
     return ride ? courseFromActivity(ride) : null;
   }, [courseId, rides]);
 
+  const ftpW = profile?.ftpW ?? (profile ? guessFtp(profile.weightKg, profile.level) : 200);
+  const thresholdKmh = profile?.thresholdKmh ?? (profile ? guessThresholdKmh(profile.level) : 10);
+  // One object for the whole ride: the ride loop restarts when this changes.
+  const thresholds = useMemo(() => ({ ftpW, thresholdKmh }), [ftpW, thresholdKmh]);
+
+  const mine = useMemo(() => profile?.indoorWorkouts ?? [], [profile?.indoorWorkouts]);
+  const workouts = useMemo(() => [...mine, ...BUILT_IN_WORKOUTS].filter((w) => w.sport === sport), [mine, sport]);
+  const workout = workouts.find((w) => w.id === workoutId) ?? null;
+
+  // Who is on the selected course right now, without joining it.
+  // Keyed by room, so switching course never shows the previous room's count.
+  const [live, setLive] = useState({ room: "", n: 0 });
+  const roomKey = course ? `${sport}:${course.id}` : "";
+  const liveCount = live.room === roomKey ? live.n : 0;
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    supabase?.auth.getUser().then(({ data }) => setSignedIn(!!data.user)).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (view.v !== "pick" || !course) return;
+    const key = `${sport}:${course.id}`;
+    return peekRoom(course.id, sport, (n) => setLive({ room: key, n }));
+  }, [course, sport, view.v]);
+
   if (!profile) return <ScreenSkeleton />;
+
+  async function saveProfile(patch: Partial<AthleteProfile>) {
+    await db.profile.update(profile!.id, { ...patch, dirty: 1, updatedAt: new Date().toISOString() });
+  }
+
+  async function saveWorkout(w: StructuredWorkout) {
+    const next = [w, ...mine.filter((x) => x.id !== w.id)];
+    await saveProfile({ indoorWorkouts: next });
+    setWorkoutId(w.id);
+    setView({ v: "pick" });
+    say("Workout saved.");
+  }
+
+  async function deleteWorkout(id: string) {
+    await saveProfile({ indoorWorkouts: mine.filter((x) => x.id !== id) });
+    if (workoutId === id) setWorkoutId(null);
+    setView({ v: "pick" });
+  }
+
+  if (view.v === "ride" && course) {
+    return (
+      <Page>
+        <Ride course={course} profile={profile} sport={sport} workout={workout} thresholds={thresholds} say={say}
+          onEnd={(r) => { if (r) setView({ v: "summary", r }); else { setView({ v: "pick" }); say("Too short to save."); } }} />
+        <Toast text={toast} />
+      </Page>
+    );
+  }
+
+  if (view.v === "summary") {
+    return (
+      <Page>
+        <Summary r={view.r} profile={profile}
+          onDone={(msg) => { setView({ v: "pick" }); if (msg) say(msg); }} />
+        <Toast text={toast} />
+      </Page>
+    );
+  }
+
+  if (view.v === "build") {
+    return (
+      <Page>
+        <Screen>
+          <Hero image={ART.indoor} color height="h-[220px]" eyebrow="Indoor · workout" title={view.isNew ? <>Build a<br /><em>workout.</em></> : <>Edit<br /><em>{view.w.name}.</em></>} />
+          <WorkoutBuilder initial={view.w} thresholds={thresholds}
+            onSave={saveWorkout} onCancel={() => setView({ v: "pick" })}
+            onDelete={view.isNew ? undefined : () => deleteWorkout(view.w.id)} />
+        </Screen>
+        <Toast text={toast} />
+      </Page>
+    );
+  }
+
+  const verb = sport === "ride" ? "Ride" : "Run";
 
   return (
     <Page>
-      {riding && course ? (
-        <Ride course={course} profile={profile} onStop={() => setRiding(false)} say={say} />
-      ) : (
-        <Screen>
-          <Hero image={ART.indoor} color height="h-[340px]" eyebrow="Indoor" title={<>Ride the hill<br /><em>from your basement.</em></>}>
-            <p className="text-sm text-bone/80 max-w-[48ch]">
-              Your effort moves you. Gradient, drag and your own weight decide how fast — so the climb is a climb.
-            </p>
-          </Hero>
+      <Screen>
+        <Hero image={ART.indoor} color height="h-[340px]" eyebrow="Indoor"
+          title={sport === "ride" ? <>Ride the hill<br /><em>from your basement.</em></> : <>Run the hill<br /><em>on your treadmill.</em></>}>
+          <p className="text-sm text-bone/80 max-w-[48ch]">
+            {sport === "ride"
+              ? "Your effort moves you. Gradient, drag and your own weight decide how fast — and a smart trainer makes you feel every climb."
+              : "Your belt speed moves you. A smart treadmill can follow the hills; a footpod or a strap works on any treadmill."}
+          </p>
+        </Hero>
 
-          <Section title="Pick a course">
+        <div className="mb-6"><Seg fill value={sport} onChange={(v) => { setSport(v); setWorkoutId(null); }} options={[{ v: "ride", label: "Ride" }, { v: "run", label: "Run" }]} /></div>
+
+        <Section title="Pick a course">
+          <div className="grid gap-2">
+            {BUILT_IN.map((c) => {
+              const built = generateCourse(c);
+              return <CourseRow key={c.id} id={c.id} name={c.name} course={built} on={courseId === c.id} onPick={setCourseId} units={profile.units} image={ART.course[c.id]} />;
+            })}
+          </div>
+        </Section>
+
+        {rides.length > 0 && (
+          <Section title="Your own routes" aside={<span className="text-xs text-smoke">recorded outside</span>}>
+            <p className="text-xs text-smoke mb-3 max-w-[54ch]">
+              Any route you recorded becomes a course. The ends are trimmed the same way a published route is, so a course you share is not a map to your door.
+            </p>
             <div className="grid gap-2">
-              {BUILT_IN.map((c) => {
-                const built = generateCourse(c);
-                return <CourseRow key={c.id} id={c.id} name={c.name} course={built} on={courseId === c.id} onPick={setCourseId} units={profile.units} image={ART.course[c.id]} />;
+              {rides.map((r) => {
+                const c = courseFromActivity(r);
+                if (!c) return null;
+                return <CourseRow key={r.id} id={r.id} name={r.title} course={c} on={courseId === r.id} onPick={setCourseId} units={profile.units} />;
               })}
             </div>
           </Section>
+        )}
 
-          {rides.length > 0 && (
-            <Section title="Your own routes" aside={<span className="text-xs text-smoke">ridden outside</span>}>
-              <p className="text-xs text-smoke mb-3 max-w-[54ch]">
-                Any route you recorded becomes a course. The ends are trimmed the same way a published route is, so a course you share is not a map to your door.
-              </p>
-              <div className="grid gap-2">
-                {rides.map((r) => {
-                  const c = courseFromActivity(r);
-                  if (!c) return null;
-                  return <CourseRow key={r.id} id={r.id} name={r.title} course={c} on={courseId === r.id} onPick={setCourseId} units={profile.units} />;
-                })}
-              </div>
-            </Section>
-          )}
-
-          <Press className="mt-6 block">
-            <button type="button" className="pill pill--volt pill--block pill--lg" disabled={!course} onClick={() => setRiding(true)}>
-              {course ? `Ride ${course.name}` : "Pick a course"}
+        <Section title="Workout" aside={<button type="button" className="text-xs underline text-smoke" onClick={() => setView({ v: "build", isNew: true, w: { id: uid(), name: "", sport, blocks: [{ kind: "ramp", sec: 600, from: 45, to: 75 }, { kind: "steady", sec: 1200, pct: 80 }, { kind: "ramp", sec: 300, from: 65, to: 40 }] } })}>+ Build your own</button>}>
+          <div className="grid gap-2">
+            <button type="button" aria-pressed={workoutId === null} onClick={() => setWorkoutId(null)}
+              className={`card p-4 text-left transition-colors ${workoutId === null ? "!border-volt" : ""}`}>
+              <p className="font-semibold">Free {sport === "ride" ? "ride" : "run"}</p>
+              <p className="text-xs text-smoke mt-0.5">{sport === "ride" ? "The road sets the resistance." : "Your pace, your call."}</p>
             </button>
-          </Press>
-        </Screen>
-      )}
+            {workouts.map((w) => {
+              const steps = flatten(w);
+              return (
+                <div key={w.id} className={`card p-4 grid gap-2 transition-colors ${workoutId === w.id ? "!border-volt" : ""}`}>
+                  <button type="button" aria-pressed={workoutId === w.id} onClick={() => setWorkoutId(w.id)} className="text-left grid gap-2">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="font-semibold truncate">{w.name}</p>
+                      <p className="text-xs text-smoke tnum shrink-0">{fmtDuration(totalSec(steps))} · stress {stressScore(steps)}</p>
+                    </div>
+                    <WorkoutChart workout={w} className="h-10 w-full text-ink" />
+                  </button>
+                  {!w.builtIn
+                    ? <button type="button" className="text-xs text-smoke underline justify-self-start flex items-center gap-1" onClick={() => setView({ v: "build", isNew: false, w })}><Pencil className="w-3 h-3" />Edit</button>
+                    : <button type="button" className="text-xs text-smoke underline justify-self-start" onClick={() => setView({ v: "build", isNew: true, w: { ...w, id: uid(), name: `${w.name} (mine)`, builtIn: false } })}>Copy and edit</button>}
+                </div>
+              );
+            })}
+          </div>
+          <Thresholds sport={sport} ftpW={ftpW} thresholdKmh={thresholdKmh} tested={sport === "ride" ? profile.ftpW != null : profile.thresholdKmh != null}
+            onChange={(patch) => saveProfile(patch)} />
+        </Section>
+
+        {course && isConfigured && (
+          <p className="mt-6 text-sm flex items-center gap-2">
+            <Users className="w-4 h-4" strokeWidth={2} />
+            {liveCount > 0
+              ? <span><strong className="tnum">{liveCount}</strong> {liveCount === 1 ? "person is" : "people are"} {sport === "ride" ? "riding" : "running"} {course.name} right now{signedIn ? " — you'll join them." : "."}</span>
+              : <span className="text-smoke">Nobody on {course.name} right now. Start, and anyone who joins will appear on the road.</span>}
+            {!signedIn && <span className="text-smoke"> Sign in to appear to others.</span>}
+          </p>
+        )}
+
+        <Press className="mt-4 block">
+          <button type="button" className="pill pill--volt pill--block pill--lg" disabled={!course} onClick={() => setView({ v: "ride" })}>
+            {course ? `${verb} ${course.name}${workout ? ` · ${workout.name}` : ""}` : "Pick a course"}
+          </button>
+        </Press>
+      </Screen>
       <Toast text={toast} />
     </Page>
+  );
+}
+
+/** FTP and threshold pace: guessed from level until the athlete enters a real one. */
+function Thresholds({ sport, ftpW, thresholdKmh, tested, onChange }: { sport: Sport; ftpW: number; thresholdKmh: number; tested: boolean; onChange: (p: Partial<AthleteProfile>) => void }) {
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState(String(sport === "ride" ? ftpW : thresholdKmh));
+  return (
+    <div className="mt-3 text-xs text-smoke">
+      {!open ? (
+        <p>
+          Targets use {sport === "ride" ? <>an FTP of <strong className="text-ink tnum">{ftpW} W</strong></> : <>a threshold of <strong className="text-ink tnum">{thresholdKmh} km/h</strong> ({pace(thresholdKmh / 3.6)} /km)</>}
+          {tested ? "" : ", guessed from your level"}. <button type="button" className="underline" onClick={() => { setV(String(sport === "ride" ? ftpW : thresholdKmh)); setOpen(true); }}>Change</button>
+        </p>
+      ) : (
+        <form className="flex items-center gap-2" onSubmit={(e) => {
+          e.preventDefault();
+          const n = parseFloat(v);
+          if (sport === "ride" && n >= 50 && n <= 600) onChange({ ftpW: Math.round(n) });
+          if (sport === "run" && n >= 5 && n <= 25) onChange({ thresholdKmh: Math.round(n * 10) / 10 });
+          setOpen(false);
+        }}>
+          <input className="input !h-9 w-24 tnum" type="number" inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} autoFocus />
+          <span>{sport === "ride" ? "W" : "km/h"}</span>
+          <button type="submit" className="pill pill--sm">Save</button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/* ── after the session ────────────────────────────────────── */
+
+function Summary({ r, profile, onDone }: { r: RideResult; profile: AthleteProfile; onDone: (msg?: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const xp = indoorXpBreakdown({ durationSec: r.durationSec, movingSec: r.movingSec, elevGainM: r.elevGainM, workout: r.workoutDone }, r.credit);
+  const u = profile.units;
+  const hrs = hrSummary(r.hr);
+
+  async function save() {
+    setBusy(true);
+    const k = activityKcal({ type: r.sport, movingMin: r.movingSec / 60, distanceM: r.distanceM, profile, hr: r.hr });
+    // Measured watts give the energy directly: ~1 kcal of food per kJ of work,
+    // since the body is about 24 % efficient and 1 kcal is 4.184 kJ.
+    const kcal = r.avgW && r.quality === "measured" && k.source !== "heart_rate" ? Math.round((r.avgW * r.movingSec) / 1000) : k.kcal;
+    const a: Activity = {
+      id: uid(),
+      type: r.sport,
+      startedAt: r.startedAt,
+      endedAt: r.endedAt,
+      distanceM: r.distanceM,
+      durationSec: r.durationSec,
+      movingSec: r.movingSec,
+      avgPaceSecKm: r.distanceM > 0 ? r.movingSec / (r.distanceM / 1000) : undefined,
+      elevGainM: r.elevGainM,
+      points: [],
+      splits: r.splits,
+      title: `${r.course.name} · indoor ${r.sport === "ride" ? "ride" : "run"}`,
+      shared: false,
+      xp: 0,
+      meta: { discipline: "indoor", indoor: { course: r.course.name, quality: r.quality, avgW: r.avgW, workout: r.workout, workoutDone: r.workoutDone || undefined, with: r.withPeople || undefined } },
+      hrSeries: r.hr.length ? r.hr : undefined,
+      avgHr: hrs?.avg,
+      maxHr: hrs?.max,
+      kcal,
+      kcalSource: k.source,
+    };
+    const { xp: got, earned } = await awardIndoor(a, r.credit);
+    await db.activities.put({ ...a, xp: got, dirty: 1, updatedAt: new Date().toISOString() } as Activity);
+    const won = r.credit > 0 ? await awardChallenges(r.sport, u.distance) : { xp: 0, titles: [] as string[] };
+    onDone(`Saved. +${got + won.xp} XP${won.titles.length ? ` · challenge: ${won.titles.join(", ")}` : ""}${earned.length ? ` · badge: ${earned.join(", ")}` : ""}`);
+  }
+
+  return (
+    <Screen>
+      <Hero image={ART.indoor} color height="h-[240px]" eyebrow={`Indoor ${r.sport === "ride" ? "ride" : "run"} · ${r.course.name}`} title={<>Session<br /><em>done.</em></>} />
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Stat label="Distance" value={fmtDist(r.distanceM, u)} accent />
+        <Stat label="Time" value={fmtDuration(r.durationSec)} sub={`moving ${fmtDuration(r.movingSec)}`} />
+        {r.sport === "ride"
+          ? <Stat label="Avg power" value={r.avgW != null ? `${r.avgW} W` : "—"} sub={r.quality} />
+          : <Stat label="Avg pace" value={`${pace(r.distanceM / Math.max(1, r.movingSec))} /km`} sub={r.quality} />}
+        <Stat label="Climb" count={r.elevGainM} suffix=" m" />
+        {hrs && <Stat label="Heart rate" count={hrs.avg} suffix=" bpm" sub={`avg · max ${hrs.max}`} />}
+        {r.withPeople > 0 && <Stat label="Rode with" count={r.withPeople} sub={r.withPeople === 1 ? "person" : "people"} />}
+      </div>
+      <Section title={`+${xp.total} XP`} aside={<span className="text-xs text-smoke">{Math.round(r.credit * 100)} % credit</span>}>
+        <ul className="card px-4 divide-y divide-line text-sm">
+          {xp.parts.map((p) => <li key={p.label} className="py-2.5 flex justify-between"><span>{p.label}</span><span className="tnum text-smoke">+{Math.round(p.xp * r.credit)}</span></li>)}
+        </ul>
+        {r.credit < 1 && (
+          <p className="text-xs text-smoke mt-2 max-w-[56ch]">
+            {r.credit === 0 ? "Effort was set by hand, so it counts as a session but earns no XP." : "Part of the effort was estimated from heart rate, which earns 60 %. A power meter, smart trainer or treadmill earns it all."}
+          </p>
+        )}
+      </Section>
+      <div className="flex gap-2 mt-6">
+        <Press className="flex-1"><button type="button" className="pill pill--volt pill--block pill--lg" disabled={busy} onClick={save}>Save session</button></Press>
+        <button type="button" className="pill pill--lg" disabled={busy} onClick={() => { if (confirm("Discard this session?")) onDone("Discarded."); }}>Discard</button>
+      </div>
+    </Screen>
   );
 }
 
@@ -112,8 +333,7 @@ function CourseRow({ id, name, course, on, onPick, units, image }: { id: string;
   );
 }
 
-/** The course drawn as its own elevation profile — the shape you are about to
- *  ride, visible before you commit to riding it. */
+/** The course drawn as its own elevation profile. */
 function Profile({ course }: { course: Course }) {
   const n = 64;
   const alts = Array.from({ length: n }, (_, i) => at(course, (i / (n - 1)) * course.lengthM).alt);
@@ -124,260 +344,5 @@ function Profile({ course }: { course: Course }) {
       <path d={`${d} L100 30 L0 30 Z`} fill="currentColor" fillOpacity={0.16} />
       <path d={d} fill="none" stroke="currentColor" strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
     </svg>
-  );
-}
-
-/* ── the ride itself ──────────────────────────────────────── */
-
-function Ride({ course, profile, onStop, say }: {
-  course: Course;
-  profile: AthleteProfile;
-  onStop: () => void;
-  say: (m: string) => void;
-}) {
-  const bike = useMemo(() => ROAD_BIKE(profile.weightKg), [profile.weightKg]);
-  const ftp = useMemo(() => guessFtp(profile.weightKg, profile.level), [profile.weightKg, profile.level]);
-  const maxHr = useMemo(() => maxHrFor(profile.age), [profile.age]);
-
-  const fusion = useRef(new SensorFusion());
-  const [sensors, setSensors] = useState<Sensor[]>([]);
-  // Which sensor is mid-connect. A button that looks identical while it is
-  // working reads as a button that did nothing.
-  const [connecting, setConnecting] = useState<SensorKind | null>(null);
-  // Zero, not 150. A rider who sets off down the road on their own the moment
-  // the screen opens, with nothing connected and nobody pedalling, is the app
-  // inventing an effort — and it reads exactly as wrong as it is.
-  const [manualW, setManualW] = useState(0);
-
-  // Physics state lives in refs: it changes sixty times a second and React
-  // has no business seeing most of those.
-  const speed = useRef(0);
-  const distance = useRef(0);
-  // Set when the loop starts, not during render — Date.now() in a render is a
-  // different answer every time React happens to re-run it.
-  const started = useRef(0);
-  const riders = useRef<Rider[]>([{ id: "me", distanceM: 0, me: true }]);
-  const pacers = useRef<PacerState[]>(startPacers());
-  // The panel covers a third of the screen. On a phone that is most of the
-  // world, and the one thing you never see is your own rider.
-  const [hudOpen, setHudOpen] = useState(true);
-
-  // The loop reads these through refs so it never has to be rebuilt; restarting
-  // it would reset its clock and stutter the ride. Synced in an effect rather
-  // than assigned during render, which React forbids for good reason.
-  const manualRef = useRef(manualW);
-  const hasSensorRef = useRef(false);
-  useEffect(() => { manualRef.current = manualW; }, [manualW]);
-  useEffect(() => { hasSensorRef.current = sensors.length > 0; }, [sensors]);
-
-  // The dial, sampled at a rate a person can read.
-  const [dials, setDials] = useState({ speedMs: 0, distanceM: 0, watts: 0, quality: "declared" as Effort["quality"], hr: 0, cadence: 0, gradient: 0, elapsed: 0, position: 1, of: 1, gapM: null as number | null });
-
-  // Reaching a sensor is an async question now: the native transport has to
-  // load a plugin before it can answer. Null means "still asking".
-  const [availability, setAvailability] = useState<Availability | null>(null);
-  useEffect(() => {
-    let alive = true;
-    sensorAvailability().then((a) => { if (alive) setAvailability(a); });
-    return () => { alive = false; };
-  }, []);
-
-  useEffect(() => {
-    let raf = 0;
-    let last = performance.now();
-    let lastHud = 0;
-    started.current = Date.now();
-
-    const tick = (now: number) => {
-      raf = requestAnimationFrame(tick);
-      // Clamped at both ends. The ceiling covers a backgrounded tab returning
-      // with a huge gap; the floor covers a clock that steps backwards, which
-      // ran the physics in reverse and put the ride at "-0.00 km, lap 0"
-      // before anybody had turned a pedal.
-      const dt = Math.max(0, Math.min((now - last) / 1000, 0.1));
-      last = now;
-
-      // Where does the effort come from, and what is it worth?
-      const power = fusion.current.get("power");
-      const hr = fusion.current.get("hr");
-      const machineSpeed = fusion.current.get("speedMs");
-
-      let effort: Effort;
-      if (power != null) effort = { watts: power, quality: "measured" };
-      else if (machineSpeed != null) effort = powerFromSpeed(machineSpeed);
-      else if (hr != null) effort = powerFromHr(hr, 55, maxHr, ftp);
-      else if (hasSensorRef.current) {
-        // A sensor is paired but has gone quiet: a strap off the chest, a
-        // trainer unplugged. Coast. Falling back to the slider here would keep
-        // the avatar rolling at whatever it was last set to, which is a ride
-        // nobody is doing.
-        effort = { watts: 0, quality: "measured" };
-      }
-      else effort = declaredPower(manualRef.current);
-
-      const here = at(course, distance.current);
-      speed.current = step(speed.current, effort.watts, here.gradient, bike, dt);
-      distance.current = Math.max(0, distance.current + speed.current * dt);
-      riders.current[0].distanceM = distance.current;
-      riders.current[0].cadence = fusion.current.get("cadence") ?? undefined;
-
-      stepPacers(pacers.current, course, dt);
-      // Rebuild rather than mutate: the world diffs this list by id to add and
-      // remove avatars, and a stale entry leaves a ghost on the road.
-      riders.current.length = 1;
-      for (const p of pacers.current) {
-        riders.current.push({ id: p.spec.id, distanceM: p.distanceM, label: p.spec.name, cadence: 84 });
-      }
-
-      if (now - lastHud > 120) {
-        lastHud = now;
-        setDials({
-          speedMs: speed.current,
-          distanceM: distance.current,
-          watts: effort.watts,
-          quality: effort.quality,
-          hr: hr ?? 0,
-          cadence: fusion.current.get("cadence") ?? 0,
-          gradient: here.gradient,
-          elapsed: (Date.now() - started.current) / 1000,
-          ...placeInBunch(distance.current, pacers.current),
-          gapM: gapToNext(distance.current, pacers.current),
-        });
-      }
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [course, bike, ftp, maxHr]);
-
-  useEffect(() => () => { for (const s of sensors) s.disconnect(); }, [sensors]);
-
-  async function connect(kind: SensorKind) {
-    setConnecting(kind);
-    try {
-      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(`${SENSOR_LABEL[kind]} disconnected.`));
-      setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
-      say(`${s.name} connected.`);
-    } catch (e) {
-      // A person closing the chooser is not an error worth shouting about.
-      const msg = e instanceof Error ? e.message : String(e);
-      if (!/cancelled|User cancelled/i.test(msg)) say(msg);
-    } finally {
-      setConnecting(null);
-    }
-  }
-
-  const kmh = dials.speedMs * 3.6;
-  const credit = XP_CREDIT[dials.quality];
-
-  // z-50 sits above .nav-float (z-40), which otherwise covers the End ride
-  // button, and below the level-up card (z-60) and the post sheet (z-70) — a
-  // personal best reached mid-ride should still be allowed to interrupt.
-  return (
-    <div className="fixed inset-0 z-50 bg-ink">
-      <World course={course} riders={riders} className="absolute inset-0" />
-
-      {/* Dials, then the standings beneath them. Side by side they collided:
-          the position chip landed on top of the speed. */}
-      <div className="absolute inset-x-0 top-0 p-3 pt-[calc(var(--safe-top)+10px)] grid gap-2 justify-items-center pointer-events-none">
-        <div className="flex gap-2">
-          <Dial label="Speed" value={kmh.toFixed(1)} unit="km/h" wide />
-          <Dial label="Power" value={String(Math.round(dials.watts))} unit="W" tone={credit === 1 ? "volt" : credit > 0 ? "plain" : "dim"} />
-          <Dial label="Gradient" value={`${(dials.gradient * 100).toFixed(1)}`} unit="%" />
-        </div>
-        <div className="flex gap-1.5">
-          <span className="chip chip--volt tnum">{ordinal(dials.position)} of {dials.of}</span>
-          {dials.gapM != null && <span className="chip chip--live backdrop-blur-md tnum">{Math.round(dials.gapM)} m to catch</span>}
-        </div>
-      </div>
-
-      {/* bottom: state and controls, or a single button when put away */}
-      {!hudOpen && (
-        <div className="absolute inset-x-0 bottom-0 p-3 pb-[calc(var(--safe-bottom)+12px)] flex justify-center">
-          <Press><button type="button" onClick={() => setHudOpen(true)}
-            className="chip chip--live backdrop-blur-md"><ChevronUp className="w-3.5 h-3.5" strokeWidth={2.4} />Controls</button></Press>
-        </div>
-      )}
-      {hudOpen && (
-      <div className="absolute inset-x-0 bottom-0 p-3 pb-[calc(var(--safe-bottom)+12px)] grid gap-2">
-        <div className="flex gap-2 justify-center flex-wrap">
-          <span className="chip chip--live backdrop-blur-md tnum">{fmtDist(dials.distanceM, profile.units)}</span>
-          <span className="chip chip--live backdrop-blur-md tnum">{fmtDuration(dials.elapsed)}</span>
-          {dials.hr > 0 && <span className="chip chip--live backdrop-blur-md tnum"><Heart className="w-3 h-3" strokeWidth={2.4} />{Math.round(dials.hr)}</span>}
-          {dials.cadence > 0 && <span className="chip chip--live backdrop-blur-md tnum"><Gauge className="w-3 h-3" strokeWidth={2.4} />{Math.round(dials.cadence)}</span>}
-          {course.loop && <span className="chip chip--live backdrop-blur-md tnum"><Mountain className="w-3 h-3" strokeWidth={2.4} />lap {Math.floor(dials.distanceM / course.lengthM) + 1}</span>}
-        </div>
-
-        <div className="card relative p-3 grid gap-3 backdrop-blur-xl !bg-[rgba(255,255,255,.92)] max-w-[520px] mx-auto w-full">
-          {/* Collapse, because the panel covers a third of the screen and the
-              one thing it hides is your own rider. Riding is the point; the
-              controls are what you touch twice. */}
-          <button type="button" onClick={() => setHudOpen(false)} aria-label="Hide the controls"
-            className="absolute -top-3 right-3 w-9 h-9 grid place-items-center rounded-full bg-carbon border border-line-strong shadow-sm">
-            <ChevronDown className="w-4 h-4" strokeWidth={2.2} />
-          </button>
-          <Provenance quality={dials.quality} />
-
-          {/* null while the transport is still being asked — the native one has
-              to load a plugin before it can answer. */}
-          {!sensors.length && availability && (
-            availability.ok ? (
-              <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-                {(["heart_rate", "fitness_machine", "cycling_power", "csc"] as SensorKind[]).map((k) => (
-                  <button key={k} type="button" onClick={() => connect(k)} disabled={connecting !== null}
-                    className={`shrink-0 h-9 px-3 rounded-full border text-xs transition-colors flex items-center gap-1.5 ${connecting === k ? "border-volt text-volt-deep" : "border-line-strong text-ink hover:border-ink"} ${connecting !== null && connecting !== k ? "opacity-40" : ""}`}>
-                    <Bluetooth className="w-3.5 h-3.5" strokeWidth={2} />{connecting === k ? `Looking for ${SENSOR_LABEL[k].toLowerCase()}…` : SENSOR_LABEL[k]}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-smoke flex gap-2"><BluetoothOff className="w-4 h-4 shrink-0" strokeWidth={2} />{availability.reason}</p>
-            )
-          )}
-
-          {!sensors.length && (
-            <label className="grid gap-1">
-              <span className="meta">Effort · {manualW} W</span>
-              <input type="range" min={0} max={400} step={10} value={manualW}
-                onChange={(e) => setManualW(+e.target.value)}
-                style={{ ["--fill" as string]: `${(manualW / 400) * 100}%` }} />
-            </label>
-          )}
-
-          <div className="flex gap-2">
-            <Press className="flex-1"><button type="button" className="pill pill--block" onClick={onStop}>End ride</button></Press>
-          </div>
-        </div>
-      </div>
-      )}
-    </div>
-  );
-}
-
-/** 1st, 2nd, 3rd, 4th — the suffix English refuses to make regular. */
-function ordinal(n: number) {
-  const s = ["th", "st", "nd", "rd"], v = n % 100;
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
-}
-
-/** Says where the number came from, every second of the ride. The alternative
- *  is a screen that looks identical whether it is reading a power meter or a
- *  slider, which is how estimates quietly become facts. */
-function Provenance({ quality }: { quality: Effort["quality"] }) {
-  const text = quality === "measured"
-    ? "Measured power — full credit."
-    : quality === "estimated"
-      ? "Estimated from your sensor — 60% credit. Heart rate lags effort by up to a minute."
-      : "Effort you set yourself. The world moves; nothing counts toward XP.";
-  return <p className={`text-[11px] leading-tight ${quality === "measured" ? "text-volt-deep" : "text-smoke"}`}>{text}</p>;
-}
-
-function Dial({ label, value, unit, wide, tone = "plain" }: { label: string; value: string; unit: string; wide?: boolean; tone?: "volt" | "plain" | "dim" }) {
-  return (
-    <div className={`card px-3 py-2 grid text-center backdrop-blur-md !bg-[rgba(255,255,255,.88)] ${wide ? "min-w-[108px]" : "min-w-[84px]"}`}>
-      <span className="meta">{label}</span>
-      <strong className={`display tnum leading-none ${wide ? "text-3xl" : "text-2xl"} ${tone === "volt" ? "text-volt-deep" : tone === "dim" ? "text-smoke" : ""}`}>{value}</strong>
-      <span className="meta">{unit}</span>
-    </div>
   );
 }

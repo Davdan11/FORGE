@@ -14,7 +14,8 @@
 
    Field orders follow the Bluetooth SIG specifications:
    Heart Rate Service 0x180D, Cycling Power 0x1818,
-   Cycling Speed and Cadence 0x1816, Fitness Machine 0x1826.
+   Cycling Speed and Cadence 0x1816, Fitness Machine 0x1826,
+   Running Speed and Cadence 0x1814.
    ───────────────────────────────────────────────────────────── */
 
 /** Everything a sensor might tell us, all optional. A heart-rate strap fills
@@ -30,6 +31,8 @@ export interface Reading {
   speedMs?: number;
   /** Cumulative metres, when the machine counts them itself. */
   distanceM?: number;
+  /** Treadmill incline, percent. */
+  inclinePct?: number;
 }
 
 /* ── Heart Rate Measurement (0x2A37) ──────────────────────────
@@ -128,6 +131,46 @@ export function parseIndoorBike(v: DataView): Reading {
   if (flags & 0x0100) take(5);                                            // expended energy
   if (flags & 0x0200) { const at = take(1); if (at >= 0) out.hr = v.getUint8(at); }
 
+  return out;
+}
+
+/* ── FTMS Treadmill Data (0x2ACD) ─────────────────────────────
+   Same shape as Indoor Bike Data — flags, then optional fields in
+   a fixed order, bit 0 inverted ("More Data") — with running
+   fields: distance, incline and ramp angle, elevation, pace,
+   energy, heart rate. Speed and incline are what move the runner. */
+export function parseTreadmill(v: DataView): Reading {
+  if (v.byteLength < 2) return {};
+  const flags = v.getUint16(0, true);
+  let o = 2;
+  const out: Reading = {};
+
+  const take = (n: number) => { const at = o; o += n; return v.byteLength >= o ? at : -1; };
+
+  if (!(flags & 0x0001)) { const at = take(2); if (at >= 0) out.speedMs = (v.getUint16(at, true) / 100) / 3.6; }
+  if (flags & 0x0002) take(2);                                            // average speed
+  if (flags & 0x0004) { const at = take(3); if (at >= 0) out.distanceM = v.getUint8(at) | (v.getUint8(at + 1) << 8) | (v.getUint8(at + 2) << 16); }
+  if (flags & 0x0008) { const at = take(4); if (at >= 0) out.inclinePct = v.getInt16(at, true) / 10; } // incline + ramp angle
+  if (flags & 0x0010) take(4);                                            // elevation gain, positive and negative
+  if (flags & 0x0020) take(1);                                            // instantaneous pace
+  if (flags & 0x0040) take(1);                                            // average pace
+  if (flags & 0x0080) take(5);                                            // expended energy
+  if (flags & 0x0100) { const at = take(1); if (at >= 0) out.hr = v.getUint8(at); }
+
+  return out;
+}
+
+/* ── RSC Measurement (0x2A53) — a running footpod ─────────────
+   uint8 flags; speed (uint16, 1/256 m/s) and cadence (uint8,
+   steps per minute) always present; then stride length and total
+   distance when their flag bits say so. */
+export function parseRsc(v: DataView): Reading {
+  if (v.byteLength < 4) return {};
+  const flags = v.getUint8(0);
+  const out: Reading = { speedMs: v.getUint16(1, true) / 256, cadence: v.getUint8(3) };
+  let o = 4;
+  if (flags & 0x01) o += 2;                                               // stride length
+  if (flags & 0x02 && v.byteLength >= o + 4) out.distanceM = v.getUint32(o, true) / 10;
   return out;
 }
 

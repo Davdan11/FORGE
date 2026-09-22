@@ -131,6 +131,13 @@ export interface Profile {
   wakeTime: string;       // "07:00"
   trainTime: string;      // "18:00"
   notifications: boolean;
+  /** Functional threshold power, watts. Unset until tested or entered. */
+  ftpW?: number;
+  /** Threshold running speed, km/h. */
+  thresholdKmh?: number;
+  /** Structured indoor workouts the athlete built. Stored on the profile so
+   *  they travel with the account without a table of their own. */
+  indoorWorkouts?: import("./indoor/workouts").StructuredWorkout[];
   createdAt: string;
   supabaseUserId?: string;
 }
@@ -290,7 +297,11 @@ export interface Activity {
   sharedAt?: string;
   xp: number;
   /** Sport-specific details (pool length and laps for swims, discipline for ski…). */
-  meta?: { poolM?: 25 | 50; laps?: number; discipline?: string; bike?: string };
+  meta?: {
+    poolM?: 25 | 50; laps?: number; discipline?: string; bike?: string;
+    /** Indoor sessions: the virtual course, what measured the effort, and the workout followed. */
+    indoor?: { course: string; quality: "measured" | "estimated" | "declared"; avgW?: number; workout?: string; workoutDone?: boolean; with?: number };
+  };
   /** [seconds since start, bpm] from a Bluetooth strap or watch, every ~5 s. */
   hrSeries?: [number, number][];
   avgHr?: number;

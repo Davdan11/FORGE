@@ -1,6 +1,7 @@
 "use client";
 
-import { parseHeartRate, parseCyclingPower, parseCsc, parseIndoorBike, type Reading, type Rev, type CscState } from "./ble-parse";
+import { parseHeartRate, parseCyclingPower, parseCsc, parseIndoorBike, parseTreadmill, parseRsc, type Reading, type Rev, type CscState } from "./ble-parse";
+import { parseResponse } from "./ftms";
 import { isNativeShell } from "../native";
 
 /* ─────────────────────────────────────────────────────────────
@@ -18,7 +19,7 @@ import { isNativeShell } from "../native";
    DataViews and to say honestly whether it can.
    ───────────────────────────────────────────────────────────── */
 
-export type SensorKind = "heart_rate" | "cycling_power" | "csc" | "fitness_machine";
+export type SensorKind = "heart_rate" | "cycling_power" | "csc" | "fitness_machine" | "treadmill" | "footpod";
 
 /** Bluetooth SIG assigned numbers. */
 export const SERVICE: Record<SensorKind, number> = {
@@ -26,6 +27,8 @@ export const SERVICE: Record<SensorKind, number> = {
   cycling_power: 0x1818,
   csc: 0x1816,
   fitness_machine: 0x1826,
+  treadmill: 0x1826,        // same Fitness Machine service, different data
+  footpod: 0x1814,          // Running Speed and Cadence
 };
 
 export const CHARACTERISTIC: Record<SensorKind, number> = {
@@ -33,13 +36,21 @@ export const CHARACTERISTIC: Record<SensorKind, number> = {
   cycling_power: 0x2a63,    // Cycling Power Measurement
   csc: 0x2a5b,              // CSC Measurement
   fitness_machine: 0x2ad2,  // Indoor Bike Data
+  treadmill: 0x2acd,        // Treadmill Data
+  footpod: 0x2a53,          // RSC Measurement
 };
+
+/** Fitness Machine Control Point: where commands are written. */
+const CONTROL_POINT = 0x2ad9;
+const CONTROLLABLE: SensorKind[] = ["fitness_machine", "treadmill"];
 
 export const SENSOR_LABEL: Record<SensorKind, string> = {
   heart_rate: "Heart rate strap",
   cycling_power: "Power meter",
   csc: "Speed & cadence sensor",
   fitness_machine: "Smart trainer",
+  treadmill: "Smart treadmill",
+  footpod: "Footpod",
 };
 
 export type Availability =
@@ -50,6 +61,43 @@ export interface Sensor {
   kind: SensorKind;
   name: string;
   disconnect: () => void;
+  /**
+   * Send one FTMS Control Point command and wait for the machine's answer.
+   * Only on trainers and treadmills that expose the control point; a machine
+   * that only reports (many older ones) has no `control`, and the ride runs
+   * in read-only mode.
+   */
+  control?: (command: Uint8Array) => Promise<{ ok: boolean; result: number }>;
+}
+
+/**
+ * One command at a time, each waiting for its indication.
+ *
+ * The control point answers every write with an indication naming the op code
+ * it answers. Two writes in flight make those answers ambiguous, and most
+ * trainers reject the second with "operation failed" anyway — so commands
+ * queue. A machine that never answers is given three seconds, not forever.
+ */
+function makeController(write: (b: Uint8Array) => Promise<void>) {
+  let waiting: { op: number; done: (r: { ok: boolean; result: number }) => void } | null = null;
+  let chain: Promise<unknown> = Promise.resolve();
+
+  const onIndication = (v: DataView) => {
+    const r = parseResponse(v);
+    if (r && waiting && r.op === waiting.op) { const w = waiting; waiting = null; w.done(r); }
+  };
+
+  const control = (command: Uint8Array) => {
+    const next = chain.then(() => new Promise<{ ok: boolean; result: number }>((resolve) => {
+      const timer = setTimeout(() => { waiting = null; resolve({ ok: false, result: 0 }); }, 3000);
+      waiting = { op: command[0], done: (r) => { clearTimeout(timer); resolve(r); } };
+      write(command).catch(() => { clearTimeout(timer); waiting = null; resolve({ ok: false, result: 0 }); });
+    }));
+    chain = next.catch(() => {});
+    return next;
+  };
+
+  return { onIndication, control };
 }
 
 export interface Transport {
@@ -68,6 +116,8 @@ export function decoderFor(kind: SensorKind): (v: DataView) => Reading {
   return (v) => {
     if (kind === "heart_rate") return parseHeartRate(v);
     if (kind === "fitness_machine") return parseIndoorBike(v);
+    if (kind === "treadmill") return parseTreadmill(v);
+    if (kind === "footpod") return parseRsc(v);
     if (kind === "cycling_power") {
       const out = parseCyclingPower(v, crank);
       crank = out.crank ?? crank;
@@ -87,6 +137,8 @@ type MinimalCharacteristic = {
   addEventListener: (t: string, fn: (e: Event) => void) => void;
   removeEventListener: (t: string, fn: (e: Event) => void) => void;
   value?: DataView;
+  writeValueWithResponse?: (b: BufferSource) => Promise<void>;
+  writeValue?: (b: BufferSource) => Promise<void>;
 };
 type MinimalDevice = {
   name?: string;
@@ -147,10 +199,33 @@ const webTransport: Transport = {
     await characteristic.startNotifications();
     device.addEventListener("gattserverdisconnected", () => onDisconnect?.());
 
+    // Control, when the machine offers it. Indications must be on before the
+    // first write, or the answer to it is lost.
+    let control: Sensor["control"];
+    let cp: MinimalCharacteristic | null = null;
+    let cpHandler: ((e: Event) => void) | null = null;
+    if (CONTROLLABLE.includes(kind)) {
+      try {
+        cp = await service.getCharacteristic(CONTROL_POINT);
+        const c = cp;
+        const ctl = makeController(async (b) => {
+          const buf = b.slice().buffer as ArrayBuffer;
+          if (c.writeValueWithResponse) await c.writeValueWithResponse(buf);
+          else await c.writeValue!(buf);
+        });
+        cpHandler = (e: Event) => { const v = (e.target as unknown as MinimalCharacteristic).value; if (v) ctl.onIndication(v); };
+        c.addEventListener("characteristicvaluechanged", cpHandler);
+        await c.startNotifications();
+        control = ctl.control;
+      } catch { cp = null; /* reports only */ }
+    }
+
     return {
       kind,
       name: device.name ?? SENSOR_LABEL[kind],
+      control,
       disconnect: () => {
+        if (cp && cpHandler) { cp.removeEventListener("characteristicvaluechanged", cpHandler); cp.stopNotifications().catch(() => {}); }
         characteristic.removeEventListener("characteristicvaluechanged", handler);
         characteristic.stopNotifications().catch(() => {});
         if (device.gatt?.connected) device.gatt.disconnect();
@@ -193,10 +268,26 @@ const nativeTransport: Transport = {
     const decode = decoderFor(kind);
     await BleClient.startNotifications(device.deviceId, service, characteristic, (v) => onReading(decode(v)));
 
+    let control: Sensor["control"];
+    const cp = numberToUUID(CONTROL_POINT);
+    let cpOn = false;
+    if (CONTROLLABLE.includes(kind)) {
+      try {
+        const ctl = makeController((b) => BleClient.write(device.deviceId, service, cp, new DataView(b.slice().buffer)));
+        // The plugin subscribes to indications or notifications, whichever the
+        // characteristic declares; the control point declares indications.
+        await BleClient.startNotifications(device.deviceId, service, cp, (v) => ctl.onIndication(v));
+        cpOn = true;
+        control = ctl.control;
+      } catch { /* reports only */ }
+    }
+
     return {
       kind,
       name: device.name ?? SENSOR_LABEL[kind],
+      control,
       disconnect: () => {
+        if (cpOn) BleClient.stopNotifications(device.deviceId, service, cp).catch(() => {});
         BleClient.stopNotifications(device.deviceId, service, characteristic).catch(() => {});
         BleClient.disconnect(device.deviceId).catch(() => {});
       },

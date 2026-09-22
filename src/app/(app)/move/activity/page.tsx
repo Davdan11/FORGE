@@ -12,7 +12,8 @@ import { PostToFeed } from "@/components/PostToFeed";
 import { WORKOUT_MAP, ZONE_LABEL } from "@/lib/data/workouts";
 import { fmtDist, fmtDuration } from "@/lib/units";
 import { rateFor } from "@/components/move-bits";
-import { Screen, Section, Stat, Toast, ScreenSkeleton } from "@/components/ui";
+import { Screen, Section, Stat, Toast, ScreenSkeleton, Photo } from "@/components/ui";
+import { ART } from "@/lib/data/images";
 import { Page, Stagger, Item, Press, motion } from "@/components/motion";
 import { ElevationChart } from "@/components/charts";
 
@@ -42,12 +43,14 @@ function ActivityDetail() {
   const profileData = elevationProfile(a.points);
   const workout = a.workoutId ? WORKOUT_MAP[a.workoutId] : undefined;
   const speedKmh = a.maxSpeedMs ? a.maxSpeedMs * 3.6 : undefined;
+  // An indoor session rode a virtual road: no map, no GPS, nothing to post as a route.
+  const indoor = a.meta?.indoor;
 
   return (
     <Page>
       <Screen>
         <div className="bleed relative h-[46vh] min-h-[320px] -mt-[calc(var(--safe-top)+16px)] lg:-mt-10 lg:h-auto lg:min-h-[62vh] mb-8 lg:mb-[var(--stack-loose)]">
-          <MapView points={a.points} />
+          {indoor ? <Photo src={ART.course[indoor.course === "La Montagne" ? "mont-royal" : indoor.course === "La Plaine" ? "plaine" : "vallee"] ?? ART.indoor} color className="absolute inset-0 w-full h-full" /> : <MapView points={a.points} />}
           <div className="absolute inset-x-0 top-[calc(var(--safe-top)+12px)] lg:top-7">
             <div className="screen flex justify-between items-start gap-3">
               <Link href="/move" className="chip chip--live backdrop-blur-md shrink-0">← Back</Link>
@@ -66,7 +69,7 @@ function ActivityDetail() {
             <Item>
               <div className="flex gap-3 mb-5">
                 <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" onClick={async () => { const r = await shareCard(a, u, profile.name); say(r === "shared" ? "Shared." : "Card downloaded."); }}>Share card</button></Press>
-                <PostToFeed activity={a} say={say} />
+                {!indoor && <PostToFeed activity={a} say={say} />}
               </div>
             </Item>
             <Item>
@@ -78,14 +81,15 @@ function ActivityDetail() {
                 {a.kcal != null ? <Stat label="Calories" count={a.kcal} suffix=" kcal" sub={a.kcalSource === "heart_rate" ? "from heart rate" : "estimated"} /> : null}
                 {a.avgHr ? <Stat label="Heart rate" count={a.avgHr} suffix=" bpm" sub={a.maxHr ? `avg · max ${a.maxHr}` : "avg"} /> : null}
                 {speedKmh ? <Stat label="Max speed" value={u.distance === "mi" ? `${(speedKmh / 1.609).toFixed(1)} mph` : `${speedKmh.toFixed(1)} km/h`} /> : null}
-                {a.type === "swim" && a.meta?.laps ? <Stat label="Laps" count={a.meta.laps} sub={`${a.meta.poolM ?? 25} m pool`} /> : a.meta?.discipline ? <Stat label="Discipline" value={a.meta.discipline.replace("xc-", "XC ")} /> : a.meta?.bike ? <Stat label="Bike" value={a.meta.bike} /> : <Stat label="Points" count={a.points.length} sub="GPS samples" />}
+                {indoor?.avgW ? <Stat label="Avg power" count={indoor.avgW} suffix=" W" sub={indoor.quality} /> : null}
+                {indoor ? <Stat label="Indoor" value={indoor.workout ?? indoor.course} sub={indoor.with ? `with ${indoor.with} live` : indoor.quality === "declared" ? "effort set by hand" : indoor.quality} /> : a.type === "swim" && a.meta?.laps ? <Stat label="Laps" count={a.meta.laps} sub={`${a.meta.poolM ?? 25} m pool`} /> : a.meta?.discipline ? <Stat label="Discipline" value={a.meta.discipline.replace("xc-", "XC ")} /> : a.meta?.bike ? <Stat label="Bike" value={a.meta.bike} /> : <Stat label="Points" count={a.points.length} sub="GPS samples" />}
               </div>
             </Item>
-            <Item>
+            {a.points.length > 1 && <Item>
               <Section title="Elevation profile">
                 <div className="card p-4"><ElevationChart profile={profileData} /></div>
               </Section>
-            </Item>
+            </Item>}
             {a.laps && a.laps.length > 0 && (
               <Item>
                 <Section title={`Laps · ${workout?.name ?? "guided"}`}>

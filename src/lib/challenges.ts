@@ -209,7 +209,9 @@ export function mondayOf(date: string) {
 }
 
 /** Today's challenge and this week's three for one sport, with progress. */
-export function challengesFor(sport: ActivityType, today: string, activities: Activity[], units: DistanceUnit): { daily: Challenge; weekly: Challenge[] } {
+export function challengesFor(sport: ActivityType, today: string, all: Activity[], units: DistanceUnit): { daily: Challenge; weekly: Challenge[] } {
+  // An indoor session moved by a slider measured nothing; it cannot finish a challenge.
+  const activities = all.filter((a) => a.meta?.indoor?.quality !== "declared");
   const kinds = kindsFor(sport);
   const dayKind = kinds.day[hash(`${today}:${sport}`) % kinds.day.length];
   const week = isoWeek(today), monday = mondayOf(today);

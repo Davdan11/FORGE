@@ -62,6 +62,38 @@ export function startPacers(): PacerState[] {
   }));
 }
 
+/* ── running pacers ──────────────────────────────────────────
+   Runners hold a pace, not a power. On a climb the same effort is
+   slower: roughly 4 % of speed per 1 % of gradient uphill, a little
+   faster downhill until the legs brake (Minetti's cost of running on
+   a slope, flattened to what a pacer needs). */
+export const RUN_PACERS = [
+  { id: "run-easy", name: "Robin", kmh: 8.5 },
+  { id: "run-steady", name: "Marceau", kmh: 10.5 },
+  { id: "run-hard", name: "Ines", kmh: 13 },
+];
+
+export interface RunPacerState { spec: { id: string; name: string; kmh: number }; speedMs: number; distanceM: number }
+
+export function startRunPacers(): RunPacerState[] {
+  return RUN_PACERS.map((spec, i) => ({ spec, speedMs: 0, distanceM: 120 - i * 50 }));
+}
+
+/** Pace on a slope: `gradient` is rise over run. */
+export function runSpeedOnGrade(flatMs: number, gradient: number) {
+  const f = gradient >= 0 ? 1 / (1 + 4 * gradient) : Math.min(1.12, 1 - 2 * gradient);
+  return flatMs * f;
+}
+
+export function stepRunPacers(pacers: RunPacerState[], course: Course, dt: number) {
+  for (const p of pacers) {
+    const target = runSpeedOnGrade(p.spec.kmh / 3.6, at(course, p.distanceM).gradient);
+    // Ease toward the target: nobody changes pace in a single frame.
+    p.speedMs += (target - p.speedMs) * Math.min(1, dt * 0.8);
+    p.distanceM += p.speedMs * dt;
+  }
+}
+
 /** Advance every pacer one tick of the same physics the athlete rides. */
 export function stepPacers(pacers: PacerState[], course: Course, dt: number) {
   for (const p of pacers) {
@@ -77,13 +109,13 @@ export function stepPacers(pacers: PacerState[], course: Course, dt: number) {
  * Distance along the course is the only ordering that means anything here:
  * everyone is on the same road, so whoever is furthest along is ahead.
  */
-export function placeInBunch(mine: number, pacers: PacerState[]): { position: number; of: number } {
+export function placeInBunch(mine: number, pacers: { distanceM: number }[]): { position: number; of: number } {
   const ahead = pacers.filter((p) => p.distanceM > mine).length;
   return { position: ahead + 1, of: pacers.length + 1 };
 }
 
 /** Gap to the rider immediately ahead, in metres, or null when leading. */
-export function gapToNext(mine: number, pacers: PacerState[]): number | null {
+export function gapToNext(mine: number, pacers: { distanceM: number }[]): number | null {
   const ahead = pacers.filter((p) => p.distanceM > mine).map((p) => p.distanceM - mine);
   return ahead.length ? Math.min(...ahead) : null;
 }
