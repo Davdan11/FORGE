@@ -16,6 +16,7 @@ import { Screen, Hero, Section, Photo, Toast, ScreenSkeleton, Seg } from "@/comp
 import { Page, Stagger, Item , CountUp, Reveal, Press } from "@/components/motion";
 import { Bars, Sparkline, Heatmap } from "@/components/charts";
 import { MiniRoute } from "@/components/move-bits";
+import { FeedIcon } from "@/components/NavIcons";
 
 export default function ProgressPage() {
   const profile = useLiveQuery(() => getProfile(), []);
@@ -173,6 +174,14 @@ export default function ProgressPage() {
 
         {tab === "feed" && (
           <Stagger className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+            {/* The community feed left the bottom bar; this is its door. */}
+            <Item className="lg:col-span-2">
+              <Link href="/feed" className="card p-4 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-full bg-[rgba(31,199,111,.14)] grid place-items-center shrink-0"><FeedIcon className="w-5 h-5" /></span>
+                <span className="grid min-w-0 flex-1"><span className="font-medium">Community</span><span className="text-xs text-smoke">Who else showed up today</span></span>
+                <span aria-hidden className="text-smoke">→</span>
+              </Link>
+            </Item>
             {shared.length === 0 ? (
               <Item><div className="card--photo"><Photo src={IMG.moveHero} veil soft className="h-40" /><div className="card__body p-5 grid gap-2 -mt-14"><p className="display text-2xl">Your <em>feed.</em></p><p className="text-sm text-smoke">Record an activity on Move and post it to your profile. Each one shows here with its route, splits and the XP it earned.</p><Link href="/move" className="pill pill--sm pill--volt justify-self-start">Record something</Link></div></div></Item>
             ) : shared.map((a) => (

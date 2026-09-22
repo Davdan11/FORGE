@@ -7,6 +7,10 @@ import { exerciseImage } from "@/lib/data/images";
 import { Photo } from "./ui";
 import type { Exercise, Muscle } from "@/lib/types";
 
+/* Soft edges on all four sides (masks multiply, so the corners fade most). */
+const FADE = "linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%), linear-gradient(to bottom, transparent 0%, #000 7%, #000 95%, transparent 100%)";
+const EDGE_FADE: React.CSSProperties = { maskImage: FADE, WebkitMaskImage: FADE, maskComposite: "intersect", WebkitMaskComposite: "source-in" };
+
 type Ex = Pick<Exercise, "slug" | "pattern" | "equipment" | "unilateral" | "timed" | "name"> & { primary?: Muscle[]; pillar?: Exercise["pillar"] };
 
 /* Rendered 3D loop when one exists for the exercise; otherwise the
@@ -35,12 +39,12 @@ export function MoveMedia({ ex, size = 160, className = "", label = false, speed
   if (media.loop) {
     const src = (still || thumb || reduce) && media.poster ? media.poster : media.loop;
     // The loops are portrait on a warm studio backdrop: shown whole, so a
-    // head or a foot is never cropped off, over a blurred copy of the same
-    // frame that fills the rest of the box without a seam.
+    // head or a foot is never cropped off, on the same backdrop colour. Their
+    // edges fade into it — several source loops have torn, noisy borders, and
+    // a studio vignette is what the eye expects there anyway.
     return (
-      <div className={`${fill ? "" : "relative"} overflow-hidden bg-[#E8DED3] ${box} ${className}`} style={style} role="img" aria-label={`${ex.name} demonstration`}>
-        {!thumb && media.poster && <img src={media.poster} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-80" />}
-        <img src={src} alt="" loading="lazy" decoding="async" className={`relative w-full h-full ${thumb ? "object-cover object-top" : "object-contain"}`} />
+      <div className={`${fill ? "" : "relative"} overflow-hidden bg-[radial-gradient(120%_90%_at_50%_40%,#EFE7DD_0%,#E3D8CB_100%)] ${box} ${className}`} style={style} role="img" aria-label={`${ex.name} demonstration`}>
+        <img src={src} alt="" loading="lazy" decoding="async" className={`relative w-full h-full ${thumb ? "object-cover object-top" : "object-contain"}`} style={thumb ? undefined : EDGE_FADE} />
       </div>
     );
   }

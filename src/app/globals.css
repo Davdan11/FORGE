@@ -206,6 +206,8 @@ a.card:active, button.card:active { transform: scale(.985); }
 }
 .pill:active { transform: scale(0.97); }
 .pill:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+/* A faded green read as "almost ready". Not available yet looks neutral. */
+.pill--volt:disabled { opacity: 1; background: rgba(16,16,16,.06); border-color: transparent; color: rgba(16,16,16,.42); }
 .pill--volt { background: var(--volt); color: var(--ink); border-color: var(--volt); box-shadow: var(--glow-volt); }
 .pill--bone { background: var(--ink); color: var(--bone); border-color: var(--ink); }
 .pill--sm { position: relative; min-height: 40px; padding: 0 14px; font-size: 0.85rem; }
@@ -227,6 +229,9 @@ a.card:active, button.card:active { transform: scale(.985); }
   transition: border-color var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out);
 }
 .input:focus { border-color: var(--volt-deep); box-shadow: 0 0 0 4px rgba(31,199,111,.16); outline: none; }
+/* An example, not an answer: at the body-text grey a placeholder read as
+   something already typed. */
+.input::placeholder { color: rgba(16,16,16,.36); }
 input[type="range"] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
 input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--volt) var(--fill, 50%), var(--line-strong) var(--fill, 50%)); }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%; background: var(--carbon); border: 3px solid var(--ink); box-shadow: 0 2px 8px rgba(16,16,16,.25); }

@@ -11,7 +11,7 @@ import { MoveMedia } from "@/components/MoveMedia";
 import { nextSetFromRpe } from "@/lib/engine/autoregulate";
 import { awardSession, bestE1rmBySlug } from "@/lib/progress";
 import { fmtLoad, kgToLb, lbToKg, fmtDuration, platesFor, roundLoad, e1rm } from "@/lib/units";
-import { Screen, Hero, Toast, ScreenSkeleton, Rail } from "@/components/ui";
+import { Screen, Hero, Toast, ScreenSkeleton, Rail, Empty } from "@/components/ui";
 import { Page, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
 import type { LoggedSet, PrescribedExercise, PrescribedSet, UnitPrefs } from "@/lib/types";
 
@@ -29,7 +29,9 @@ function SessionDetail() {
   const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const profile = useLiveQuery(() => getProfile(), []);
-  const session = useLiveQuery(() => db.sessions.get(id), [id]);
+  // `?? null`: useLiveQuery returns undefined while loading AND when the row
+  // does not exist, and a skeleton that waits for a missing row never ends.
+  const session = useLiveQuery(async () => (await db.sessions.get(id)) ?? null, [id]);
   const loggedRaw = useLiveQuery(() => db.sets.where("sessionId").equals(id).toArray(), [id]);
   const logged = useMemo(() => loggedRaw ?? [], [loggedRaw]);
   const [active, setActive] = useState(0);
@@ -61,6 +63,7 @@ function SessionDetail() {
   }, [logged]);
   const tonnage = useMemo(() => logged.reduce((a, s) => a + (s.loadKg ?? 0) * (s.reps ?? 0), 0), [logged]);
 
+  if (session === null) return <Screen><Empty title="Session not found" body="It may have been rebuilt after a change to your plan. Today always has the current one." cta="Back to today" href="/today" /></Screen>;
   if (!session || !profile) return <ScreenSkeleton />;
   const ex = session.exercises[active];
   const nextEx = session.exercises[active + 1];
@@ -239,12 +242,12 @@ function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap }:
     <div className="card overflow-hidden">
       <div className="relative h-[240px] lg:h-[320px] overflow-hidden">
         <MoveMedia ex={meta} fill periodMs={tempo ? tempoMs : undefined} />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/35 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink/90 via-ink/45 to-transparent" />
         <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-6 flex items-end justify-between gap-3">
           <div className="min-w-0">
             <span className="meta">{ex.block}{meta.tempo ? ` · tempo ${meta.tempo}` : ""}</span>
             <p className="display text-3xl lg:text-5xl">{meta.name}</p>
-            <p className="text-xs text-smoke">{meta.primary.join(", ")}{last ? ` · last: ${last.seconds ? `${last.seconds}s` : `${last.reps} reps`}${last.loadKg ? ` · ${fmtLoad(last.loadKg, units)}` : ""}${last.rpe ? ` @${last.rpe}` : ""}` : ""}</p>
+            <p className="text-xs text-bone/75">{meta.primary.join(", ")}{last ? ` · last: ${last.seconds ? `${last.seconds}s` : `${last.reps} reps`}${last.loadKg ? ` · ${fmtLoad(last.loadKg, units)}` : ""}${last.rpe ? ` @${last.rpe}` : ""}` : ""}</p>
           </div>
           <div className="grid gap-1.5 justify-items-end shrink-0 relative z-10"><Link href={`/library/${meta.slug}`} className="chip chip--live">Cues</Link>{!disabled && <button type="button" className="chip chip--live" onClick={onSwap}>Swap</button>}</div>
         </div>
@@ -277,7 +280,7 @@ function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap }:
       </ul>
       <div className="p-4 border-t border-line">
         <div className="grid gap-1.5 min-w-0">
-          <span className="text-xs"><span className="text-[#FF6B5B]">{meta.primary.join(", ")}</span>{meta.secondary.length ? <span className="text-smoke"> · {meta.secondary.join(", ")}</span> : null}</span>
+          <span className="text-xs"><span className="text-danger font-medium">{meta.primary.join(", ")}</span>{meta.secondary.length ? <span className="text-smoke"> · {meta.secondary.join(", ")}</span> : null}</span>
         <button type="button" className="text-left text-xs text-smoke underline" onClick={() => setShowWhy(!showWhy)}>Why this?</button>
         <AnimatePresence>{showWhy && <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-sm overflow-hidden">{ex.why}</motion.p>}</AnimatePresence>
         <p className="text-xs text-smoke">{meta.cues[0]}</p>
@@ -311,7 +314,7 @@ function SetRow({ i, set, logged, units, disabled, timed, loadable, onLog }: { i
 
   if (logged) {
     return (
-      <motion.li initial={{ backgroundColor: "rgba(212,255,58,.18)" }} animate={{ backgroundColor: "rgba(212,255,58,0)" }} transition={{ duration: 1.2 }} className="grid grid-cols-[28px_1fr_auto_auto] items-center gap-3 text-sm px-4 py-3 border-b border-line">
+      <motion.li initial={{ backgroundColor: "rgba(31,199,111,.18)" }} animate={{ backgroundColor: "rgba(31,199,111,0)" }} transition={{ duration: 1.2 }} className="grid grid-cols-[28px_1fr_auto_auto] items-center gap-3 text-sm px-4 py-3 border-b border-line">
         <span className="meta">{i + 1}</span>
         <span className="tnum">{logged.seconds ? `${logged.seconds}s` : `${logged.reps} reps`}{logged.loadKg ? ` · ${fmtLoad(logged.loadKg, units)}` : ""}{logged.adjusted && <span className="block text-[11px] text-volt">next set adjusted</span>}</span>
         <span className={`chip chip--rpe rpe-${logged.rpe ?? 6}`} aria-pressed={logged.rpe != null}>RPE {logged.rpe ?? "—"}</span>
@@ -326,13 +329,15 @@ function SetRow({ i, set, logged, units, disabled, timed, loadable, onLog }: { i
     onLog(v);
   };
   return (
-    <li className={`grid gap-2 px-4 py-3 border-b border-line transition-opacity ${disabled ? "opacity-35" : ""}`}>
-      <div className="grid grid-cols-[28px_1fr] items-start gap-3">
-        <span className="meta pt-6">{i + 1}</span>
-        <div className="grid gap-2 sm:grid-cols-2">
-        {loadable ? <Stepper disabled={disabled} value={load} onChange={setLoad} delta={step} label={units.weight} hint={set.pct ? `${Math.round(set.pct * 100)}%` : undefined} /> : <span className="text-xs text-smoke self-end pb-3 min-h-11 flex items-center">bodyweight</span>}
-        <Stepper disabled={disabled} value={reps} onChange={setReps} delta={timed ? 5 : 1} label={timed ? "seconds" : "reps"} hint={set.rpe ? `RPE ${set.rpe}` : undefined} />
-        </div>
+    <li className={`grid gap-3 px-4 py-4 border-b border-line transition-opacity ${disabled ? "opacity-35" : ""}`}>
+      <div className="flex items-center gap-2.5">
+        <span className="w-7 h-7 rounded-full bg-ink text-bone grid place-items-center text-xs font-semibold tnum shrink-0">{i + 1}</span>
+        <span className="text-sm font-medium">Set {i + 1}</span>
+        <span className="text-xs text-smoke tnum ml-auto">{[loadable ? (set.pct ? `${Math.round(set.pct * 100)}% of max` : null) : "bodyweight", set.rpe ? `target RPE ${set.rpe}` : null].filter(Boolean).join(" · ")}</span>
+      </div>
+      <div className={`grid gap-2 ${loadable ? "grid-cols-2" : ""}`}>
+        {loadable && <Stepper disabled={disabled} value={load} onChange={setLoad} delta={step} label={units.weight} />}
+        <Stepper disabled={disabled} value={reps} onChange={setReps} delta={timed ? 5 : 1} label={timed ? "seconds" : "reps"} />
       </div>
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="meta mr-1">RPE</span>

@@ -18,7 +18,7 @@ import { MobilityFlow } from "@/components/MobilityFlow";
 import { Check, ChevronRight, Flame } from "lucide-react";
 import { dailyQuests, markFlowDone } from "@/lib/quests";
 import { fmtLoad, e1rm } from "@/lib/units";
-import { Screen, Hero, Section, Seg, MultiSeg, Bar, Toast, Photo, ScreenSkeleton } from "@/components/ui";
+import { Screen, Hero, Section, Seg, MultiSeg, RatingScale, Bar, Toast, Photo, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
 import { Sparkline } from "@/components/charts";
 import { atTime, ensureNotificationPermission, scheduleLocal } from "@/lib/notify";
@@ -150,9 +150,13 @@ export default function Today() {
               <Section title="Rest day · guided mobility">
                 <Press>
                   <button type="button" onClick={() => setFlow(true)} className="card--photo block w-full text-left">
-                    <Photo src={IMG.restDay} veil className="h-44" />
-                    <div className="card__body p-5 grid gap-2 -mt-16">
-                      <p className="display text-2xl">Twelve minutes of <em>mobility.</em></p>
+                    {/* The title sits on the photo, the copy below it: pulled up
+                        over the photo, the copy's first line ran into the title. */}
+                    <div className="relative">
+                      <Photo src={IMG.restDay} veil className="h-48" />
+                      <p className="on-photo absolute inset-x-0 bottom-0 p-5 display text-2xl leading-[0.95]">Twelve minutes<br />of <em>mobility.</em></p>
+                    </div>
+                    <div className="card__body p-5 grid gap-3">
                       <p className="text-sm text-smoke">Six moves, two minutes each, the app counts and buzzes at every switch: 90/90 · couch · thoracic · deep squat · WGS · hamstring floss.</p>
                       <span className="pill pill--sm pill--volt justify-self-start mt-1">Start the flow · +66 XP</span>
                     </div>
@@ -288,7 +292,6 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
   const [gear, setGear] = useState<Readiness["equipmentToday"]>("full");
   const [pain, setPain] = useState<PainArea[]>([]);
   const [open, setOpen] = useState(false);
-  const five = [1, 2, 3, 4, 5].map((n) => ({ v: n as 1 | 2 | 3 | 4 | 5, label: String(n) }));
   const preview = readinessScore({ sleepHours: sleep, sleepQuality: quality, soreness, stress, mood });
 
   async function submit() {
@@ -317,11 +320,11 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
         <div className="field"><span className="meta">Sleep last night · {sleep} h</span><input type="range" min={3} max={11} step={0.5} value={sleep} onChange={(e) => setSleep(Number(e.target.value))} style={{ ["--fill" as string]: `${((sleep - 3) / 8) * 100}%` }} className="w-full" /></div>
         {/* minmax(0,1fr): a plain 1fr track has an auto minimum, so the segments
             would push the columns wider than the card instead of compressing. */}
-        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-5 gap-y-4">
-          <div className="field min-w-0"><span className="meta">Sleep quality</span><Seg fill value={quality} onChange={setQuality} options={five} /></div>
-          <div className="field min-w-0"><span className="meta">Soreness</span><Seg fill value={soreness} onChange={setSoreness} options={five} /></div>
-          <div className="field min-w-0"><span className="meta">Stress</span><Seg fill value={stress} onChange={setStress} options={five} /></div>
-          <div className="field min-w-0"><span className="meta">Mood</span><Seg fill value={mood} onChange={setMood} options={five} /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-5">
+          <RatingScale label="Sleep quality" value={quality} onChange={setQuality} better="high" words={["Awful", "Poor", "OK", "Good", "Great"]} />
+          <RatingScale label="Soreness" value={soreness} onChange={setSoreness} better="low" words={["None", "Light", "Moderate", "Heavy", "Wrecked"]} />
+          <RatingScale label="Stress" value={stress} onChange={setStress} better="low" words={["Calm", "Low", "Moderate", "High", "Maxed out"]} />
+          <RatingScale label="Mood" value={mood} onChange={setMood} better="high" words={["Low", "Flat", "OK", "Good", "Great"]} />
         </div>
         <button type="button" className="text-left text-xs text-smoke underline" onClick={() => setOpen(!open)}>{open ? "Hide" : "Real-life mode: time, gear, pain, HRV"}</button>
         <AnimatePresence>{open && (
@@ -347,11 +350,11 @@ function FoodToday({ nutrition, notifications, sessionTitle, onNotify }: { nutri
       <div className="card overflow-hidden">
         {meal && next && (
           <Link href={`/food/meal?id=${encodeURIComponent(meal.id)}&date=${nutrition.date}`} className="block relative">
-            <Photo src={meal.image} veil color className="h-44" />
-            <div className="on-photo absolute inset-x-0 bottom-0 p-4 grid gap-0.5">
+            <Photo src={meal.image} veil color className="h-52" />
+            <div className="on-photo absolute inset-x-0 bottom-0 p-4 grid gap-1">
               <span className="meta text-bone/80">Next · {next.time} · {next.slot}</span>
-              <span className="display text-2xl">{meal.name.split(" with ")[0]}</span>
-              <span className="text-xs text-smoke tnum">{Math.round(meal.kcal * next.scale)} kcal · {Math.round(meal.protein * next.scale)} g protein · {Math.round(meal.sugar * next.scale)} g sugar · {meal.minutes} min</span>
+              <span className="display text-xl leading-[0.95] line-clamp-2">{meal.name.split(" with ")[0]}</span>
+              <span className="text-xs text-bone/75 tnum">{Math.round(meal.kcal * next.scale)} kcal · {Math.round(meal.protein * next.scale)} g protein · {Math.round(meal.sugar * next.scale)} g sugar · {meal.minutes} min</span>
             </div>
           </Link>
         )}

@@ -19,7 +19,7 @@ export async function renderShareCard(a: Activity, units: UnitPrefs, name: strin
     const box = 760, s = box / Math.max(w, h);
     const ox = (W - w * s) / 2, oy = 160 + (box - h * s) / 2;
     ctx.lineJoin = "round"; ctx.lineCap = "round";
-    ctx.strokeStyle = "rgba(212,255,58,.25)"; ctx.lineWidth = 34;
+    ctx.strokeStyle = "rgba(31,199,111,.25)"; ctx.lineWidth = 34;
     ctx.beginPath(); a.points.forEach((p, i) => { const x = ox + (p.lng - minX) * latScale * s, y = oy + (maxY - p.lat) * s; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke();
     ctx.strokeStyle = "#D4FF3A"; ctx.lineWidth = 10; ctx.stroke();
     const last = a.points[a.points.length - 1];

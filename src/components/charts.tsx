@@ -21,7 +21,7 @@ export function Bars({ data, format = (v) => String(Math.round(v)), height = 120
           {data.map((d, i) => (
             <button key={d.label + i} type="button" aria-label={`${d.label}: ${format(d.value)}`} onClick={() => setSel(i === sel ? null : i)} className="flex-1 h-full flex items-end min-w-0">
               <motion.span initial={{ height: 0 }} animate={{ height: `${Math.max(2, (d.value / max) * 100)}%` }} transition={{ duration: 0.7, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
-                className="block w-full rounded-t-[4px]" style={{ background: i === active ? "var(--volt)" : "rgba(212,255,58,.35)" }} />
+                className="block w-full rounded-t-[4px]" style={{ background: i === active ? "var(--volt)" : "rgba(31,199,111,.35)" }} />
             </button>
           ))}
         </div>
@@ -62,6 +62,8 @@ export function Heatmap({ cells, weeks = 12 }: { cells: Record<string, number>; 
   const start = new Date(today); start.setDate(today.getDate() - dow - (weeks - 1) * 7);
   const cols = Array.from({ length: weeks }, (_, w) => Array.from({ length: 7 }, (_, d) => { const dt = new Date(start); dt.setDate(start.getDate() + w * 7 + d); return dt; }));
   const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  // Drawn for the paper theme: empty days are a faint ink tint so the grid
+  // reads as a calendar even before anything is logged.
   const op = [0.08, 0.35, 0.65, 1];
   return (
     <div className="grid gap-2">
@@ -69,7 +71,7 @@ export function Heatmap({ cells, weeks = 12 }: { cells: Record<string, number>; 
         {cols.map((col, w) => (
           <div key={w} className="flex-1 grid gap-[3px]">
             {col.map((d) => { const k = iso(d); const v = Math.min(3, cells[k] ?? 0); const future = d > today; return (
-              <motion.span key={k} title={`${k}: ${v ? "active" : "rest"}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: w * 0.03 }} className="block aspect-square rounded-[3px]" style={{ background: future ? "transparent" : v ? `rgba(212,255,58,${op[v]})` : "rgba(236,231,223,.06)", border: iso(today) === k ? "1px solid var(--bone)" : undefined }} />); })}
+              <motion.span key={k} title={`${k}: ${v ? "active" : "rest"}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: w * 0.03 }} className="block aspect-square rounded-[3px]" style={{ background: future ? "transparent" : v ? `rgba(31,199,111,${op[v]})` : "rgba(16,16,16,.07)", boxShadow: iso(today) === k ? "inset 0 0 0 1.5px var(--ink)" : undefined }} />); })}
           </div>
         ))}
       </div>
@@ -90,7 +92,7 @@ export function ElevationChart({ profile, height = 90 }: { profile: { d: number;
     <div className="grid gap-1">
       <div className="flex justify-between text-[10px] text-smoke tnum"><span>{Math.round(max)} m</span><span>{Math.round(min)} m</span></div>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height }}>
-        <path d={`${line} L${x(total)} ${h} L${x(0)} ${h} Z`} fill="rgba(212,255,58,.18)" />
+        <path d={`${line} L${x(total)} ${h} L${x(0)} ${h} Z`} fill="rgba(31,199,111,.18)" />
         <path d={line} fill="none" stroke="var(--volt)" strokeWidth="1.8" strokeLinejoin="round" />
       </svg>
     </div>

@@ -216,6 +216,49 @@ export function Seg<T extends string | number>({ value, options, onChange, fill,
   );
 }
 
+/**
+ * A 1–5 self-rating as five rising bars, named in words.
+ *
+ * A row of the digits 1 to 5 asks people to translate how they feel into a
+ * number and says nothing back. Here the bars rise like a signal, the chosen
+ * word is shown ("Light", "Great"), and the colour says whether that is good
+ * news for today's session. `better` says which end is good: soreness and
+ * stress are better low, sleep quality and mood better high.
+ */
+export function RatingScale<T extends 1 | 2 | 3 | 4 | 5>({ label, value, onChange, words, better }: {
+  label: string; value: T; onChange: (v: T) => void;
+  words: [string, string, string, string, string]; better: "high" | "low";
+}) {
+  const id = useId();
+  const good = better === "high" ? (value - 1) / 4 : (5 - value) / 4;
+  const tone = good >= 0.75 ? "var(--volt)" : good >= 0.5 ? "var(--ink)" : good >= 0.25 ? "#c9892b" : "var(--danger)";
+  const text = good >= 0.75 ? "var(--volt-deep)" : good >= 0.5 ? "var(--ink)" : good >= 0.25 ? "#9a6414" : "var(--danger)";
+  return (
+    <div className="grid gap-2 min-w-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="meta" id={id}>{label}</span>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span key={value} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}
+            className="text-sm font-semibold" style={{ color: text }}>{words[value - 1]}</motion.span>
+        </AnimatePresence>
+      </div>
+      <div role="radiogroup" aria-labelledby={id} className="grid grid-cols-5 gap-1.5">
+        {([1, 2, 3, 4, 5] as T[]).map((n) => {
+          const on = n <= value;
+          return (
+            <button key={n} type="button" role="radio" aria-checked={n === value} aria-label={words[n - 1]} onClick={() => onChange(n)}
+              className="h-11 flex items-end rounded-xl focus-visible:outline-offset-1">
+              <motion.span className="block w-full rounded-lg" initial={false}
+                animate={{ height: 10 + n * 6, backgroundColor: on ? tone : "rgba(16,16,16,.08)" }}
+                transition={{ type: "spring", stiffness: 420, damping: 32 }} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function MultiSeg<T extends string>({ value, options, onChange }: { value: T[]; options: { v: T; label: string }[]; onChange: (v: T[]) => void }) {
   const toggle = (v: T) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
   return (

@@ -31,7 +31,7 @@ export function WorkoutDetail() {
                 <ul className="grid divide-y divide-line">
                   {w.segments.map((s, i) => (
                     <li key={i} className="py-3 grid grid-cols-[52px_1fr_auto] gap-3 items-start text-sm">
-                      <span className="chip justify-self-start" style={{ background: `rgba(212,255,58,${[0, .25, .45, .65, .85, 1][s.zone]})`, color: s.zone >= 3 ? "var(--ink)" : "var(--bone)", borderColor: "transparent" }}>Z{s.zone}</span>
+                      <span className="chip justify-self-start" style={{ background: `rgba(31,199,111,${[0, .18, .32, .5, .7, 1][s.zone]})`, color: "var(--ink)", borderColor: "transparent" }}>Z{s.zone}</span>
                       <span><span className="block font-medium">{s.label}{s.repeat ? ` × ${s.repeat}` : ""}</span><span className="text-xs text-smoke">{s.cue}</span></span>
                       <span className="tnum text-xs text-smoke">{fmtDuration(s.seconds)}{s.repeat ? ` ×${s.repeat}` : ""}</span>
                     </li>
