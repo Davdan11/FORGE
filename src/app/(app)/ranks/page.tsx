@@ -3,11 +3,15 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { Gift, Lock } from "lucide-react";
 import { getStats, getProfile } from "@/lib/db";
-import { LEVELS_PER_TIER, TIERS, levelFromXp, nextRewardFor, subRankFor, tierForLevel, xpToReach } from "@/lib/gamification";
+import { LEVELS_PER_TIER, SUB_RANKS, TIERS, levelFromXp, nextRewardFor, subRankFor, tierForLevel, xpToReach } from "@/lib/gamification";
+
 import { RankEmblem } from "@/components/RankEmblem";
 import { Screen, Hero, Section, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, CountUp } from "@/components/motion";
 import { IMG } from "@/lib/data/images";
+
+/** Levels per sub-rank: ten levels a tier, five sub-ranks. */
+const PER_SUB = LEVELS_PER_TIER / SUB_RANKS.length;
 
 export default function RanksPage() {
   const stats = useLiveQuery(() => getStats(), []);
@@ -41,7 +45,8 @@ export default function RanksPage() {
                     const current = t.key === tier.key;
                     const last = t.from + LEVELS_PER_TIER - 1;
                     return (
-                      <li key={t.key} className={`card p-4 flex items-center gap-4 ${current ? "border-volt" : ""}`}>
+                      <li key={t.key} className={`card p-4 grid gap-4 ${current ? "border-volt" : ""}`}>
+                        <div className="flex items-center gap-4">
                         <RankEmblem tier={t} sub={current ? sub : undefined} size={64} locked={!reached} className="shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-2 flex-wrap">
@@ -57,6 +62,22 @@ export default function RanksPage() {
                               <span><span className="font-medium">{t.reward.item}</span><span className="block text-xs text-smoke">{t.reward.note}</span></span>
                             </p>
                           )}
+                        </div>
+                        </div>
+                        {/* The five sub-ranks, I to V: earned ones in full, the rest dimmed. */}
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {SUB_RANKS.map((s, i) => {
+                            const from = t.from + i * PER_SUB;
+                            const got = lvl.level >= from;
+                            const here = current && s === sub;
+                            return (
+                              <div key={s} className={`grid justify-items-center gap-1 rounded-2xl py-2 ${here ? "bg-[rgba(31,199,111,.12)] ring-1 ring-volt" : ""}`}>
+                                <RankEmblem tier={t} sub={s} size={48} locked={!got} />
+                                <span className={`text-[11px] font-medium ${got ? "" : "text-smoke"}`}>{s}</span>
+                                <span className="text-[10px] text-smoke tnum">Lv {from}–{from + PER_SUB - 1}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </li>
                     );
