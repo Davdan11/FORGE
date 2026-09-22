@@ -235,8 +235,11 @@ function Ride({ course, profile, onStop, say }: {
   const kmh = hud.speedMs * 3.6;
   const credit = XP_CREDIT[hud.quality];
 
+  // z-50 sits above .nav-float (z-40), which otherwise covers the End ride
+  // button, and below the level-up card (z-60) and the post sheet (z-70) — a
+  // personal best reached mid-ride should still be allowed to interrupt.
   return (
-    <div className="fixed inset-0 z-40 bg-ink">
+    <div className="fixed inset-0 z-50 bg-ink">
       <World course={course} riders={riders} className="absolute inset-0" />
 
       {/* top: the numbers */}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { at, type Course } from "@/lib/indoor/course";
+import { buildTerrain, scatter, hashSeed } from "@/lib/indoor/terrain";
 
 /* ─────────────────────────────────────────────────────────────
    The world.
@@ -24,7 +25,7 @@ import { at, type Course } from "@/lib/indoor/course";
 
 /** Where the ground meets the sky. Fog is tinted to this so the road fades
  *  into the horizon instead of into nothing. */
-const HORIZON = 0x243040;
+const HORIZON = 0x43536a;
 const VOLT = 0x1fc76f;
 const BONE = 0xf6f3ec;
 
@@ -104,6 +105,15 @@ export function World({ course, riders, className = "" }: { course: Course; ride
     const camera = new THREE.PerspectiveCamera(58, 1, 0.5, VIEW_M * 1.4);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Without tone mapping a renderer clips every bright value to flat white
+    // and the whole image reads as a technical drawing. ACES is what film and
+    // every modern game grade through, and it is one line.
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.45;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    // Soft shadows, small map. A phone cannot afford 4096 and cannot show it.
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // Capping at 2 keeps a 3x phone from rendering nine times the pixels for
     // a difference nobody can see through fog.
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -115,16 +125,31 @@ export function World({ course, riders, className = "" }: { course: Course; ride
     Object.assign(renderer.domElement.style, { display: "block", width: "100%", height: "100%" });
     host.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0x5b6b78, 0x0a0a0a, 1.15));
-    const sun = new THREE.DirectionalLight(BONE, 1.1);
-    sun.position.set(-120, 180, 90);
-    scene.add(sun);
+    // Sky bounce, warm ground bounce. The pair is what stops shadowed faces
+    // going to pure black, which is the tell of a scene lit by one lamp.
+    scene.add(new THREE.HemisphereLight(0x9ec0e0, 0x35302a, 1.35));
 
-    scene.add(buildGround());
+    const sun = new THREE.DirectionalLight(0xfff2dc, 2.9);
+    sun.position.set(-140, 120, 80);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    // The shadow camera is a box that travels with the rider: it only has to
+    // cover what is on screen, and a box big enough for a 40 km course would
+    // give every shadow the resolution of a thumbnail.
+    const sc = sun.shadow.camera as THREE.OrthographicCamera;
+    sc.left = -90; sc.right = 90; sc.top = 90; sc.bottom = -90;
+    sc.near = 1; sc.far = 400;
+    sun.shadow.bias = -0.0008;
+    scene.add(sun);
+    scene.add(sun.target);
+
+    const ground = buildGround(course);
+    scene.add(ground);
     scene.add(buildRoad(course));
     scene.add(buildEdges(course));
     scene.add(buildCentreLine(course));
     scene.add(buildMarkers(course));
+    scene.add(buildTrees(course));
 
     const avatars = new Map<string, THREE.Object3D>();
     const mixers = new Map<string, THREE.AnimationMixer>();
@@ -177,7 +202,14 @@ export function World({ course, riders, className = "" }: { course: Course; ride
         if (!present.has(id)) { group.remove(obj); avatars.delete(id); mixers.delete(id); }
       }
 
-      if (me) follow(camera, course, me.distanceM, dt);
+      if (me) {
+        follow(camera, course, me.distanceM, dt);
+        // Drag the shadow box along with the rider, or shadows simply stop
+        // existing a few hundred metres from the start line.
+        const here = at(course, me.distanceM);
+        sun.target.position.set(here.x, here.alt, here.z);
+        sun.position.set(here.x - 140, here.alt + 120, here.z + 80);
+      }
       renderer.render(scene, camera);
     }
 
@@ -243,7 +275,9 @@ function buildRoad(course: Course) {
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
-  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x1a1d1f, roughness: 0.95, metalness: 0, side: THREE.DoubleSide }));
+  const road = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x24262a, roughness: 0.9, metalness: 0, side: THREE.DoubleSide }));
+  road.receiveShadow = true;
+  return road;
 }
 
 /** A volt line down each edge. This is what makes the road readable at speed:
@@ -281,6 +315,7 @@ function buildMarkers(course: Course) {
     mesh.setMatrixAt(i, m);
   }
   mesh.count = count;
+  mesh.castShadow = true;
   return mesh;
 }
 
@@ -293,9 +328,9 @@ function skyTexture() {
   c.height = 256;
   const ctx = c.getContext("2d")!;
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, "#07080a");
-  g.addColorStop(0.62, "#111823");
-  g.addColorStop(1, "#243040");
+  g.addColorStop(0, "#0d1420");
+  g.addColorStop(0.55, "#1d2b3d");
+  g.addColorStop(1, "#43536a");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 2, 256);
   const tex = new THREE.CanvasTexture(c);
@@ -328,14 +363,82 @@ function buildCentreLine(course: Course) {
   return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x8b9199, side: THREE.DoubleSide, transparent: true, opacity: 0.55 }));
 }
 
-/** One large plane rather than terrain: with fog closing at 420 m, modelled
- *  hills either side cost geometry nobody ever sees. */
-function buildGround() {
-  const g = new THREE.PlaneGeometry(6000, 6000);
-  g.rotateX(-Math.PI / 2);
-  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x13181e, roughness: 1 }));
-  m.position.y = -0.6;
-  return m;
+/**
+ * The ground, as a landscape rather than a sheet.
+ *
+ * Heights come from lib/indoor/terrain.ts, which carves the road into rolling
+ * relief: every point takes the altitude of the nearest stretch of road, then
+ * rises away from it. A climb therefore has a valley around it. The previous
+ * version was a single flat plane, which is why a gradient could be read on
+ * the dial and nowhere in the world.
+ */
+function buildGround(course: Course) {
+  const t = buildTerrain(course);
+  const geo = new THREE.PlaneGeometry(t.width, t.depth, t.size - 1, t.size - 1);
+  geo.rotateX(-Math.PI / 2);
+
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) pos.setY(i, t.heights[i]);
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    color: 0x2f3a2c,
+    roughness: 1,
+    // Flat shading: every triangle keeps its own normal, so the hillsides read
+    // as faceted low-poly rather than as a smooth blob. It is the look, and it
+    // is also free.
+    flatShading: true,
+  }));
+  mesh.position.set(t.minX + t.width / 2, 0, t.minZ + t.depth / 2);
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+/**
+ * Trees, as two instanced meshes.
+ *
+ * Instancing is what makes a forest affordable: eight hundred trunks and eight
+ * hundred crowns are two draw calls, not sixteen hundred. Drawn from simple
+ * cones and cylinders for now — the moment real props land in
+ * public/models/props this is where they get scattered instead, using the same
+ * placements so the world does not rearrange itself.
+ */
+function buildTrees(course: Course, count = 800) {
+  const group = new THREE.Group();
+  const places = scatter(course, count, hashSeed(course.id));
+
+  const trunk = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.16, 0.24, 2.2, 5),
+    new THREE.MeshStandardMaterial({ color: 0x3a2f26, roughness: 1, flatShading: true }),
+    count,
+  );
+  const crown = new THREE.InstancedMesh(
+    new THREE.ConeGeometry(1.5, 5.2, 6),
+    new THREE.MeshStandardMaterial({ color: 0x24402a, roughness: 1, flatShading: true }),
+    count,
+  );
+  trunk.castShadow = true;
+  crown.castShadow = true;
+
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const v = new THREE.Vector3();
+  const sv = new THREE.Vector3();
+
+  places.forEach((p, i) => {
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotation);
+    sv.set(p.scale, p.scale, p.scale);
+
+    v.set(p.x, p.y + 1.1 * p.scale, p.z);
+    trunk.setMatrixAt(i, m.compose(v, q, sv));
+
+    v.set(p.x, p.y + (2.2 + 2.6) * p.scale, p.z);
+    crown.setMatrixAt(i, m.compose(v, q, sv));
+  });
+
+  group.add(trunk, crown);
+  return group;
 }
 
 function buildAvatar(me: boolean, model: Loaded): { object: THREE.Object3D; mixer?: THREE.AnimationMixer } {
@@ -390,6 +493,7 @@ function buildPrimitiveAvatar(me: boolean) {
     new THREE.CapsuleGeometry(0.22, 0.62, 4, 8),
     new THREE.MeshStandardMaterial({ color: colour, roughness: 0.45, emissive: me ? VOLT : 0x000000, emissiveIntensity: me ? 0.3 : 0 }),
   );
+  rider.castShadow = true;
   rider.rotation.x = 0.55;   // leaning over the bars
   body.add(rider);
 
