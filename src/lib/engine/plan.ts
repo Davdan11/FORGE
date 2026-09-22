@@ -271,6 +271,22 @@ export function buildSession(profile: Profile, planId: string, week: number, day
   };
 }
 
+/**
+ * Prescribe a movement the athlete added to a session from the library: an
+ * accessory slot at this block's accessory rep range, loaded from what they
+ * have lifted, like anything the engine chose itself.
+ */
+export function prescribeAdded(ex: Exercise, profile: Profile, week: number, minutes: number, measured: MeasuredE1rm = {}): PrescribedExercise {
+  const { deload } = MESO(week);
+  const timed = ex.timed || ex.pattern === "cardio" || ex.pattern === "mobility";
+  const slot: Slot = {
+    pattern: ex.pattern, block: "accessory", sets: deload ? 2 : minutes >= 60 ? 3 : 2,
+    reps: phaseOf(profile.goal, week).accReps, rpe: deload ? 6 : 7.5, rest: 75,
+    timedSec: ex.pattern === "cardio" ? 600 : timed ? 45 : undefined, why: "",
+  };
+  return { id: uid(), slug: ex.slug, block: "accessory", sets: buildSets(slot, ex, profile, week, profile.goal, measured), why: "You added this from the library.", added: true };
+}
+
 /** The Monday a plan starts on: the start date itself if it is one. */
 export function planMonday(startDate: string) {
   const start = new Date(startDate + "T00:00:00");

@@ -1,6 +1,7 @@
 import type { BlockReview, Plan, Profile, Session, SessionLog } from "../types";
 import { BLOCK_WEEKS, NEUTRAL_TUNING, blockMeta, buildWeeks, type BlockTuning, type MeasuredE1rm } from "./plan";
 import { adaptationsFor, type InjuryAdaptation } from "./injury";
+import { carryAdded } from "./custom";
 import { db, getProfile, todayISO } from "../db";
 import { bestE1rmBySlug } from "../progress";
 
@@ -101,7 +102,8 @@ export function advance(
   const remove: string[] = [];
   const add: Session[] = [];
   const taken = new Set(sessions.filter((s) => s.status !== "planned").map((s) => s.date));
-  const fresh = (list: Session[]) => list.filter((s) => s.date >= today && !taken.has(s.date));
+  // Days not already done, with anything the athlete added by hand put back.
+  const fresh = (list: Session[]) => carryAdded(list.filter((s) => s.date >= today && !taken.has(s.date)), sessions);
 
   // The tuning in force: the latest review's, or neutral before the first.
   let tuning: BlockTuning = [...blocks].reverse().find((b) => b.review)?.review?.tuning ?? NEUTRAL_TUNING;

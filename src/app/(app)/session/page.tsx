@@ -12,6 +12,7 @@ import { nextSetFromRpe } from "@/lib/engine/autoregulate";
 import { awardSession, bestE1rmBySlug } from "@/lib/progress";
 import { fmtLoad, kgToLb, lbToKg, fmtDuration, platesFor, roundLoad, e1rm } from "@/lib/units";
 import { Screen, Hero, Toast, ScreenSkeleton, Rail, Empty } from "@/components/ui";
+import { removeAdded } from "@/lib/engine/custom";
 import { Page, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
 import type { LoggedSet, PrescribedExercise, PrescribedSet, UnitPrefs } from "@/lib/types";
 
@@ -153,7 +154,7 @@ function SessionDetail() {
         <div className="min-w-0">
         <AnimatePresence mode="wait">
           {ex && <motion.div key={ex.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
-            <ExerciseCard ex={ex} logged={byEx[ex.id] ?? []} units={profile.units} disabled={done} sessionId={session.id} onLog={(i, v) => logSet(ex, i, v)} onSwap={() => setSwapOpen(ex.id)} />
+            <ExerciseCard ex={ex} logged={byEx[ex.id] ?? []} units={profile.units} disabled={done} sessionId={session.id} onLog={(i, v) => logSet(ex, i, v)} onSwap={() => setSwapOpen(ex.id)} onRemove={ex.added && !(byEx[ex.id]?.length) ? () => removeAdded(session.id, ex.id) : undefined} />
           </motion.div>}
         </AnimatePresence>
 
@@ -222,7 +223,7 @@ function Clock({ from }: { from: string }) {
   return <>{fmtDuration(s)}</>;
 }
 
-function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap }: { ex: PrescribedExercise; logged: LoggedSet[]; units: UnitPrefs; disabled: boolean; sessionId: string; onLog: (i: number, v: { reps?: number; seconds?: number; loadKg?: number; rpe?: number }) => void; onSwap: () => void }) {
+function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap, onRemove }: { ex: PrescribedExercise; logged: LoggedSet[]; units: UnitPrefs; disabled: boolean; sessionId: string; onLog: (i: number, v: { reps?: number; seconds?: number; loadKg?: number; rpe?: number }) => void; onSwap: () => void; onRemove?: () => void }) {
   const meta = getExercise(ex.slug);
   const [showWhy, setShowWhy] = useState(false);
   const [tempo, setTempo] = useState(false);
@@ -245,11 +246,11 @@ function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap }:
         <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink/90 via-ink/45 to-transparent" />
         <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-6 flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <span className="meta">{ex.block}{meta.tempo ? ` · tempo ${meta.tempo}` : ""}</span>
+            <span className="meta">{ex.added ? "added by you" : ex.block}{meta.tempo ? ` · tempo ${meta.tempo}` : ""}</span>
             <p className="display text-3xl lg:text-5xl">{meta.name}</p>
             <p className="text-xs text-bone/75">{meta.primary.join(", ")}{last ? ` · last: ${last.seconds ? `${last.seconds}s` : `${last.reps} reps`}${last.loadKg ? ` · ${fmtLoad(last.loadKg, units)}` : ""}${last.rpe ? ` @${last.rpe}` : ""}` : ""}</p>
           </div>
-          <div className="grid gap-1.5 justify-items-end shrink-0 relative z-10"><Link href={`/library/${meta.slug}`} className="chip chip--live">Cues</Link>{!disabled && <button type="button" className="chip chip--live" onClick={onSwap}>Swap</button>}</div>
+          <div className="grid gap-1.5 justify-items-end shrink-0 relative z-10"><Link href={`/library/${meta.slug}`} className="chip chip--live">Cues</Link>{!disabled && (onRemove ? <button type="button" className="chip chip--live" onClick={onRemove}>Remove</button> : <button type="button" className="chip chip--live" onClick={onSwap}>Swap</button>)}</div>
         </div>
       </div>
 

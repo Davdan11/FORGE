@@ -3,6 +3,7 @@ import { bestE1rmBySlug } from "../progress";
 import { generatePlan } from "./plan";
 import { adaptationsFor } from "./injury";
 import type { Profile } from "../types";
+import { carryAdded } from "./custom";
 
 /* ─────────────────────────────────────────────────────────────
    Regenerate the part of the block that hasn't happened yet.
@@ -21,7 +22,9 @@ export async function rebuildRemaining(patch: Partial<Profile> = {}): Promise<nu
 
   const [measured, injuryRows] = await Promise.all([bestE1rmBySlug(), db.injuries.toArray()]);
   const injuries = adaptationsFor(injuryRows, today);
-  const { plan, sessions } = generatePlan(profile, today, measured, injuries);
+  const { plan, sessions: built } = generatePlan(profile, today, measured, injuries);
+  // Movements the athlete added by hand stay on their day.
+  const sessions = carryAdded(built, await db.sessions.where("status").equals("planned").toArray());
 
   await db.transaction("rw", db.plans, db.sessions, async () => {
     await db.sessions.where("status").equals("planned").delete();

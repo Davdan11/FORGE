@@ -3,6 +3,7 @@ import { buildSession, type MeasuredE1rm } from "./plan";
 import type { InjuryAdaptation } from "./injury";
 import { roundLoad } from "../units";
 import { getExercise } from "../data/exercises";
+import { addedOf, insertAdded } from "./custom";
 
 /* ─────────────────────────────────────────────────────────────
    Readiness → daily auto-regulation.
@@ -44,7 +45,10 @@ export function autoRegulate(profile: Profile, planned: Session, r: Readiness, m
       equipment: equipmentToday === "full" ? profile.equipment : equipmentToday === "dumbbells" ? ["dumbbell", "bench", "band", "bodyweight"] : ["bodyweight", "band"],
       pain: [...new Set([...profile.pain, ...pain])],
     };
-    session = { ...buildSession(p, planned.planId, planned.week, planned.day, planned.date, planned.kind, minutes, pain, measured, injuries), id: planned.id };
+    const rebuilt = buildSession(p, planned.planId, planned.week, planned.day, planned.date, planned.kind, minutes, pain, measured, injuries);
+    // What the athlete added stays, unless today's pain rules it out.
+    const kept = addedOf(planned).filter((e) => !(getExercise(e.slug)?.painFlags ?? []).some((f) => p.pain.includes(f)));
+    session = { ...rebuilt, exercises: insertAdded(rebuilt.exercises, kept), id: planned.id };
     if (equipmentToday !== "full") changes.push(`Rewritten for ${equipmentToday === "dumbbells" ? "dumbbells only" : "no equipment"} — same patterns, different tools.`);
     if (pain.length) changes.push(`Movements loading the ${pain.join(", ")} swapped out for today.`);
     if (minutes < planned.minutes - 10) changes.push(`Cut to ${minutes} min: accessories trimmed, main lift kept.`);

@@ -153,6 +153,9 @@ export interface PrescribedExercise {
   sets: PrescribedSet[];
   why: string;
   block: "prep" | "main" | "accessory" | "finisher" | "cooldown";
+  /** Put there by the athlete from the library, not by the engine. Survives
+   *  the engine rewriting the session (see engine/custom.ts). */
+  added?: boolean;
 }
 
 export interface Session {
