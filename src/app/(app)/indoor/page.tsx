@@ -9,7 +9,8 @@ import { generateCourse, courseFromActivity, at, type Course } from "@/lib/indoo
 import { step, ROAD_BIKE, powerFromHr, powerFromSpeed, declaredPower, guessFtp, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
 import { fmtDist, fmtDuration } from "@/lib/units";
-import { Screen, Section, ScreenSkeleton, Toast } from "@/components/ui";
+import { Screen, Hero, Photo, Section, ScreenSkeleton, Toast } from "@/components/ui";
+import { ART } from "@/lib/data/images";
 import { Page, Press } from "@/components/motion";
 import type { Rider } from "@/components/indoor/World";
 import { startPacers, stepPacers, placeInBunch, gapToNext, type PacerState } from "@/lib/indoor/pacers";
@@ -53,19 +54,17 @@ export default function IndoorPage() {
         <Ride course={course} profile={profile} onStop={() => setRiding(false)} say={say} />
       ) : (
         <Screen>
-          <header className="mb-6">
-            <span className="eyebrow">Indoor</span>
-            <h1 className="display text-4xl lg:text-5xl mt-2 leading-none">Ride the hill<br /><em>from your basement.</em></h1>
-            <p className="text-sm text-smoke mt-3 max-w-[48ch]">
+          <Hero image={ART.indoor} color height="h-[340px]" eyebrow="Indoor" title={<>Ride the hill<br /><em>from your basement.</em></>}>
+            <p className="text-sm text-bone/80 max-w-[48ch]">
               Your effort moves you. Gradient, drag and your own weight decide how fast — so the climb is a climb.
             </p>
-          </header>
+          </Hero>
 
           <Section title="Pick a course">
             <div className="grid gap-2">
               {BUILT_IN.map((c) => {
                 const built = generateCourse(c);
-                return <CourseRow key={c.id} id={c.id} name={c.name} course={built} on={courseId === c.id} onPick={setCourseId} units={profile.units} />;
+                return <CourseRow key={c.id} id={c.id} name={c.name} course={built} on={courseId === c.id} onPick={setCourseId} units={profile.units} image={ART.course[c.id]} />;
               })}
             </div>
           </Section>
@@ -97,11 +96,12 @@ export default function IndoorPage() {
   );
 }
 
-function CourseRow({ id, name, course, on, onPick, units }: { id: string; name: string; course: Course; on: boolean; onPick: (v: string) => void; units: UnitPrefs }) {
+function CourseRow({ id, name, course, on, onPick, units, image }: { id: string; name: string; course: Course; on: boolean; onPick: (v: string) => void; units: UnitPrefs; image?: string }) {
   return (
     <button type="button" aria-pressed={on} onClick={() => onPick(id)}
       className={`card p-4 flex items-center justify-between gap-4 text-left transition-colors ${on ? "!border-volt" : ""}`}>
-      <div className="min-w-0">
+      {image && <Photo src={image} color className="thumb !w-16 !h-16 shrink-0" />}
+      <div className="min-w-0 flex-1">
         <p className="font-semibold truncate">{name}</p>
         <p className="text-xs text-smoke tnum mt-0.5">
           {fmtDist(course.lengthM, units)} · ↑ {Math.round(course.elevGainM)} m{course.loop ? " · loop" : ""}

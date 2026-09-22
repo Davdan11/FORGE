@@ -1,4 +1,4 @@
-import type { DayPlanMeal, Meal, MealSlot, NutritionDay, Profile, Session } from "../types";
+import type { AvoidFood, DayPlanMeal, Meal, MealSlot, NutritionDay, Profile, Session } from "../types";
 import { addDays } from "../db";
 import { fitScore, getMeal, sampleIds, searchRecipes } from "./recipes";
 import { MEALS as CURATED } from "../data/meals";
@@ -18,15 +18,20 @@ export type DayType = NutritionDay["dayType"];
 
 export function dailyTargets(p: Profile, dayType: DayType) {
   const bmr = p.sex === "female" ? 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.age - 161 : 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.age + 5;
-  const activity = { 2: 1.35, 3: 1.45, 4: 1.55, 5: 1.65, 6: 1.75 }[p.daysPerWeek];
+  // Training days set the base; a job on your feet or a physical one burns
+  // more than any session, and a desk-worker multiplier would starve it.
+  const work = { desk: 0, on_feet: 0.08, physical: 0.18 }[p.lifestyle?.work ?? "desk"];
+  const activity = { 2: 1.35, 3: 1.45, 4: 1.55, 5: 1.65, 6: 1.75 }[p.daysPerWeek] + work;
   let tdee = bmr * activity;
   tdee *= dayType === "hard" ? 1.08 : dayType === "train" ? 1.0 : 0.9;
   const goalAdj = { cut: -0.18, recomp: -0.05, strength: 0.05, build: 0.12, endurance: 0.05, perform: 0.05 }[p.goal];
   const kcal = Math.round(tdee * (1 + goalAdj) / 10) * 10;
   const proteinPerKg = p.goal === "cut" ? 2.2 : p.goal === "build" || p.goal === "strength" ? 1.9 : 1.7;
   const protein = Math.round(p.weightKg * proteinPerKg);
-  const fat = Math.round(Math.max(p.weightKg * 0.7, kcal * 0.25 / 9));
-  const carbs = Math.max(80, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  // Keto: carbs held under 50 g and fat fills the rest of the energy.
+  const keto = p.dietary.includes("keto");
+  const carbs = keto ? KETO_CARBS : Math.max(80, Math.round((kcal - protein * 4 - Math.max(p.weightKg * 0.7, kcal * 0.25 / 9) * 9) / 4));
+  const fat = keto ? Math.round((kcal - protein * 4 - carbs * 4) / 9) : Math.round(Math.max(p.weightKg * 0.7, kcal * 0.25 / 9));
   const sugarMax = Math.round(kcal * (p.goal === "cut" ? 0.06 : 0.09) / 4);   // WHO-style free-sugar ceiling
   const fiberMin = Math.round(Math.max(25, kcal / 1000 * 14));
   return { kcal, protein, carbs, fat, sugarMax, fiberMin };
@@ -39,7 +44,49 @@ const SLOTS_BY_MEALS: Record<3 | 4 | 5, MealSlot[]> = {
 };
 const SHARE: Record<MealSlot, number> = { breakfast: 0.27, lunch: 0.32, dinner: 0.33, snack: 0.1, pre: 0.1, post: 0.12 };
 
-export const dietsOf = (p: Profile): Diet[] => p.dietary.filter((d): d is Diet => d !== "halal");
+const KETO_CARBS = 45;
+
+/** Diets the recipe catalogue tags directly. Halal and keto are enforced by
+ *  `mealFits` instead: one by ingredient, the other by macros. */
+export const dietsOf = (p: Profile): Diet[] => p.dietary.filter((d): d is Diet => d !== "halal" && d !== "keto");
+
+/* Words that give a food away in an ingredient line. Matched on whole words,
+   so "egg" does not catch "eggplant" and "ham" does not catch "hummus". */
+const AVOID_WORDS: Record<AvoidFood, string[]> = {
+  nuts: ["almond", "almonds", "walnut", "walnuts", "cashew", "cashews", "pecan", "pecans", "pistachio", "pistachios", "hazelnut", "hazelnuts", "nut", "nuts"],
+  peanuts: ["peanut", "peanuts"],
+  shellfish: ["shrimp", "prawn", "prawns", "crab", "lobster", "mussel", "mussels", "scallop", "scallops", "clam", "clams", "oyster", "oysters"],
+  fish: ["fish", "salmon", "tuna", "cod", "trout", "sardine", "sardines", "mackerel", "anchovy", "tilapia", "haddock"],
+  eggs: ["egg", "eggs"],
+  dairy: ["milk", "yogurt", "yoghurt", "skyr", "cheese", "feta", "parmesan", "halloumi", "paneer", "butter", "cream", "whey", "ricotta", "mozzarella"],
+  soy: ["soy", "tofu", "tempeh", "edamame", "miso"],
+  pork: ["pork", "bacon", "ham", "prosciutto", "chorizo", "pancetta", "salami"],
+  red_meat: ["beef", "steak", "sirloin", "lamb", "veal", "bison", "pork"],
+};
+const words = (s: string) => s.toLowerCase().match(/[a-zà-ÿ]+/g) ?? [];
+
+/** Foods the profile never wants served: its own list, plus pork for halal. */
+export function avoidedFoods(p: Profile): AvoidFood[] {
+  const out = new Set(p.avoidFoods ?? []);
+  if (p.dietary.includes("halal")) out.add("pork");
+  return [...out];
+}
+
+/** Everything about a meal except the tagged diets: avoided foods and keto. */
+export function mealFits(m: Meal, p: Profile): boolean {
+  const avoid = avoidedFoods(p);
+  if (avoid.length) {
+    const banned = new Set(avoid.flatMap((a) => AVOID_WORDS[a]));
+    // "Oat milk" and "peanut butter" are not dairy: the plant word wins.
+    const plant = /\b(oat|almond|soy|coconut|rice|peanut|nut)\s+(milk|butter|yogurt|cream)\b/i;
+    for (const ing of m.ingredients) {
+      const text = avoid.includes("dairy") ? ing.item.replace(plant, (x) => x.split(/\s+/)[0]) : ing.item;
+      if (words(text).some((w) => banned.has(w))) return false;
+    }
+  }
+  if (p.dietary.includes("keto") && (m.carbs * 4) / Math.max(1, m.kcal) > 0.12) return false;
+  return true;
+}
 
 function timeAdd(hhmm: string, minutes: number) {
   const [h, m] = hhmm.split(":").map(Number);
@@ -51,12 +98,16 @@ function timeAdd(hhmm: string, minutes: number) {
 function rng(seed: number) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 /** Candidate pool for a slot: a random sample of the catalog (fast) + all curated, filtered by diet, minus recent meals. */
-function candidates(slot: MealSlot, diets: Diet[], avoid: Set<string>, rand: () => number): Meal[] {
+function candidates(slot: MealSlot, p: Profile, avoid: Set<string>, rand: () => number): Meal[] {
+  const diets = dietsOf(p);
+  const ok = (m: Meal) => !avoid.has(m.id) && dietOk(m, diets) && mealFits(m, p);
   const out: Meal[] = [];
-  for (const m of CURATED) if (m.slot.includes(slot) && !avoid.has(m.id) && dietOk(m, diets)) out.push(m);
-  for (const id of sampleIds(slot, 40, rand)) {
+  for (const m of CURATED) if (m.slot.includes(slot) && ok(m)) out.push(m);
+  // Keto and long avoid lists reject most of a sample, so draw more.
+  const n = p.dietary.includes("keto") ? 400 : avoidedFoods(p).length ? 120 : 40;
+  for (const id of sampleIds(slot, n, rand)) {
     const m = getMeal(id);
-    if (m && !avoid.has(m.id) && dietOk(m, diets)) out.push(m);
+    if (m && ok(m)) out.push(m);
   }
   return out;
 }
@@ -70,7 +121,6 @@ export function buildNutritionDay(p: Profile, date: string, session: Session | n
   const slots = [...SLOTS_BY_MEALS[p.mealsPerDay]];
   const avoid = new Set<string>([...(yesterday?.meals.map((m) => m.mealId) ?? []), ...recent]);
   const rand = rng(date.split("-").reduce((a, b) => a * 31 + Number(b), 7) + p.name.length);
-  const diets = dietsOf(p);
   const train = session && dayType !== "rest";
   if (train) slots.push("pre", "post");
 
@@ -82,7 +132,7 @@ export function buildNutritionDay(p: Profile, date: string, session: Session | n
   for (const slot of slots) {
     const targetKcal = targets.kcal * (SHARE[slot] / totalShare);
     const targetProtein = targets.protein * (SHARE[slot] / totalShare);
-    const pool = candidates(slot, diets, avoid, rand);
+    const pool = candidates(slot, p, avoid, rand);
     if (!pool.length) continue;
     // Score everything (goal fit + a sugar budget for the slot), then pick among the best few for variety.
     const sugarBudget = targets.sugarMax * (SHARE[slot] / totalShare) * 1.15;
@@ -157,7 +207,7 @@ export function swapOptions(p: Profile, day: NutritionDay, planned: DayPlanMeal,
   const targetProtein = day.targets.protein * (SHARE[planned.slot] / day.meals.reduce((a, m) => a + SHARE[m.slot], 0));
   const inDay = new Set(day.meals.map((m) => m.mealId));
   const rand = rng(Date.now() % 100000);
-  const pool = candidates(planned.slot, dietsOf(p), inDay, rand);
+  const pool = candidates(planned.slot, p, inDay, rand);
   return pool.map((m) => ({ m, s: fitScore(m, { kcal: targetKcal, protein: targetProtein }, p.goal) })).sort((a, b) => a.s - b.s).slice(0, n).map((x) => x.m);
 }
 

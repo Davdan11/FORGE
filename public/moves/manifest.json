@@ -1,1 +1,406 @@
-{}
+{
+  "90-90-hip-switch": {
+    "poster": "/moves/90-90-hip-switch.jpg",
+    "loop": "/moves/90-90-hip-switch.loop.webp"
+  },
+  "ab-crunch-machine": {
+    "poster": "/moves/ab-crunch-machine.jpg",
+    "loop": "/moves/ab-crunch-machine.loop.webp"
+  },
+  "ankle-rock": {
+    "poster": "/moves/ankle-rock.jpg",
+    "loop": "/moves/ankle-rock.loop.webp"
+  },
+  "assisted-dip": {
+    "poster": "/moves/assisted-dip.jpg",
+    "loop": "/moves/assisted-dip.loop.webp"
+  },
+  "assisted-pull-up": {
+    "poster": "/moves/assisted-pull-up.jpg",
+    "loop": "/moves/assisted-pull-up.loop.webp"
+  },
+  "back-extension-machine": {
+    "poster": "/moves/back-extension-machine.jpg",
+    "loop": "/moves/back-extension-machine.loop.webp"
+  },
+  "back-squat": {
+    "poster": "/moves/back-squat.jpg",
+    "loop": "/moves/back-squat.loop.webp"
+  },
+  "band-assisted-pull-up": {
+    "poster": "/moves/band-assisted-pull-up.jpg",
+    "loop": "/moves/band-assisted-pull-up.loop.webp"
+  },
+  "band-pull-apart": {
+    "poster": "/moves/band-pull-apart.jpg",
+    "loop": "/moves/band-pull-apart.loop.webp"
+  },
+  "band-row": {
+    "poster": "/moves/band-row.jpg",
+    "loop": "/moves/band-row.loop.webp"
+  },
+  "barbell-row": {
+    "poster": "/moves/barbell-row.jpg",
+    "loop": "/moves/barbell-row.loop.webp"
+  },
+  "bench-dip": {
+    "poster": "/moves/bench-dip.jpg",
+    "loop": "/moves/bench-dip.loop.webp"
+  },
+  "bench-press": {
+    "poster": "/moves/bench-press.jpg",
+    "loop": "/moves/bench-press.loop.webp"
+  },
+  "bicycle-crunch": {
+    "poster": "/moves/bicycle-crunch.jpg",
+    "loop": "/moves/bicycle-crunch.loop.webp"
+  },
+  "bike": {
+    "poster": "/moves/bike.jpg",
+    "loop": "/moves/bike.loop.webp"
+  },
+  "bodyweight-squat": {
+    "poster": "/moves/bodyweight-squat.jpg",
+    "loop": "/moves/bodyweight-squat.loop.webp"
+  },
+  "box-jump": {
+    "poster": "/moves/box-jump.jpg",
+    "loop": "/moves/box-jump.loop.webp"
+  },
+  "brisk-walk": {
+    "poster": "/moves/brisk-walk.jpg",
+    "loop": "/moves/brisk-walk.loop.webp"
+  },
+  "broad-jump": {
+    "poster": "/moves/broad-jump.jpg",
+    "loop": "/moves/broad-jump.loop.webp"
+  },
+  "bulgarian-split-squat": {
+    "poster": "/moves/bulgarian-split-squat.jpg",
+    "loop": "/moves/bulgarian-split-squat.loop.webp"
+  },
+  "burpee": {
+    "poster": "/moves/burpee.jpg",
+    "loop": "/moves/burpee.loop.webp"
+  },
+  "cable-crossover": {
+    "poster": "/moves/cable-crossover.jpg",
+    "loop": "/moves/cable-crossover.loop.webp"
+  },
+  "cable-curl": {
+    "poster": "/moves/cable-curl.jpg",
+    "loop": "/moves/cable-curl.loop.webp"
+  },
+  "cable-lateral-raise": {
+    "poster": "/moves/cable-lateral-raise.jpg",
+    "loop": "/moves/cable-lateral-raise.loop.webp"
+  },
+  "cable-row": {
+    "poster": "/moves/cable-row.jpg",
+    "loop": "/moves/cable-row.loop.webp"
+  },
+  "calf-raise-machine": {
+    "poster": "/moves/calf-raise-machine.jpg",
+    "loop": "/moves/calf-raise-machine.loop.webp"
+  },
+  "cat-cow": {
+    "poster": "/moves/cat-cow.jpg",
+    "loop": "/moves/cat-cow.loop.webp"
+  },
+  "chest-supported-row": {
+    "poster": "/moves/chest-supported-row.jpg",
+    "loop": "/moves/chest-supported-row.loop.webp"
+  },
+  "chin-up": {
+    "poster": "/moves/chin-up.jpg",
+    "loop": "/moves/chin-up.loop.webp"
+  },
+  "couch-stretch": {
+    "poster": "/moves/couch-stretch.jpg",
+    "loop": "/moves/couch-stretch.loop.webp"
+  },
+  "crunch": {
+    "poster": "/moves/crunch.jpg",
+    "loop": "/moves/crunch.loop.webp"
+  },
+  "dead-bug": {
+    "poster": "/moves/dead-bug.jpg",
+    "loop": "/moves/dead-bug.loop.webp"
+  },
+  "deadlift": {
+    "poster": "/moves/deadlift.jpg",
+    "loop": "/moves/deadlift.loop.webp"
+  },
+  "deep-squat-hold": {
+    "poster": "/moves/deep-squat-hold.jpg",
+    "loop": "/moves/deep-squat-hold.loop.webp"
+  },
+  "dip": {
+    "poster": "/moves/dip.jpg",
+    "loop": "/moves/dip.loop.webp"
+  },
+  "dumbbell-bench-press": {
+    "poster": "/moves/dumbbell-bench-press.jpg",
+    "loop": "/moves/dumbbell-bench-press.loop.webp"
+  },
+  "dumbbell-curl": {
+    "poster": "/moves/dumbbell-curl.jpg",
+    "loop": "/moves/dumbbell-curl.loop.webp"
+  },
+  "dumbbell-fly": {
+    "poster": "/moves/dumbbell-fly.jpg",
+    "loop": "/moves/dumbbell-fly.loop.webp"
+  },
+  "dumbbell-front-raise": {
+    "poster": "/moves/dumbbell-front-raise.jpg",
+    "loop": "/moves/dumbbell-front-raise.loop.webp"
+  },
+  "dumbbell-row": {
+    "poster": "/moves/dumbbell-row.jpg",
+    "loop": "/moves/dumbbell-row.loop.webp"
+  },
+  "dumbbell-shoulder-press": {
+    "poster": "/moves/dumbbell-shoulder-press.jpg",
+    "loop": "/moves/dumbbell-shoulder-press.loop.webp"
+  },
+  "dumbbell-tricep-extension": {
+    "poster": "/moves/dumbbell-tricep-extension.jpg",
+    "loop": "/moves/dumbbell-tricep-extension.loop.webp"
+  },
+  "face-pull": {
+    "poster": "/moves/face-pull.jpg",
+    "loop": "/moves/face-pull.loop.webp"
+  },
+  "farmers-carry": {
+    "poster": "/moves/farmers-carry.jpg",
+    "loop": "/moves/farmers-carry.loop.webp"
+  },
+  "front-squat": {
+    "poster": "/moves/front-squat.jpg",
+    "loop": "/moves/front-squat.loop.webp"
+  },
+  "glute-bridge": {
+    "poster": "/moves/glute-bridge.jpg",
+    "loop": "/moves/glute-bridge.loop.webp"
+  },
+  "glute-kickback-machine": {
+    "poster": "/moves/glute-kickback-machine.jpg",
+    "loop": "/moves/glute-kickback-machine.loop.webp"
+  },
+  "goblet-squat": {
+    "poster": "/moves/goblet-squat.jpg",
+    "loop": "/moves/goblet-squat.loop.webp"
+  },
+  "good-morning": {
+    "poster": "/moves/good-morning.jpg",
+    "loop": "/moves/good-morning.loop.webp"
+  },
+  "hack-squat": {
+    "poster": "/moves/hack-squat.jpg",
+    "loop": "/moves/hack-squat.loop.webp"
+  },
+  "hammer-curl": {
+    "poster": "/moves/hammer-curl.jpg",
+    "loop": "/moves/hammer-curl.loop.webp"
+  },
+  "hamstring-floss": {
+    "poster": "/moves/hamstring-floss.jpg",
+    "loop": "/moves/hamstring-floss.loop.webp"
+  },
+  "hanging-knee-raise": {
+    "poster": "/moves/hanging-knee-raise.jpg",
+    "loop": "/moves/hanging-knee-raise.loop.webp"
+  },
+  "hip-abductor": {
+    "poster": "/moves/hip-abductor.jpg",
+    "loop": "/moves/hip-abductor.loop.webp"
+  },
+  "hip-adductor": {
+    "poster": "/moves/hip-adductor.jpg",
+    "loop": "/moves/hip-adductor.loop.webp"
+  },
+  "hip-thrust": {
+    "poster": "/moves/hip-thrust.jpg",
+    "loop": "/moves/hip-thrust.loop.webp"
+  },
+  "incline-chest-press": {
+    "poster": "/moves/incline-chest-press.jpg",
+    "loop": "/moves/incline-chest-press.loop.webp"
+  },
+  "incline-dumbbell-press": {
+    "poster": "/moves/incline-dumbbell-press.jpg",
+    "loop": "/moves/incline-dumbbell-press.loop.webp"
+  },
+  "incline-push-up": {
+    "poster": "/moves/incline-push-up.jpg",
+    "loop": "/moves/incline-push-up.loop.webp"
+  },
+  "inverted-row": {
+    "poster": "/moves/inverted-row.jpg",
+    "loop": "/moves/inverted-row.loop.webp"
+  },
+  "kettlebell-swing": {
+    "poster": "/moves/kettlebell-swing.jpg",
+    "loop": "/moves/kettlebell-swing.loop.webp"
+  },
+  "landmine-press": {
+    "poster": "/moves/landmine-press.jpg",
+    "loop": "/moves/landmine-press.loop.webp"
+  },
+  "lat-pulldown": {
+    "poster": "/moves/lat-pulldown.jpg",
+    "loop": "/moves/lat-pulldown.loop.webp"
+  },
+  "lateral-raise": {
+    "poster": "/moves/lateral-raise.jpg",
+    "loop": "/moves/lateral-raise.loop.webp"
+  },
+  "leg-extension": {
+    "poster": "/moves/leg-extension.jpg",
+    "loop": "/moves/leg-extension.loop.webp"
+  },
+  "leg-press": {
+    "poster": "/moves/leg-press.jpg",
+    "loop": "/moves/leg-press.loop.webp"
+  },
+  "low-row": {
+    "poster": "/moves/low-row.jpg",
+    "loop": "/moves/low-row.loop.webp"
+  },
+  "lying-leg-curl": {
+    "poster": "/moves/lying-leg-curl.jpg",
+    "loop": "/moves/lying-leg-curl.loop.webp"
+  },
+  "machine-chest-press": {
+    "poster": "/moves/machine-chest-press.jpg",
+    "loop": "/moves/machine-chest-press.loop.webp"
+  },
+  "mountain-climber": {
+    "poster": "/moves/mountain-climber.jpg",
+    "loop": "/moves/mountain-climber.loop.webp"
+  },
+  "overhead-press": {
+    "poster": "/moves/overhead-press.jpg",
+    "loop": "/moves/overhead-press.loop.webp"
+  },
+  "pallof-press": {
+    "poster": "/moves/pallof-press.jpg",
+    "loop": "/moves/pallof-press.loop.webp"
+  },
+  "pec-deck": {
+    "poster": "/moves/pec-deck.jpg",
+    "loop": "/moves/pec-deck.loop.webp"
+  },
+  "pigeon-stretch": {
+    "poster": "/moves/pigeon-stretch.jpg",
+    "loop": "/moves/pigeon-stretch.loop.webp"
+  },
+  "plank": {
+    "poster": "/moves/plank.jpg",
+    "loop": "/moves/plank.loop.webp"
+  },
+  "pull-up": {
+    "poster": "/moves/pull-up.jpg",
+    "loop": "/moves/pull-up.loop.webp"
+  },
+  "push-up": {
+    "poster": "/moves/push-up.jpg",
+    "loop": "/moves/push-up.loop.webp"
+  },
+  "reverse-lunge": {
+    "poster": "/moves/reverse-lunge.jpg",
+    "loop": "/moves/reverse-lunge.loop.webp"
+  },
+  "romanian-deadlift": {
+    "poster": "/moves/romanian-deadlift.jpg",
+    "loop": "/moves/romanian-deadlift.loop.webp"
+  },
+  "rotary-torso": {
+    "poster": "/moves/rotary-torso.jpg",
+    "loop": "/moves/rotary-torso.loop.webp"
+  },
+  "row": {
+    "poster": "/moves/row.jpg",
+    "loop": "/moves/row.loop.webp"
+  },
+  "run": {
+    "poster": "/moves/run.jpg",
+    "loop": "/moves/run.loop.webp"
+  },
+  "russian-twist": {
+    "poster": "/moves/russian-twist.jpg",
+    "loop": "/moves/russian-twist.loop.webp"
+  },
+  "safety-bar-squat": {
+    "poster": "/moves/safety-bar-squat.jpg",
+    "loop": "/moves/safety-bar-squat.loop.webp"
+  },
+  "seated-leg-curl": {
+    "poster": "/moves/seated-leg-curl.jpg",
+    "loop": "/moves/seated-leg-curl.loop.webp"
+  },
+  "shoulder-cars": {
+    "poster": "/moves/shoulder-cars.jpg",
+    "loop": "/moves/shoulder-cars.loop.webp"
+  },
+  "shoulder-press-machine": {
+    "poster": "/moves/shoulder-press-machine.jpg",
+    "loop": "/moves/shoulder-press-machine.loop.webp"
+  },
+  "side-plank": {
+    "poster": "/moves/side-plank.jpg",
+    "loop": "/moves/side-plank.loop.webp"
+  },
+  "single-leg-rdl": {
+    "poster": "/moves/single-leg-rdl.jpg",
+    "loop": "/moves/single-leg-rdl.loop.webp"
+  },
+  "skull-crusher": {
+    "poster": "/moves/skull-crusher.jpg",
+    "loop": "/moves/skull-crusher.loop.webp"
+  },
+  "smith-bench-press": {
+    "poster": "/moves/smith-bench-press.jpg",
+    "loop": "/moves/smith-bench-press.loop.webp"
+  },
+  "smith-squat": {
+    "poster": "/moves/smith-squat.jpg",
+    "loop": "/moves/smith-squat.loop.webp"
+  },
+  "stair-sprints": {
+    "poster": "/moves/stair-sprints.jpg",
+    "loop": "/moves/stair-sprints.loop.webp"
+  },
+  "step-up": {
+    "poster": "/moves/step-up.jpg",
+    "loop": "/moves/step-up.loop.webp"
+  },
+  "suitcase-carry": {
+    "poster": "/moves/suitcase-carry.jpg",
+    "loop": "/moves/suitcase-carry.loop.webp"
+  },
+  "thoracic-rotation": {
+    "poster": "/moves/thoracic-rotation.jpg",
+    "loop": "/moves/thoracic-rotation.loop.webp"
+  },
+  "trap-bar-deadlift": {
+    "poster": "/moves/trap-bar-deadlift.jpg",
+    "loop": "/moves/trap-bar-deadlift.loop.webp"
+  },
+  "triceps-pushdown": {
+    "poster": "/moves/triceps-pushdown.jpg",
+    "loop": "/moves/triceps-pushdown.loop.webp"
+  },
+  "walking-lunge": {
+    "poster": "/moves/walking-lunge.jpg",
+    "loop": "/moves/walking-lunge.loop.webp"
+  },
+  "wall-sit": {
+    "poster": "/moves/wall-sit.jpg",
+    "loop": "/moves/wall-sit.loop.webp"
+  },
+  "world-greatest-stretch": {
+    "poster": "/moves/world-greatest-stretch.jpg",
+    "loop": "/moves/world-greatest-stretch.loop.webp"
+  }
+}

@@ -4,21 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "motion/react";
-import { Activity, Dumbbell, MapPin, UtensilsCrossed, User, CalendarDays, Settings, type LucideIcon, Users, Bike } from "lucide-react";
+import { CalendarDays, Settings } from "lucide-react";
+import { FeedIcon, FoodIcon, IndoorIcon, LibraryIcon, MoveIcon, ProfileIcon, TodayIcon, type NavIcon } from "./NavIcons";
 import { getProfile, getStats } from "@/lib/db";
 import { subRankFor, tierForLevel } from "@/lib/gamification";
 import { RankEmblem } from "./RankEmblem";
 import { levelFromXp, rankFor } from "@/lib/gamification";
 
 /* Desktop shell navigation (≥ lg). Mirrors BottomNav items. */
-const ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/today", label: "Today", icon: Activity },
-  { href: "/library", label: "Library", icon: Dumbbell },
-  { href: "/move", label: "Move", icon: MapPin },
-  { href: "/indoor", label: "Indoor", icon: Bike },
-  { href: "/food", label: "Food", icon: UtensilsCrossed },
-  { href: "/progress", label: "Profile", icon: User },
-  { href: "/feed", label: "Feed", icon: Users },
+const ITEMS: { href: string; label: string; icon: NavIcon }[] = [
+  { href: "/today", label: "Today", icon: TodayIcon },
+  { href: "/library", label: "Library", icon: LibraryIcon },
+  { href: "/move", label: "Move", icon: MoveIcon },
+  { href: "/indoor", label: "Indoor", icon: IndoorIcon },
+  { href: "/food", label: "Food", icon: FoodIcon },
+  { href: "/progress", label: "Profile", icon: ProfileIcon },
+  { href: "/feed", label: "Feed", icon: FeedIcon },
   { href: "/plan", label: "Block", icon: CalendarDays },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

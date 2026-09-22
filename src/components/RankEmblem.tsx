@@ -23,7 +23,7 @@ export function RankEmblem({ tier, sub, size = 128, locked = false, className = 
       // The supplied shields are square, so they render square — stretching
       // them to the drawn shield's 1:1.1 would distort the sculpt.
       <img src={art} alt={`${tier.name}${sub ? ` ${sub}` : ""}`} width={size} height={size} decoding="async"
-        className={`object-contain ${className}`} style={{ width: size, height: size, ...(rankNeedsDimming(tier.key, !locked) ? { filter: "grayscale(1) brightness(.62)", opacity: 0.75 } : {}) }} />
+        className={`object-contain ${className}`} style={{ width: size, height: size, ...(rankNeedsDimming(tier.key, !locked) ? { filter: "grayscale(.6) brightness(.85)", opacity: 0.55 } : {}) }} />
     );
   }
   const { rim, face, shine } = locked ? { rim: "#6b6862", face: "#8d8a84", shine: "#b6b3ac" } : tier.metal;

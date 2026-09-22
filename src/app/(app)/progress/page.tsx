@@ -8,8 +8,9 @@ import { BADGES, RANKS, levelFromXp, rankFor, subRankFor, tierForLevel } from "@
 import { RankEmblem } from "@/components/RankEmblem";
 import { BadgeEmblem } from "@/components/BadgeEmblem";
 import { bestE1rmBySlug, logWeighIn } from "@/lib/progress";
+import { blockOfWeek, firstWeekOf, weekOf } from "@/lib/engine/progression";
 import { getExercise } from "@/lib/data/exercises";
-import { exerciseImage, sessionImage, IMG } from "@/lib/data/images";
+import { ART, exerciseImage, sessionImage, IMG } from "@/lib/data/images";
 import { e1rm, fmtDist, fmtLoad, kgToLb, lbToKg, fmtDuration } from "@/lib/units";
 import { Screen, Hero, Section, Photo, Toast, ScreenSkeleton, Seg } from "@/components/ui";
 import { Page, Stagger, Item , CountUp, Reveal, Press } from "@/components/motion";
@@ -54,8 +55,9 @@ export default function ProgressPage() {
   const wDelta = wSeries.length > 1 ? wSeries[wSeries.length - 1].kg - wSeries[0].kg : 0;
   const toUnitW = (kg: number) => (units.weight === "lb" ? `${Math.round(kgToLb(kg) * 10) / 10} lb` : `${Math.round(kg * 10) / 10} kg`);
   const today = todayISO();
-  const week = plan ? Math.max(1, Math.min(12, Math.floor((new Date(today).getTime() - new Date(plan.startDate).getTime()) / 604800000) + 1)) : 1;
-  const meso = Math.min(3, Math.ceil(week / 4));
+  const week = plan ? Math.max(1, Math.min(plan.weeks, weekOf(plan, today))) : 1;
+  const meso = blockOfWeek(week);
+  const blockName = plan?.blocks[meso - 1]?.name ?? "Block";
   const doneSessions = sessions.filter((s) => s.status === "done").length;
   const earned = BADGES.filter((b) => stats.badges.includes(b.id));
   const recent = logs.slice(-5).reverse().map((l) => ({ l, s: sessions.find((s) => s.id === l.sessionId) }));
@@ -70,7 +72,7 @@ export default function ProgressPage() {
   return (
     <Page>
       <Screen>
-        <Hero image={sessionImage("push", 1400, 800)} height="h-[380px]" eyebrow={`${rankFor(lvl.level)} · level ${lvl.level} · ${stats.streakWeeks} week streak`} title={<>{profile.name}<br /><em>{goalLine(profile.goal)}</em></>}
+        <Hero image={ART.profile} color height="h-[380px]" eyebrow={`${rankFor(lvl.level)} · level ${lvl.level} · ${stats.streakWeeks} week streak`} title={<>{profile.name}<br /><em>{goalLine(profile.goal)}</em></>}
           right={<Link href="/settings" className="chip chip--live backdrop-blur-md">Settings</Link>}>
           <div className="flex items-center gap-4 mt-4">
             <Link href="/ranks" aria-label="Your rank and rewards"><RankEmblem tier={tierForLevel(lvl.level)} sub={subRankFor(lvl.level)} size={64} /></Link>
@@ -87,12 +89,12 @@ export default function ProgressPage() {
         {tab === "stats" && (
           <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
             <div className="min-w-0">
-              {/* The block: where you are in the 12 weeks */}
+              {/* The block: where you are in the current four weeks */}
               <Item>
                 <Section title="This block" aside={<Link href="/plan" className="text-xs text-smoke underline">Full plan</Link>}>
                   <div className="card overflow-hidden">
-                    <div className="relative h-40 lg:h-48"><Photo src={sessionImage("full")} veil className="absolute inset-0" /><div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5"><span className="meta text-bone/80">Mesocycle {meso} of 3 · {week % 4 === 0 ? "deload week" : `deload in ${4 - (week % 4)} week${4 - (week % 4) > 1 ? "s" : ""}`}</span><p className="display text-3xl lg:text-4xl">Week {week} <em>of 12.</em></p></div></div>
-                    <div className="grid grid-cols-12 gap-1 p-4 pb-3">{Array.from({ length: 12 }, (_, i) => <span key={i} className={`h-1.5 rounded-full ${i + 1 < week ? "bg-volt" : i + 1 === week ? "bg-ink" : "bg-line-strong"} ${(i + 1) % 4 === 0 ? "opacity-60" : ""}`} />)}</div>
+                    <div className="relative h-40 lg:h-48"><Photo src={sessionImage("full")} veil className="absolute inset-0" /><div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5"><span className="meta text-bone/80">Block {meso} · {blockName} · {week % 4 === 0 ? "deload week" : `deload in ${4 - (week % 4)} week${4 - (week % 4) > 1 ? "s" : ""}`}</span><p className="display text-3xl lg:text-4xl">Week {week - firstWeekOf(meso) + 1} <em>of 4.</em></p></div></div>
+                    <div className="grid grid-cols-4 gap-1 p-4 pb-3">{Array.from({ length: 4 }, (_, i) => { const n = firstWeekOf(meso) + i; return <span key={n} className={`h-1.5 rounded-full ${n < week ? "bg-volt" : n === week ? "bg-ink" : "bg-line-strong"} ${i === 3 ? "opacity-60" : ""}`} />; })}</div>
                     <div className="grid grid-cols-3 divide-x divide-line border-t border-line text-center tnum">
                       <span className="py-3 grid"><strong className="display text-2xl"><CountUp value={doneSessions} /></strong><span className="meta">sessions done</span></span>
                       <span className="py-3 grid"><strong className="display text-2xl"><CountUp value={Math.round(stats.totals.volumeKg / 1000 * 10) / 10} decimals={1} suffix=" t" /></strong><span className="meta">lifted</span></span>

@@ -69,6 +69,18 @@ export function activityImage(type: string, w = 1200, h = 800) {
   return U(id, w, h);
 }
 
+/* FORGE's own artwork, shipped in /public/art (no network needed): one
+   backdrop per tab, and one per built-in indoor course. */
+export const ART = {
+  today: "/art/bg-today.webp",
+  library: "/art/bg-library.webp",
+  move: "/art/bg-move.webp",
+  indoor: "/art/bg-indoor.webp",
+  food: "/art/bg-food.webp",
+  profile: "/art/bg-profile.webp",
+  course: { vallee: "/art/indoor-vallee.webp", "mont-royal": "/art/indoor-montagne.webp", plaine: "/art/indoor-plaine.webp" } as Record<string, string>,
+};
+
 export const IMG = {
   moveHero: U(OUT.runGroup, 1200, 800),
   moveShoes: U(OUT.shoes, 1200, 800),

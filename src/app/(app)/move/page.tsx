@@ -7,8 +7,10 @@ import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, todayISO, uid } from "@/lib/db";
 import { acceptPoint, summarise } from "@/lib/geo";
-import { activityXpBreakdown, awardActivity } from "@/lib/progress";
-import { IMG } from "@/lib/data/images";
+import { activityXpBreakdown, awardActivity, awardChallenges } from "@/lib/progress";
+import { SportChallenges } from "@/components/Challenges";
+import { sportSpec } from "@/lib/data/sports";
+import { ART } from "@/lib/data/images";
 import { WORKOUTS, WORKOUT_MAP, ZONE_LABEL, expandSegments } from "@/lib/data/workouts";
 import { fmtDist, fmtDuration, fmtPace } from "@/lib/units";
 import { Screen, Section, Toast, Photo, ScreenSkeleton, Seg, Toggle, Rail } from "@/components/ui";
@@ -99,13 +101,16 @@ function Move() {
     const s = summarise(points);
     const durationSec = Math.round((Date.now() - new Date(startedAt.current).getTime() - pausedTotal.current) / 1000);
     setRec("idle");
-    if (points.length < 2 || s.distanceM < 50) { setToast("Too short to save."); setTimeout(() => setToast(null), 2500); return; }
+    // A rink, a wall or a mat has no route to draw: those sports are saved on
+    // time alone. Everything else needs a real track.
+    const timeOnly = !sportSpec(type).gps;
+    if (timeOnly ? durationSec < 300 : points.length < 2 || s.distanceM < 50) { setToast(timeOnly ? "Under five minutes — not saved." : "Too short to save."); setTimeout(() => setToast(null), 2500); return; }
     const seg = segments[segIdx];
     if (seg) lapsRef.current.push({ label: seg.label, seconds: Math.max(0, durationSec - segStartRef.current), distanceM: Math.max(0, distRef.current - lapStartDist.current), zone: seg.zone });
     const label = TYPES.find((t) => t.v === type)?.label ?? "Activity";
     const hour = new Date().getHours();
     const when = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
-    setPending({ id: uid(), type, startedAt: startedAt.current, endedAt: new Date().toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: durationSec / (s.distanceM / 1000), maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points, splits: s.splits, laps: lapsRef.current.length ? lapsRef.current : undefined, title: workout ? workout.name : `${when} ${label}`, workoutId: workout?.id, shared: true, xp: 0 });
+    setPending({ id: uid(), type, startedAt: startedAt.current, endedAt: new Date().toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points, splits: s.splits, laps: lapsRef.current.length ? lapsRef.current : undefined, title: workout ? workout.name : `${when} ${label}`, workoutId: workout?.id, shared: true, xp: 0 });
   }
   async function save(a: Activity) {
     const today = todayISO();
@@ -113,9 +118,11 @@ function Move() {
     const withSession: Activity = { ...a, sessionId: session?.kind.startsWith("cardio") ? session.id : undefined, sharedAt: a.shared ? new Date().toISOString() : undefined };
     const { xp, earned } = await awardActivity(withSession);
     await db.activities.put({ ...withSession, xp, dirty: 1 });
+    // After the write: challenges read the saved activities.
+    const won = await awardChallenges(withSession.type, profile?.units.distance ?? "km");
     if (session?.kind.startsWith("cardio") && session.status !== "done") await db.sessions.update(session.id, { status: "done", dirty: 1 });
     setPending(null); setPoints([]); setTab("history");
-    setToast(`Saved. +${xp} XP${earned.length ? ` · badge: ${earned.join(", ")}` : ""}${session?.kind.startsWith("cardio") ? " · today's cardio done" : ""}`);
+    setToast(`Saved. +${xp + won.xp} XP${won.titles.length ? ` · challenge: ${won.titles.join(", ")}` : ""}${earned.length ? ` · badge: ${earned.join(", ")}` : ""}${session?.kind.startsWith("cardio") ? " · today's cardio done" : ""}`);
     setTimeout(() => setToast(null), 4500);
   }
 
@@ -228,11 +235,8 @@ function Move() {
                       <div className="card p-3 grid"><span className="meta">Activities</span><strong className="display text-lg lg:text-2xl tnum"><CountUp value={activities.length} /></strong></div>
                       <div className="card p-3 grid"><span className="meta">Climbed</span><strong className="display text-[17px] lg:text-2xl tnum whitespace-nowrap">{Math.round(activities.reduce((a, b) => a + b.elevGainM, 0))} m</strong></div>
                     </div>
-                    <Section title="Guided workouts" aside={<button type="button" className="text-xs text-smoke underline" onClick={() => setTab("workouts")}>All {WORKOUTS.length}</button>}>
-                      <Rail gutter className="gap-3 pb-2 lg:mx-0 lg:px-0">
-                        {WORKOUTS.filter((w) => w.type === type).concat(WORKOUTS.filter((w) => w.type !== type)).slice(0, 8).map((w) => <WorkoutCard key={w.id} w={w} narrow />)}
-                      </Rail>
-                    </Section>
+                    <SportChallenges sport={type} units={units.distance} />
+                    <button type="button" className="text-xs text-smoke underline justify-self-start" onClick={() => setTab("workouts")}>Prefer structure? {WORKOUTS.length} guided workouts →</button>
                   </motion.div>
                 )}
                 {tab === "workouts" && (
@@ -243,7 +247,7 @@ function Move() {
                     <div className="card p-4"><span className="meta block mb-2">Weekly distance · 8 weeks</span><Bars data={weekly} format={(v) => `${(Math.round(v * 10) / 10).toLocaleString("en-US")} ${units.distance}`} /></div>
                     <Section title="Activities" aside={<span className="text-xs text-smoke tnum">{activities.length}</span>}>
                       {activities.length === 0 ? (
-                        <div className="card--photo"><Photo src={IMG.moveShoes} veil soft className="h-40" /><div className="card__body p-5 grid gap-2 -mt-14"><p className="display text-2xl">No routes <em>yet.</em></p><p className="text-sm text-smoke">Pick a sport, press start, keep the screen on. Your first route is drawn here with splits and elevation — and it counts toward today’s cardio.</p></div></div>
+                        <div className="card--photo"><Photo src={ART.move} color veil soft className="h-40" /><div className="card__body p-5 grid gap-2 -mt-14"><p className="display text-2xl">No routes <em>yet.</em></p><p className="text-sm text-smoke">Pick a sport, press start, keep the screen on. Your first route is drawn here with splits and elevation — and it counts toward today’s cardio.</p></div></div>
                       ) : (
                         <Stagger className="grid gap-2" delay={0.04}>{activities.map((a) => <Item key={a.id}><ActivityRow a={a} units={units} /></Item>)}</Stagger>
                       )}

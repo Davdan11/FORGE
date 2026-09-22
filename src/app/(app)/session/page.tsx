@@ -139,7 +139,7 @@ function SessionDetail() {
             const n = byEx[e.id]?.length ?? 0; const meta = getExercise(e.slug);
             return (
               <button key={e.id} type="button" aria-pressed={i === active} onClick={() => setActive(i)} className={`shrink-0 flex items-center gap-2 pl-1 pr-3 py-1 min-h-11 rounded-full border transition-colors xl:w-full xl:min-h-14 xl:pl-1.5 xl:pr-4 ${i === active ? "bg-volt border-volt text-ink" : n >= e.sets.length ? "border-line-strong" : "border-line text-smoke"}`}>
-                {meta && <span className="w-9 h-9 rounded-full overflow-hidden relative shrink-0"><MoveMedia ex={meta} fill /></span>}
+                {meta && <span className="w-9 h-9 rounded-full overflow-hidden relative shrink-0"><MoveMedia ex={meta} fill thumb /></span>}
                 <span className="text-xs xl:text-sm font-medium whitespace-nowrap xl:flex-1 xl:text-left xl:min-w-0 xl:truncate">{meta?.name}</span>
                 <span className="text-[10px] tnum opacity-70">{n}/{e.sets.length}</span>
               </button>
@@ -156,7 +156,7 @@ function SessionDetail() {
 
         {nextEx && !done && (() => { const m = getExercise(nextEx.slug); if (!m) return null; return (
           <button type="button" onClick={() => setActive(active + 1)} className="card mt-3 p-2 flex items-center gap-3 w-full text-left">
-            <span className="thumb !w-14 !h-14 relative overflow-hidden"><MoveMedia ex={m} fill /></span>
+            <span className="thumb !w-14 !h-14 relative overflow-hidden"><MoveMedia ex={m} fill thumb /></span>
             <span className="flex-1 min-w-0"><span className="meta">Next up</span><span className="block font-medium truncate">{m.name}</span></span>
             <span className="tnum text-xs text-smoke">{nextEx.sets.length} × {nextEx.sets[0].reps ?? `${nextEx.sets[0].seconds}s`}{nextEx.sets[0].loadKg ? ` · ${fmtLoad(nextEx.sets[0].loadKg, profile.units)}` : ""}</span>
           </button>); })()}
@@ -166,7 +166,7 @@ function SessionDetail() {
             <span className="meta">Swap {getExercise(ex.slug)?.name} for</span>
             {(getExercise(ex.slug)?.swaps ?? []).map((s) => { const m = getExercise(s); if (!m) return null; return (
               <button key={s} type="button" className="flex items-center gap-3 p-2 rounded-xl border border-line text-left" onClick={() => swap(ex, s)}>
-                <span className="thumb !w-14 !h-14 relative overflow-hidden"><MoveMedia ex={m} fill /></span><span className="flex-1"><span className="block text-sm font-medium">{m.name}</span><span className="text-xs text-smoke">{m.equipment.join(" · ")}</span></span>
+                <span className="thumb !w-14 !h-14 relative overflow-hidden"><MoveMedia ex={m} fill thumb /></span><span className="flex-1"><span className="block text-sm font-medium">{m.name}</span><span className="text-xs text-smoke">{m.equipment.join(" · ")}</span></span>
               </button>); })}
             <button type="button" className="text-xs text-smoke underline text-left" onClick={() => setSwapOpen(null)}>Cancel</button>
           </motion.div>

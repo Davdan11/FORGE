@@ -12,7 +12,7 @@ import { awardReadiness, bestE1rmBySlug } from "@/lib/progress";
 import { levelFromXp, rankFor, subRankFor, tierForLevel } from "@/lib/gamification";
 import { RankEmblem } from "@/components/RankEmblem";
 import { getExercise } from "@/lib/data/exercises";
-import { sessionImage, IMG } from "@/lib/data/images";
+import { ART, IMG } from "@/lib/data/images";
 import { MoveMedia } from "@/components/MoveMedia";
 import { MobilityFlow } from "@/components/MobilityFlow";
 import { Check, ChevronRight, Flame } from "lucide-react";
@@ -70,7 +70,7 @@ export default function Today() {
   return (
     <Page>
       <Screen>
-        <Hero image={session ? sessionImage(session.kind) : IMG.restDay} height="h-[420px]" eyebrow={`${greet}, ${profile.name} · ${weekday}`}
+        <Hero image={ART.today} color height="h-[420px]" eyebrow={`${greet}, ${profile.name} · ${weekday}`}
           title={<>{session ? session.title : "Rest day"}<br /><em className="slab">{session ? (session.status === "done" ? "done." : session.status === "adjusted" ? "adjusted for today." : `week ${session.week}.`) : "move, gently."}</em></>}
           right={<Link href="/ranks" className="flex items-center gap-3 chip chip--live backdrop-blur-md py-1.5"><RankEmblem tier={tierForLevel(lvl.level)} sub={subRankFor(lvl.level)} size={32} className="shrink-0" /><span className="grid leading-tight text-left"><span className="text-[10px] text-smoke">{rankFor(lvl.level)}</span><span className="text-xs tnum">{lvl.into.toLocaleString("en-US")} / {lvl.need.toLocaleString("en-US")} XP</span></span></Link>}
           stats={[
@@ -233,7 +233,7 @@ function SessionCard({ session, units, best }: { session: Session; units: UnitPr
             return (
               <li key={ex.id}>
                 <Link href={`/library/${ex.slug}`} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className="thumb !w-14 !h-14 relative overflow-hidden"><MoveMedia ex={meta} fill /></span>
+                  <span className="thumb !w-14 !h-14 relative overflow-hidden"><MoveMedia ex={meta} fill thumb /></span>
                   <span className="min-w-0 flex-1"><span className="block font-medium truncate">{meta.name}</span><span className="meta">{ex.block}{meta.tempo ? ` · ${meta.tempo}` : ""}</span></span>
                   <span className="tnum text-right text-sm"><span className="block">{ex.sets.length} × {first.seconds ? `${first.seconds}s` : first.reps}</span>{first.loadKg && <span className="text-xs text-smoke">{fmtLoad(first.loadKg, units)}</span>}</span>
                 </Link>

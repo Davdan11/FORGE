@@ -1,4 +1,5 @@
-import { db, getStats, getProfile, isoWeek, todayISO } from "./db";
+import { addDays, db, getStats, getProfile, isoWeek, todayISO } from "./db";
+import { challengesFor, unpaid } from "./challenges";
 import { XP, levelFromXp, evaluateBadges } from "./gamification";
 import { verifyActivity, type Verification } from "./verify";
 
@@ -9,7 +10,7 @@ function announceLevelUp(level: number) {
   window.dispatchEvent(new CustomEvent<number>(LEVEL_UP_EVENT, { detail: level }));
 }
 import { e1rm } from "./units";
-import type { Activity, SessionLog } from "./types";
+import type { Activity, ActivityType, DistanceUnit, SessionLog } from "./types";
 
 /* ─────────────────────────────────────────────────────────────
    Progress: XP, levels, streaks, badges, personal records.
@@ -116,6 +117,27 @@ export async function awardActivity(a: Activity) {
   await touchStreak();
   const { earned } = await finalize();
   return { xp, earned, verification };
+}
+
+/**
+ * Pay for any sport challenge an activity has just completed. Reads the saved
+ * activities, so call it after the activity is written. Each challenge is paid
+ * once: its id goes into `stats.challengesDone`.
+ */
+export async function awardChallenges(sport: ActivityType, units: DistanceUnit) {
+  const today = todayISO();
+  const since = addDays(today, -40);
+  const activities = await db.activities.where("startedAt").aboveOrEqual(since).toArray();
+  const stats = await getStats();
+  const paid = unpaid(challengesFor(sport, today, activities, units), stats.challengesDone ?? []);
+  if (!paid.length) return { xp: 0, titles: [] as string[] };
+  const xp = paid.reduce((t, c) => t + c.xp, 0);
+  stats.xp += xp;
+  // Only the recent ones can still be earned; older ids are dead weight.
+  stats.challengesDone = [...(stats.challengesDone ?? []), ...paid.map((c) => c.id)].slice(-200);
+  await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
+  await finalize();
+  return { xp, titles: paid.map((c) => c.title) };
 }
 
 /** Share an already-saved activity to the profile feed. */

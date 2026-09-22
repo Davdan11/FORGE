@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -11,6 +12,8 @@ import { rebuildRemaining } from "@/lib/engine/rebuild";
 import { levelFromXp, rankFor, subRankFor, tierForLevel } from "@/lib/gamification";
 import { RankEmblem } from "@/components/RankEmblem";
 import { supabase, isConfigured } from "@/lib/supabase/client";
+import { accountLabel, restoreAccount, signOut } from "@/lib/auth";
+import { AccountPanel } from "@/components/AccountPanel";
 import { syncNow } from "@/lib/sync";
 import { downloadBackup, restoreBackup } from "@/lib/backup";
 import { IMG, sessionImage } from "@/lib/data/images";
@@ -34,7 +37,6 @@ export default function SettingsPage() {
   const router = useRouter();
   const profile = useLiveQuery(() => getProfile(), []);
   const stats = useLiveQuery(() => getStats(), []);
-  const [email, setEmail] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -42,7 +44,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!isConfigured || !supabase) return;
-    supabase.auth.getUser().then(({ data }) => setUser(data.user?.email ?? null));
+    supabase.auth.getUser().then(({ data }) => setUser(data.user ? accountLabel(data.user) : null));
+  }, []);
+
+  // Signing in here keeps what is on this phone and merges in the account.
+  const onSignedIn = useCallback(async (u: User) => {
+    setUser(accountLabel(u));
+    const { message } = await restoreAccount().catch((e) => ({ message: e instanceof Error ? e.message : "Sync failed." }));
+    setToast(message); setTimeout(() => setToast(null), 3500);
   }, []);
 
   if (!profile || !stats) return <ScreenSkeleton />;
@@ -55,11 +64,6 @@ export default function SettingsPage() {
     await update(patch);
     await rebuildRemaining(patch);
     say(`Block rebuilt · ${why}.`);
-  }
-  async function signIn() {
-    if (!supabase) return;
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + "/settings" } });
-    say(error ? error.message : "Magic link sent. Check your email.");
   }
 
   return (
@@ -139,9 +143,9 @@ export default function SettingsPage() {
                 {!isConfigured ? (
                   <div className="card p-4 grid gap-1"><p className="text-sm font-medium">On this device</p><p className="text-xs text-smoke">Your plan, sessions, routes and meals are stored locally and work offline. No account is set up on this build, so export a copy below to keep your block safe.</p></div>
                 ) : user ? (
-                  <div className="card p-4 grid gap-3"><p className="text-sm">Signed in as <strong>{user}</strong></p><div className="flex gap-2"><Press><button type="button" className="pill pill--sm pill--bone" onClick={async () => say(await syncNow())}>Sync now</button></Press><button type="button" className="pill pill--sm" onClick={async () => { await supabase!.auth.signOut(); setUser(null); }}>Sign out</button></div></div>
+                  <div className="card p-4 grid gap-3"><p className="text-sm">Signed in as <strong>{user}</strong></p><div className="flex gap-2"><Press><button type="button" className="pill pill--sm pill--bone" onClick={async () => say(await syncNow())}>Sync now</button></Press><button type="button" className="pill pill--sm" onClick={async () => { await signOut(); setUser(null); }}>Sign out</button></div></div>
                 ) : (
-                  <div className="card p-4 grid gap-3"><p className="text-sm">Sign in to back up and sync across devices. No password — a magic link.</p><input className="input" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /><Press className="justify-self-start"><button type="button" className="pill pill--sm pill--bone" onClick={signIn} disabled={!email.includes("@")}>Send magic link</button></Press></div>
+                  <div className="card p-4 grid gap-3"><p className="text-sm">Create an account or sign in to back up your training and use it on every device. What is on this phone is kept.</p><AccountPanel onSignedIn={onSignedIn} compact /></div>
                 )}
               </Section>
             </Item>

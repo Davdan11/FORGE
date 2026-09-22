@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { EXERCISES, searchExercises } from "@/lib/data/exercises";
-import { IMG } from "@/lib/data/images";
+import { ART } from "@/lib/data/images";
 import { MoveMedia } from "@/components/MoveMedia";
 import { Screen, Hero, ScreenSkeleton, Rail } from "@/components/ui";
 import { Page, Stagger, Item, Press } from "@/components/motion";
@@ -23,7 +23,7 @@ function Library() {
   return (
     <Page>
       <Screen>
-        <Hero image={IMG.dark} height="h-[260px]" eyebrow={`${EXERCISES.length} movements · cues · faults · swaps`} title={<>The <em>bank.</em></>}>
+        <Hero image={ART.library} color height="h-[260px]" eyebrow={`${EXERCISES.length} movements · cues · faults · swaps`} title={<>The <em>bank.</em></>}>
           <input className="input mt-4 !bg-[rgba(255,255,255,.92)] !text-ink backdrop-blur-md" placeholder="Search a movement, muscle or pattern" value={q} onChange={(e) => setQ(e.target.value)} />
         </Hero>
         <Rail active={pattern} gutter className="gap-2 pb-3 mb-4 lg:mx-0 lg:px-0 lg:flex-wrap lg:overflow-visible">

@@ -160,6 +160,39 @@ export const MEALS: Meal[] = [
     ingredients: [{ item: "Skyr", qty: "250 g" }, { item: "Mixed berries", qty: "100 g" }], steps: ["Mix. Highest protein-per-calorie snack in the bank."] }),
   M({ name: "Strawberry protein smoothie", slot: ["snack", "post", "breakfast"], kcal: 340, protein: 32, carbs: 42, sugar: 19, fat: 6, fiber: 5, minutes: 3, tags: ["vegetarian", "quick", "gluten_free"], image: P("1502741224143-90386d7f8c82"), cuisine: "Snack",
     ingredients: [{ item: "Frozen strawberries", qty: "150 g" }, { item: "Whey", qty: "1 scoop" }, { item: "Milk", qty: "250 ml" }, { item: "Oats", qty: "20 g" }], steps: ["Blend 45 s. Drink."] }),
+
+  /* ───────────── Low-carb ─────────────
+     The generated catalogue has keto lunches and dinners but not one keto
+     breakfast, snack or training meal: every template in those slots is built
+     on oats, bread, fruit or rice. These fill that gap. Macros summed from the
+     ingredient weights (USDA values), carbs at or under 12% of energy. */
+  M({ name: "Spinach and feta omelette", slot: ["breakfast"], kcal: 410, protein: 26, carbs: 5, sugar: 2, fat: 31, fiber: 1, minutes: 8, tags: ["vegetarian", "gluten_free", "quick", "low_carb", "low_sugar"], image: P("1525351484163-7529414344d8"), cuisine: "Classic",
+    ingredients: [{ item: "Eggs", qty: "3" }, { item: "Feta", qty: "40 g" }, { item: "Spinach", qty: "60 g" }, { item: "Butter", qty: "10 g" }, { item: "Black pepper", qty: "" }],
+    steps: ["Beat the eggs with pepper (the feta brings the salt).", "Melt the butter in a non-stick pan on medium-low and wilt the spinach for 1 min.", "Pour in the eggs. Pull the set edges into the middle for 2 min until almost set.", "Crumble the feta over one half, fold, and slide onto the plate."],
+    tip: "Take it off while the top still looks slightly wet — it finishes on the plate." }),
+  M({ name: "Smoked salmon, eggs and avocado", slot: ["breakfast"], kcal: 440, protein: 29, carbs: 9, sugar: 1, fat: 33, fiber: 7, minutes: 10, tags: ["pescatarian", "gluten_free", "lactose_free", "quick", "low_carb", "low_sugar"], image: P("1539252554453-80ab65ce3586"), cuisine: "Nordic",
+    ingredients: [{ item: "Smoked salmon", qty: "80 g" }, { item: "Eggs", qty: "2" }, { item: "Avocado", qty: "½" }, { item: "Olive oil", qty: "1 tsp" }, { item: "Lemon, dill", qty: "to finish" }],
+    steps: ["Lower the eggs into boiling water for 7 min, then into cold water for 1 min.", "Slice the avocado and dress it with lemon and the olive oil.", "Peel and halve the eggs; plate with the salmon and avocado. Finish with dill and pepper."] }),
+  M({ name: "Cheddar and almonds", slot: ["snack"], kcal: 275, protein: 13, carbs: 8, sugar: 2, fat: 22, fiber: 4, minutes: 2, tags: ["vegetarian", "gluten_free", "quick", "low_carb", "low_sugar"], image: P("1515543237350-b3eea1ec8082"), cuisine: "Snack",
+    ingredients: [{ item: "Aged cheddar cheese", qty: "30 g" }, { item: "Almonds", qty: "25 g" }, { item: "Cucumber", qty: "50 g" }],
+    steps: ["Cube the cheese, slice the cucumber, and eat with the almonds."] }),
+  M({ name: "Boiled eggs and avocado", slot: ["snack", "pre"], kcal: 255, protein: 14, carbs: 7, sugar: 1, fat: 20, fiber: 5, minutes: 10, tags: ["vegetarian", "gluten_free", "lactose_free", "quick", "low_carb", "low_sugar"], image: P("1482049016688-2d3e1b311543"), cuisine: "Snack",
+    ingredients: [{ item: "Eggs", qty: "2" }, { item: "Avocado", qty: "70 g" }, { item: "Flaky salt, chili", qty: "" }],
+    steps: ["Boil the eggs 8 min, cool in cold water, peel.", "Halve them and eat with the avocado, salt and chili."],
+    tip: "Boil six at a time; peeled, they keep four days in the fridge." }),
+  M({ name: "Whey shake and walnuts", slot: ["post", "snack"], kcal: 285, protein: 28, carbs: 6, sugar: 2, fat: 18, fiber: 2, minutes: 2, tags: ["vegetarian", "gluten_free", "quick", "high_protein", "low_carb", "low_sugar"], image: P("1502741224143-90386d7f8c82"), cuisine: "Snack",
+    ingredients: [{ item: "Whey protein", qty: "1 scoop · 30 g" }, { item: "Cold water", qty: "300 ml" }, { item: "Walnuts", qty: "25 g" }],
+    steps: ["Shake the whey with the water for 20 s.", "Drink it with the walnuts."] }),
+  M({ name: "Tuna lettuce cups", slot: ["pre", "snack"], kcal: 250, protein: 32, carbs: 4, sugar: 2, fat: 11, fiber: 2, minutes: 5, tags: ["pescatarian", "gluten_free", "lactose_free", "quick", "high_protein", "low_carb", "low_sugar"], image: P("1543339308-43e59d6b73a6"), cuisine: "Snack",
+    ingredients: [{ item: "Tuna in water", qty: "120 g drained" }, { item: "Olive oil", qty: "10 g" }, { item: "Romaine lettuce", qty: "80 g" }, { item: "Cucumber", qty: "50 g" }, { item: "Lemon", qty: "½" }],
+    steps: ["Flake the tuna with the olive oil, lemon juice and pepper.", "Dice the cucumber and fold it in.", "Spoon into the lettuce leaves and eat by hand."] }),
+  M({ name: "Turkey and cheddar roll-ups", slot: ["post", "pre", "snack"], kcal: 230, protein: 30, carbs: 2, sugar: 1, fat: 12, fiber: 0, minutes: 3, tags: ["gluten_free", "quick", "high_protein", "low_carb", "low_sugar"], image: P("1505253716362-afaea1d3d1af"), cuisine: "Snack",
+    ingredients: [{ item: "Sliced turkey breast", qty: "100 g" }, { item: "Aged cheddar cheese", qty: "30 g" }, { item: "Dijon mustard", qty: "1 tsp" }],
+    steps: ["Spread each turkey slice with a little mustard.", "Lay a strip of cheddar on it and roll it up."] }),
+  M({ name: "Chicken, greens and olive oil box", slot: ["post", "pre"], kcal: 305, protein: 38, carbs: 4, sugar: 3, fat: 14, fiber: 2, minutes: 5, tags: ["gluten_free", "lactose_free", "quick", "high_protein", "low_carb", "low_sugar"], image: P("1546793665-c74683f339c1"), cuisine: "Classic",
+    ingredients: [{ item: "Cooked chicken breast", qty: "120 g" }, { item: "Mixed leaves", qty: "60 g" }, { item: "Cherry tomatoes", qty: "50 g" }, { item: "Olive oil", qty: "10 g" }, { item: "Lemon", qty: "½" }],
+    steps: ["Slice the chicken over the leaves and tomatoes.", "Dress with the olive oil, lemon, salt and pepper."],
+    tip: "Cook a tray of chicken breasts on Sunday: 22 min at 200 °C covers four days of these." }),
 ];
 
 export const MEAL_MAP: Record<string, Meal> = Object.fromEntries(MEALS.map((m) => [m.id, m]));

@@ -7,6 +7,7 @@ import { db, getProfile, todayISO, addDays } from "@/lib/db";
 import { getMeal, recipeCount } from "@/lib/nutrition/recipes";
 import { buildNutritionDay, dayTotals, eatenTotals, groceryList, swapOptions, dailyTargets } from "@/lib/nutrition/engine";
 import { awardMeal } from "@/lib/progress";
+import { ART } from "@/lib/data/images";
 import { Screen, Hero, Section, Bar, Toast, Photo, Check, ScreenSkeleton, Seg } from "@/components/ui";
 import { Page, Stagger, Item, Press, Ring, CountUp, motion, AnimatePresence } from "@/components/motion";
 import type { DayPlanMeal, Meal, NutritionDay } from "@/lib/types";
@@ -80,7 +81,7 @@ export default function FoodPage() {
   return (
     <Page>
       <Screen>
-        <Hero image={hero?.image ?? ""} color height="h-[360px]" eyebrow={`${day.dayType === "rest" ? "Rest day" : day.dayType === "hard" ? "Hard day" : "Training day"} · ${day.targets.kcal} kcal · ${day.targets.protein} g protein`}
+        <Hero image={ART.food} color height="h-[360px]" eyebrow={`${day.dayType === "rest" ? "Rest day" : day.dayType === "hard" ? "Hard day" : "Training day"} · ${day.targets.kcal} kcal · ${day.targets.protein} g protein`}
           title={next ? <>Next up<br /><em>{hero?.name.split(" with ")[0]}</em></> : <>Day <em>complete.</em></>}
           right={<Seg value={tab} onChange={setTab} options={[{ v: "today", label: "Today" }, { v: "groceries", label: "Groceries" }]} />}>
           {next && hero && <div className="flex items-center gap-2 mt-3 flex-wrap"><span className="chip chip--live backdrop-blur-md">{next.time}</span><span className="chip chip--live backdrop-blur-md tnum">{Math.round(hero.kcal * next.scale)} kcal</span><span className="chip chip--live backdrop-blur-md">{hero.minutes} min</span><Link href={`/food/meal?id=${enc(hero.id)}&date=${day.date}`} className="pill pill--sm pill--volt ml-auto">Cook</Link></div>}
