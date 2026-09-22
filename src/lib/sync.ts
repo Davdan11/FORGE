@@ -17,6 +17,8 @@ import { supabase } from "./supabase/client";
 
 const TABLES = ["profile", "plans", "sessions", "sets", "logs", "readiness", "activities", "nutrition", "stats", "weights", "injuries"] as const;
 type Table = (typeof TABLES)[number];
+/** Every local table that lives on the account. */
+export const SYNCED_TABLES: readonly string[] = TABLES;
 
 /** Local store names and Postgres table names differ for one table only. */
 const remoteName = (t: Table) => (t === "profile" ? "profiles" : t);
@@ -38,6 +40,16 @@ export async function syncNow(): Promise<string> {
   // Advance the cursor from the newest row the server actually hands us, not
   // from this device's clock — the two can disagree by minutes.
   let newest = since;
+
+  // Deletions first, so a row removed here is gone from the server before
+  // anything is pulled back down (see autosync.ts).
+  const { pendingDeletes, clearDeletes } = await import("./autosync");
+  for (const [t, ids] of Object.entries(pendingDeletes())) {
+    if (!TABLES.includes(t as Table) || !ids.length) continue;
+    const { error } = await supabase.from(remoteName(t as Table)).delete().in("id", ids);
+    if (error) return `Sync failed deleting from ${t}: ${error.message}`;
+    clearDeletes(t, ids);
+  }
 
   for (const t of TABLES) {
     const table = db.table(t);

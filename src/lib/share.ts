@@ -21,9 +21,9 @@ export async function renderShareCard(a: Activity, units: UnitPrefs, name: strin
     ctx.lineJoin = "round"; ctx.lineCap = "round";
     ctx.strokeStyle = "rgba(31,199,111,.25)"; ctx.lineWidth = 34;
     ctx.beginPath(); a.points.forEach((p, i) => { const x = ox + (p.lng - minX) * latScale * s, y = oy + (maxY - p.lat) * s; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke();
-    ctx.strokeStyle = "#D4FF3A"; ctx.lineWidth = 10; ctx.stroke();
+    ctx.strokeStyle = "#1FC76F"; ctx.lineWidth = 10; ctx.stroke();
     const last = a.points[a.points.length - 1];
-    ctx.fillStyle = "#D4FF3A"; ctx.beginPath(); ctx.arc(ox + (last.lng - minX) * latScale * s, oy + (maxY - last.lat) * s, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#1FC76F"; ctx.beginPath(); ctx.arc(ox + (last.lng - minX) * latScale * s, oy + (maxY - last.lat) * s, 16, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = "#0A0A0A"; ctx.lineWidth = 6; ctx.stroke();
   }
 
@@ -38,7 +38,7 @@ export async function renderShareCard(a: Activity, units: UnitPrefs, name: strin
     ctx.fillStyle = "#ECE7DF"; ctx.font = "800 56px Archivo, system-ui, sans-serif"; ctx.fillText(v, x, 1220);
     ctx.fillStyle = "#8F8A82"; ctx.font = "500 22px Archivo, system-ui, sans-serif"; ctx.fillText(l, x, 1256);
   });
-  ctx.fillStyle = "#D4FF3A"; ctx.font = "800 40px Archivo, system-ui, sans-serif"; ctx.fillText("FORGE", 72, 90);
+  ctx.fillStyle = "#1FC76F"; ctx.font = "800 40px Archivo, system-ui, sans-serif"; ctx.fillText("FORGE", 72, 90);
   ctx.fillStyle = "#8F8A82"; ctx.font = "500 24px Archivo, system-ui, sans-serif"; ctx.fillText(`+${a.xp} XP`, W - 200, 90);
 
   return await new Promise<Blob>((res) => c.toBlob((b) => res(b!), "image/png"));

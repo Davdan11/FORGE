@@ -18,13 +18,20 @@ export function MapView({ points, follow, locate, locateKey = 0, onLocate, class
 
   useEffect(() => {
     if (!el.current || map.current) return;
-    const m = new maplibregl.Map({ container: el.current, style: STYLE, center: [points[0]?.lng ?? -73.57, points[0]?.lat ?? 45.5], zoom: points.length ? 14 : 11, attributionControl: { compact: true } });
+    const m = new maplibregl.Map({ container: el.current, style: STYLE, center: [points[0]?.lng ?? -73.57, points[0]?.lat ?? 45.5], zoom: points.length ? 14 : 11, attributionControl: false });
+    // The OpenStreetMap / CARTO credit is a licence requirement, so it stays —
+    // as the small "i" in the corner, away from the start controls. MapLibre's
+    // compact mode opens itself on load; it starts closed here instead.
+    m.addControl(new maplibregl.AttributionControl({ compact: true }), "top-right");
+    const closeCredit = () => el.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
+    m.once("idle", closeCredit);
     m.on("load", () => {
+      closeCredit();
       m.addSource("route", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } } });
-      m.addLayer({ id: "route-glow", type: "line", source: "route", paint: { "line-color": "#D4FF3A", "line-width": 14, "line-opacity": 0.18, "line-blur": 6 }, layout: { "line-cap": "round", "line-join": "round" } });
-      m.addLayer({ id: "route", type: "line", source: "route", paint: { "line-color": "#D4FF3A", "line-width": 4.5 }, layout: { "line-cap": "round", "line-join": "round" } });
+      m.addLayer({ id: "route-glow", type: "line", source: "route", paint: { "line-color": "#1FC76F", "line-width": 14, "line-opacity": 0.18, "line-blur": 6 }, layout: { "line-cap": "round", "line-join": "round" } });
+      m.addLayer({ id: "route", type: "line", source: "route", paint: { "line-color": "#0E7A45", "line-width": 4.5 }, layout: { "line-cap": "round", "line-join": "round" } });
       m.addSource("head", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      m.addLayer({ id: "head", type: "circle", source: "head", paint: { "circle-radius": 7, "circle-color": "#D4FF3A", "circle-stroke-color": "#0A0A0A", "circle-stroke-width": 3 } });
+      m.addLayer({ id: "head", type: "circle", source: "head", paint: { "circle-radius": 7, "circle-color": "#1FC76F", "circle-stroke-color": "#0A0A0A", "circle-stroke-width": 3 } });
       ready.current = true;
       draw();
       if (locate && points.length === 0) locateMe();

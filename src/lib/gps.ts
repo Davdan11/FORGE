@@ -75,6 +75,8 @@ export interface TrackDraft {
   pausedMs: number;
   points: TrackPoint[];
   workoutId?: string;
+  /** Heart-rate samples, when a strap was connected. */
+  hr?: [number, number][];
   savedAt: number;
 }
 

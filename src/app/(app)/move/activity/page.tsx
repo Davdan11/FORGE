@@ -75,6 +75,8 @@ function ActivityDetail() {
                 <Stat label="Time" value={fmtDuration(a.durationSec)} sub={a.movingSec ? `moving ${fmtDuration(a.movingSec)}` : undefined} />
                 <Stat label={rateFor(a, u).label} value={rateFor(a, u).value} sub={rateFor(a, u).sub} />
                 <Stat label="Elevation" count={Math.round(a.elevGainM)} suffix=" m" sub={a.elevLossM != null ? `↓ ${Math.round(a.elevLossM)} m` : "gain"} />
+                {a.kcal != null ? <Stat label="Calories" count={a.kcal} suffix=" kcal" sub={a.kcalSource === "heart_rate" ? "from heart rate" : "estimated"} /> : null}
+                {a.avgHr ? <Stat label="Heart rate" count={a.avgHr} suffix=" bpm" sub={a.maxHr ? `avg · max ${a.maxHr}` : "avg"} /> : null}
                 {speedKmh ? <Stat label="Max speed" value={u.distance === "mi" ? `${(speedKmh / 1.609).toFixed(1)} mph` : `${speedKmh.toFixed(1)} km/h`} /> : null}
                 {a.type === "swim" && a.meta?.laps ? <Stat label="Laps" count={a.meta.laps} sub={`${a.meta.poolM ?? 25} m pool`} /> : a.meta?.discipline ? <Stat label="Discipline" value={a.meta.discipline.replace("xc-", "XC ")} /> : a.meta?.bike ? <Stat label="Bike" value={a.meta.bike} /> : <Stat label="Points" count={a.points.length} sub="GPS samples" />}
               </div>

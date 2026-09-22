@@ -291,6 +291,13 @@ export interface Activity {
   xp: number;
   /** Sport-specific details (pool length and laps for swims, discipline for ski…). */
   meta?: { poolM?: 25 | 50; laps?: number; discipline?: string; bike?: string };
+  /** [seconds since start, bpm] from a Bluetooth strap or watch, every ~5 s. */
+  hrSeries?: [number, number][];
+  avgHr?: number;
+  maxHr?: number;
+  kcal?: number;
+  /** Whether `kcal` came from heart rate or is an estimate from sport and pace. */
+  kcalSource?: "heart_rate" | "estimate";
 }
 
 /* ── Guided cardio workouts ────────────────────────────────── */

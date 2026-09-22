@@ -9,6 +9,8 @@ import { db, getProfile, todayISO, uid } from "@/lib/db";
 import { acceptPoint, summarise } from "@/lib/geo";
 import { clearDraft, openLocationSettings, readDraft, saveDraft, startGps, type StopGps, type TrackDraft } from "@/lib/gps";
 import { isNativeShell } from "@/lib/native";
+import { useHeartRate } from "@/components/useHeartRate";
+import { activityKcal, hrSummary, maxHrFor, zoneOf, ZONE_NAME, type HrSeries } from "@/lib/heart";
 import { activityXpBreakdown, awardActivity, awardChallenges } from "@/lib/progress";
 import { SportChallenges } from "@/components/Challenges";
 import { sportSpec } from "@/lib/data/sports";
@@ -48,6 +50,8 @@ function Move() {
   const [group, setGroup] = useState(() => SPORT_GROUPS.find((g) => g.sports.some((sp) => sp.v === (workout?.type ?? "run")))?.key ?? "run");
   const [tab, setTab] = useState<"record" | "workouts" | "history">("record");
   const gps = useRef<StopGps | null>(null);
+  const heart = useHeartRate();
+  const hrSeries = useRef<HrSeries>([]);
   const lastDraft = useRef(0);
   // A run the system killed before it was saved (see lib/gps).
   // Read once on mount. Safe to read during render: the page shows a skeleton
@@ -89,8 +93,20 @@ function Move() {
     return () => clearInterval(t);
   }, [rec, segments]);
 
+  useEffect(() => {
+    if (rec !== "live") return;
+    const t = setInterval(() => {
+      const b = heart.fresh();
+      if (b == null) return;
+      const sec = Math.round((Date.now() - new Date(startedAt.current).getTime() - pausedTotal.current) / 1000);
+      hrSeries.current.push([sec, b]);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [rec, heart]);
+
   function start() {
     clearDraft(); setDraft(null);
+    hrSeries.current = [];
     setErr(null); setPoints([]); setElapsed(0); pausedTotal.current = 0; lapsRef.current = []; distRef.current = 0; lapStartDist.current = 0; setSegIdx(0); setSegLeft(segments[0]?.seconds ?? 0);
     startedAt.current = new Date().toISOString();
     setRec("live"); setTab("record");
@@ -101,11 +117,13 @@ function Move() {
     const label = TYPES.find((t) => t.v === type)?.label ?? "Activity";
     startGps(
       (p) => setPoints((prev) => {
+        const bpm = heart.fresh();
+        if (bpm != null) p = { ...p, hr: bpm };
         if (!acceptPoint(prev[prev.length - 1], p)) return prev;
         const next = [...prev, p];
         distRef.current = summarise(next).distanceM;
         // Every 15 s is plenty: a crash costs at most 15 s of track.
-        if (p.t - lastDraft.current > 15000) { lastDraft.current = p.t; saveDraft({ type: sport, startedAt: began, pausedMs: pausedTotal.current, points: next, workoutId }); }
+        if (p.t - lastDraft.current > 15000) { lastDraft.current = p.t; saveDraft({ type: sport, startedAt: began, pausedMs: pausedTotal.current, points: next, workoutId, hr: hrSeries.current }); }
         return next;
       }),
       (problem) => setErr(problem === "denied"
@@ -130,8 +148,15 @@ function Move() {
     const label = TYPES.find((t) => t.v === type)?.label ?? "Activity";
     const hour = new Date().getHours();
     const when = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
-    setPending({ id: uid(), type, startedAt: startedAt.current, endedAt: new Date().toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points, splits: s.splits, laps: lapsRef.current.length ? lapsRef.current : undefined, title: workout ? workout.name : `${when} ${label}`, workoutId: workout?.id, shared: true, xp: 0 });
+    setPending({ id: uid(), type, startedAt: startedAt.current, endedAt: new Date().toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points, splits: s.splits, laps: lapsRef.current.length ? lapsRef.current : undefined, title: workout ? workout.name : `${when} ${label}`, workoutId: workout?.id, shared: true, xp: 0, ...effort(type, s.movingSec || durationSec, s.distanceM, hrSeries.current) });
   }
+  /** Heart rate and calories for the save sheet. */
+  function effort(t: ActivityType, movingSec: number, distanceM: number, hr: HrSeries): Pick<Activity, "hrSeries" | "avgHr" | "maxHr" | "kcal" | "kcalSource"> {
+    const sum = hrSummary(hr);
+    const k = activityKcal({ type: t, movingMin: movingSec / 60, distanceM, profile: profile!, hr });
+    return { hrSeries: hr.length ? hr : undefined, avgHr: sum?.avg, maxHr: sum?.max, kcal: k.kcal, kcalSource: k.source };
+  }
+
   /** Turn a run the system killed into the usual save sheet. */
   function recover(d: TrackDraft) {
     const s = summarise(d.points);
@@ -140,7 +165,7 @@ function Move() {
     const label = TYPES.find((t) => t.v === d.type)?.label ?? "Activity";
     setType(d.type);
     setDraft(null);
-    setPending({ id: uid(), type: d.type, startedAt: d.startedAt, endedAt: new Date(last).toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points: d.points, splits: s.splits, title: `${label} (recovered)`, workoutId: d.workoutId, shared: true, xp: 0 });
+    setPending({ id: uid(), type: d.type, startedAt: d.startedAt, endedAt: new Date(last).toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points: d.points, splits: s.splits, title: `${label} (recovered)`, workoutId: d.workoutId, shared: true, xp: 0, ...effort(d.type, s.movingSec || durationSec, s.distanceM, d.hr ?? []) });
   }
 
   async function save(a: Activity) {
@@ -220,6 +245,7 @@ function Move() {
                   </div>
                 )}
                 <Press><button type="button" className="pill pill--volt pill--block pill--lg" onClick={() => { setErr(null); setCounting(true); }}>{workout ? "Start guided workout" : `Start ${typeLabel.toLowerCase()}`}</button></Press>
+                <HeartChip heart={heart} maxHr={maxHrFor(profile.age)} />
                 <AnimatePresence>{err && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-danger">{err}{isNativeShell() && err.startsWith("FORGE can't use your location") && <> <button type="button" className="underline" onClick={() => openLocationSettings()}>Open settings</button></>}</motion.p>}</AnimatePresence>
                 </div>
                 </div>
@@ -304,9 +330,15 @@ function Move() {
               </div>
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="card p-2 grid"><span className="meta">Climb</span><strong className="tnum">{Math.round(live.elevGainM)} m</strong></div>
-                <div className="card p-2 grid"><span className="meta">Splits</span><strong className="tnum">{live.splits.length}</strong></div>
                 <div className="card p-2 grid"><span className="meta">Last km</span><strong className="tnum">{live.splits.length ? fmtDuration(live.splits[live.splits.length - 1].sec) : "—"}</strong></div>
-                <div className="card p-2 grid"><span className="meta">Segment</span><strong className="tnum">{segments.length ? `${segIdx + 1}/${segments.length}` : "—"}</strong></div>
+                <div className="card p-2 grid" style={heart.bpm ? { borderColor: ZONE_COLOR[zoneOf(heart.bpm, maxHrFor(profile.age))] } : undefined}>
+                  <span className="meta">Heart</span>
+                  <strong className="tnum">{heart.bpm ?? "—"}</strong>
+                  {heart.bpm && <span className="text-[10px] text-smoke">Z{zoneOf(heart.bpm, maxHrFor(profile.age))} · {ZONE_NAME[zoneOf(heart.bpm, maxHrFor(profile.age))]}</span>}
+                </div>
+                {segments.length
+                  ? <div className="card p-2 grid"><span className="meta">Segment</span><strong className="tnum">{segIdx + 1}/{segments.length}</strong></div>
+                  : <div className="card p-2 grid"><span className="meta">kcal</span><strong className="tnum">{activityKcal({ type, movingMin: (live.movingSec || elapsed) / 60, distanceM: live.distanceM, profile, hr: hrSeries.current }).kcal}</strong></div>}
               </div>
               {err && <p className="text-xs text-danger">{err}</p>}
             </div>
@@ -384,5 +416,28 @@ function SaveSheet({ a, units, onCancel, onSave, onChange }: { a: Activity; unit
         <div className="flex gap-3"><button type="button" className="pill" onClick={onCancel}>Discard</button><Press className="flex-1"><button type="button" className="pill pill--volt pill--block" onClick={() => onSave(a)}>Save activity</button></Press></div>
       </motion.div>
     </motion.div>
+  );
+}
+
+/* Zone colours: calm to hard, the same order a watch uses. */
+const ZONE_COLOR = ["var(--line)", "#9ad0ec", "#1fc76f", "#f2c14e", "#f08a3c", "#d9453d"];
+
+/** Connect a heart-rate strap or watch for this activity. */
+function HeartChip({ heart, maxHr }: { heart: ReturnType<typeof useHeartRate>; maxHr: number }) {
+  if (heart.sensor) {
+    const z = heart.bpm ? zoneOf(heart.bpm, maxHr) : 0;
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <span className="chip tnum" style={{ borderColor: ZONE_COLOR[z] }}>♥ {heart.bpm ?? "…"} bpm{heart.bpm ? ` · Z${z}` : ""}</span>
+        <span className="text-xs text-smoke truncate flex-1">{heart.sensor.name}</span>
+        <button type="button" className="text-xs text-smoke underline" onClick={heart.disconnect}>Disconnect</button>
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-1">
+      <button type="button" className="pill pill--sm justify-self-start" disabled={heart.busy} onClick={heart.connect}>{heart.busy ? "Looking for a strap…" : "♥ Connect heart rate"}</button>
+      {heart.error && <span className="text-xs text-danger">{heart.error}</span>}
+    </div>
   );
 }

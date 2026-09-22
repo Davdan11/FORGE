@@ -15,6 +15,7 @@ import { supabase, isConfigured } from "@/lib/supabase/client";
 import { accountLabel, restoreAccount, signOut } from "@/lib/auth";
 import { AccountPanel } from "@/components/AccountPanel";
 import { syncNow } from "@/lib/sync";
+import { readSyncStatus } from "@/lib/autosync";
 import { downloadBackup, restoreBackup } from "@/lib/backup";
 import { IMG, sessionImage } from "@/lib/data/images";
 import { fmtHeight, kgToLb, lbToKg } from "@/lib/units";
@@ -182,7 +183,7 @@ export default function SettingsPage() {
                 {!isConfigured ? (
                   <div className="card p-4 grid gap-1"><p className="text-sm font-medium">On this device</p><p className="text-xs text-smoke">Your plan, sessions, routes and meals are stored locally and work offline. No account is set up on this build, so export a copy below to keep your block safe.</p></div>
                 ) : user ? (
-                  <div className="card p-4 grid gap-3"><p className="text-sm">Signed in as <strong>{user}</strong></p><div className="flex gap-2"><Press><button type="button" className="pill pill--sm pill--bone" onClick={async () => say(await syncNow())}>Sync now</button></Press><button type="button" className="pill pill--sm" onClick={async () => { await signOut(); setUser(null); }}>Sign out</button></div></div>
+                  <div className="card p-4 grid gap-3"><div className="grid gap-0.5"><p className="text-sm">Signed in as <strong>{user}</strong></p><SyncLine /></div><div className="flex gap-2"><Press><button type="button" className="pill pill--sm pill--bone" onClick={async () => say(await syncNow())}>Sync now</button></Press><button type="button" className="pill pill--sm" onClick={async () => { await signOut(); setUser(null); }}>Sign out</button></div></div>
                 ) : (
                   <div className="card p-4 grid gap-3"><p className="text-sm">Create an account or sign in to back up your training and use it on every device. What is on this phone is kept.</p><AccountPanel onSignedIn={onSignedIn} compact /></div>
                 )}
@@ -220,4 +221,18 @@ export default function SettingsPage() {
       </Screen>
     </Page>
   );
+}
+
+/** When the account last saved, in words. Everything saves on its own; this
+ *  is here so nobody has to wonder whether it did. */
+function SyncLine() {
+  const [state, setState] = useState(() => ({ status: typeof window === "undefined" ? null : readSyncStatus(), now: Date.now() }));
+  useEffect(() => { const t = setInterval(() => setState({ status: readSyncStatus(), now: Date.now() }), 3000); return () => clearInterval(t); }, []);
+  const { status, now } = state;
+  if (!status) return <p className="text-xs text-smoke">Saves automatically.</p>;
+  const mins = Math.round((now - new Date(status.at).getTime()) / 60000);
+  const when = mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : new Date(status.at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+  return status.ok
+    ? <p className="text-xs text-smoke"><span className="inline-block w-1.5 h-1.5 rounded-full bg-volt mr-1.5 align-middle" />Saved {when} · automatic</p>
+    : <p className="text-xs text-danger">Last save failed ({when}): {status.message}. It retries on its own.</p>;
 }
