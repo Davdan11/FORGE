@@ -13,9 +13,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "art": "node scripts/art-manifest.mjs",
-    "art:optimise": "node scripts/optimise-art.mjs && npm run art"
+    "art:optimise": "node scripts/optimise-art.mjs && npm run art",
+    "build:native": "BUILD_TARGET=native next build && npx cap sync",
+    "ios": "npm run build:native && npx cap open ios",
+    "android": "npm run build:native && npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "@types/three": "^0.186.0",

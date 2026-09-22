@@ -54,7 +54,7 @@ export default function PlanPage() {
                       const mainMeta = main ? getExercise(main.slug) : undefined;
                       const isToday = s.date === today;
                       return (
-                        <Link key={s.id} href={`/session/${s.id}`} className={`card overflow-hidden block ${isToday ? "border-volt" : ""}`}>
+                        <Link key={s.id} href={`/session?id=${s.id}`} className={`card overflow-hidden block ${isToday ? "border-volt" : ""}`}>
                           <div className="relative h-36 lg:h-40">
                             <Photo src={sessionImage(s.kind, 800, 500)} veil className="absolute inset-0" />
                             <div className="on-photo absolute top-3 left-3 flex gap-1.5">{s.status === "done" ? <span className="chip chip--volt">Done</span> : isToday ? <span className="chip chip--live backdrop-blur-md">Today</span> : s.status === "adjusted" ? <span className="chip chip--live backdrop-blur-md">Adjusted</span> : null}</div>

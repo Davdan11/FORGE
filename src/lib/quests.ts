@@ -17,7 +17,7 @@ export function dailyQuests(input: { date: string; readiness?: Readiness | null;
   const q: Quest[] = [];
   q.push({ id: "checkin", label: "Morning check-in", detail: "Sleep, soreness, stress — it tunes today’s load.", xp: XP.readinessCheckIn, done: !!readiness, href: "#readiness" });
   if (session) {
-    q.push({ id: "session", label: session.title, detail: `${session.minutes} min · ${session.exercises.length} movements`, xp: session.status === "adjusted" ? XP.sessionAdjustedDone : XP.sessionDone, done: session.status === "done", href: `/session/${session.id}` });
+    q.push({ id: "session", label: session.title, detail: `${session.minutes} min · ${session.exercises.length} movements`, xp: session.status === "adjusted" ? XP.sessionAdjustedDone : XP.sessionDone, done: session.status === "done", href: `/session?id=${session.id}` });
   } else {
     const min = activitiesToday.reduce((a, b) => a + b.durationSec / 60, 0);
     q.push({ id: "move", label: "Move 20 minutes", detail: "Any sport, GPS on. Zone 2 is enough.", xp: XP.activityBase, done: min >= 20, progress: [Math.min(20, Math.round(min)), 20], href: "/move" });

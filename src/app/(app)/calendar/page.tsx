@@ -109,7 +109,7 @@ export default function CalendarPage() {
                 ) : (
                   <div className="grid gap-3">
                     {day?.session && (
-                      <Link href={`/session/${day.session.id}`} className="card p-4 grid gap-2">
+                      <Link href={`/session?id=${day.session.id}`} className="card p-4 grid gap-2">
                         <span className="meta">Training · week {day.session.week} · {day.session.minutes} min</span>
                         <p className="display text-2xl">{day.session.title}</p>
                         <ul className="grid gap-1 text-sm text-smoke">
@@ -133,7 +133,7 @@ export default function CalendarPage() {
                             if (!meal) return null;
                             return (
                               <li key={`${m.slot}-${m.time}`}>
-                                <Link href={`/food/${enc(meal.id)}?date=${picked}`} className="px-4 py-2.5 flex items-center gap-3">
+                                <Link href={`/food/meal?id=${enc(meal.id)}&date=${picked}`} className="px-4 py-2.5 flex items-center gap-3">
                                   <Photo src={meal.image} color className="thumb !w-11 !h-11 shrink-0" />
                                   <span className="min-w-0 flex-1">
                                     <span className="block text-sm font-medium truncate">{meal.name.split(" with ")[0]}</span>
@@ -152,7 +152,7 @@ export default function CalendarPage() {
                     )}
 
                     {day?.activities.map((a) => (
-                      <Link key={a.id} href={`/move/${a.id}`} className="card p-4 grid gap-1">
+                      <Link key={a.id} href={`/move/activity?id=${a.id}`} className="card p-4 grid gap-1">
                         <span className="meta">Recorded · {a.type}</span>
                         <p className="font-medium">{a.title}</p>
                       </Link>

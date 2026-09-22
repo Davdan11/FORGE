@@ -69,7 +69,7 @@ export function MiniRoute({ points, size = 56 }: { points: TrackPoint[]; size?: 
 
 export function ActivityRow({ a, units }: { a: Activity; units: UnitPrefs }) {
   return (
-    <Link href={`/move/${a.id}`} className="card p-2 flex items-center gap-3">
+    <Link href={`/move/activity?id=${a.id}`} className="card p-2 flex items-center gap-3">
       <MiniRoute points={a.points} />
       <span className="flex-1 min-w-0"><span className="block font-medium truncate">{a.title}</span><span className="text-xs text-smoke">{a.startedAt.slice(0, 10)} · <span className="capitalize">{a.type}</span>{a.shared ? " · shared" : ""} · <span className="text-volt">+{a.xp} XP</span></span></span>
       <span className="text-right tnum"><span className="block font-semibold">{fmtDist(a.distanceM, units)}</span><span className="text-xs text-smoke">{fmtDuration(a.durationSec)} · ↑{Math.round(a.elevGainM)} m</span></span>

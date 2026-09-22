@@ -119,7 +119,7 @@ export default function ProgressPage() {
                 <Section title="Recent sessions">
                   {recent.length === 0 ? <p className="text-sm text-smoke">Nothing yet — your first logged session lands here.</p> : (
                     <ul className="grid gap-2 sm:grid-cols-2">{recent.map(({ l, s }) => (
-                      <li key={l.id}><Link href={s ? `/session/${s.id}` : "/today"} className="card overflow-hidden block">
+                      <li key={l.id}><Link href={s ? `/session?id=${s.id}` : "/today"} className="card overflow-hidden block">
                         <div className="relative h-24"><Photo src={sessionImage(s?.kind ?? "full", 600, 300)} veil className="absolute inset-0" /><div className="on-photo absolute inset-x-0 bottom-0 p-3 flex items-end justify-between"><span className="display text-lg leading-none">{s?.title ?? "Session"}</span><span className="chip chip--volt tnum">+{l.xp} XP</span></div></div>
                         <div className="px-3 py-2 flex justify-between text-xs text-smoke tnum"><span>{l.startedAt.slice(0, 10)}</span><span>{Math.round((l.durationSec ?? 0) / 60)} min · {Math.round(l.volumeKg ?? 0).toLocaleString("en-US")} kg{l.avgRpe ? ` · RPE ${l.avgRpe.toFixed(1)}` : ""}</span></div>
                       </Link></li>))}</ul>
@@ -175,7 +175,7 @@ export default function ProgressPage() {
               <Item><div className="card--photo"><Photo src={IMG.moveHero} veil soft className="h-40" /><div className="card__body p-5 grid gap-2 -mt-14"><p className="display text-2xl">Your <em>feed.</em></p><p className="text-sm text-smoke">Record an activity on Move and post it to your profile. Each one shows here with its route, splits and the XP it earned.</p><Link href="/move" className="pill pill--sm pill--volt justify-self-start">Record something</Link></div></div></Item>
             ) : shared.map((a) => (
               <Item key={a.id}>
-                <Link href={`/move/${a.id}`} className="card overflow-hidden block">
+                <Link href={`/move/activity?id=${a.id}`} className="card overflow-hidden block">
                   <div className="flex items-center gap-3 p-3"><span className="w-9 h-9 rounded-full bg-volt text-ink grid place-items-center font-bold text-sm">{profile.name.slice(0, 1).toUpperCase()}</span><span className="grid"><span className="text-sm font-medium">{profile.name}</span><span className="text-[11px] text-smoke">{(a.sharedAt ?? a.startedAt).slice(0, 10)} · <span className="capitalize">{a.type}</span></span></span><span className="ml-auto chip chip--volt tnum">+{a.xp} XP</span></div>
                   <div className="relative h-44 bg-graphite grid place-items-center"><MiniRoute points={a.points} size={160} /><div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(10,10,10,.6))] pointer-events-none" /></div>
                   <div className="p-3 grid gap-2"><p className="font-semibold">{a.title}</p><div className="grid grid-cols-4 gap-2 text-center"><span className="grid"><span className="meta">Dist</span><span className="tnum text-sm">{fmtDist(a.distanceM, units)}</span></span><span className="grid"><span className="meta">Time</span><span className="tnum text-sm">{fmtDuration(a.durationSec)}</span></span><span className="grid"><span className="meta">Climb</span><span className="tnum text-sm">{Math.round(a.elevGainM)} m</span></span><span className="grid"><span className="meta">Feel</span><span className="tnum text-sm">{a.feel ? `${a.feel}/5` : "—"}</span></span></div></div>

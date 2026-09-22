@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { db, getProfile, uid } from "@/lib/db";
@@ -15,8 +15,18 @@ import { Screen, Hero, Toast, ScreenSkeleton, Rail } from "@/components/ui";
 import { Page, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
 import type { LoggedSet, PrescribedExercise, PrescribedSet, UnitPrefs } from "@/lib/types";
 
+/* The id arrives as a query parameter, not as a path segment.
+
+   A static export writes one file per route, and these ids only exist once
+   somebody has trained — there is nothing to pre-render. A query parameter
+   needs no file of its own, so the same page serves every id and the iOS and
+   Android builds get a route they can actually ship. */
 export default function SessionPage() {
-  const { id } = useParams<{ id: string }>();
+  return <Suspense fallback={<ScreenSkeleton />}><SessionDetail /></Suspense>;
+}
+
+function SessionDetail() {
+  const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const profile = useLiveQuery(() => getProfile(), []);
   const session = useLiveQuery(() => db.sessions.get(id), [id]);

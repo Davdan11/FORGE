@@ -243,7 +243,7 @@ function SessionCard({ session, units, best }: { session: Session; units: UnitPr
         </ul>
         <div className="p-4 grid gap-3 border-t border-line">
           <p className="text-xs text-smoke">{session.why}</p>
-          <Press><Link href={`/session/${session.id}`} className="pill pill--volt pill--block pill--lg">{session.status === "done" ? "Review session" : "Start session"}</Link></Press>
+          <Press><Link href={`/session?id=${session.id}`} className="pill pill--volt pill--block pill--lg">{session.status === "done" ? "Review session" : "Start session"}</Link></Press>
         </div>
       </div>
     </Section>
@@ -263,7 +263,7 @@ function WeekStrip({ today, sessions, mon }: { today: string; sessions: Session[
         const date = new Date(d + "T00:00:00");
         return (
           <li key={d}>
-            <Link href={s ? `/session/${s.id}` : "/library?pattern=mobility"}
+            <Link href={s ? `/session?id=${s.id}` : "/library?pattern=mobility"}
               className="py-2.5 flex items-center gap-3 text-sm">
               <span className={`w-2 h-2 rounded-full shrink-0 ${s?.status === "done" ? "bg-volt" : s ? "bg-ink" : "bg-line-strong"}`} />
               <span className={`w-[4.5rem] shrink-0 ${on ? "font-semibold" : ""}`}>{date.toLocaleDateString("en-US", { weekday: "long" })}</span>
@@ -346,7 +346,7 @@ function FoodToday({ nutrition, notifications, sessionTitle, onNotify }: { nutri
     <Section title="Food" aside={<Link href="/food" className="text-xs text-smoke underline">Full day</Link>}>
       <div className="card overflow-hidden">
         {meal && next && (
-          <Link href={`/food/${encodeURIComponent(meal.id)}?date=${nutrition.date}`} className="block relative">
+          <Link href={`/food/meal?id=${encodeURIComponent(meal.id)}&date=${nutrition.date}`} className="block relative">
             <Photo src={meal.image} veil color className="h-44" />
             <div className="on-photo absolute inset-x-0 bottom-0 p-4 grid gap-0.5">
               <span className="meta text-bone/80">Next · {next.time} · {next.slot}</span>

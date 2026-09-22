@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile } from "@/lib/db";
 import { elevationProfile } from "@/lib/geo";
@@ -19,8 +19,18 @@ import { ElevationChart } from "@/components/charts";
 const MapView = dynamic(() => import("@/components/MapView").then((m) => m.MapView), { ssr: false, loading: () => <div className="w-full h-full skeleton !rounded-none" /> });
 const FEEL = ["", "Rough", "Meh", "OK", "Good", "Flying"];
 
+/* The id arrives as a query parameter, not as a path segment.
+
+   A static export writes one file per route, and these ids only exist once
+   somebody has trained — there is nothing to pre-render. A query parameter
+   needs no file of its own, so the same page serves every id and the iOS and
+   Android builds get a route they can actually ship. */
 export default function ActivityPage() {
-  const { id } = useParams<{ id: string }>();
+  return <Suspense fallback={<ScreenSkeleton />}><ActivityDetail /></Suspense>;
+}
+
+function ActivityDetail() {
+  const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const a = useLiveQuery(() => db.activities.get(id), [id]);
   const profile = useLiveQuery(() => getProfile(), []);

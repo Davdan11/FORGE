@@ -83,7 +83,7 @@ export default function FoodPage() {
         <Hero image={hero?.image ?? ""} color height="h-[360px]" eyebrow={`${day.dayType === "rest" ? "Rest day" : day.dayType === "hard" ? "Hard day" : "Training day"} · ${day.targets.kcal} kcal · ${day.targets.protein} g protein`}
           title={next ? <>Next up<br /><em>{hero?.name.split(" with ")[0]}</em></> : <>Day <em>complete.</em></>}
           right={<Seg value={tab} onChange={setTab} options={[{ v: "today", label: "Today" }, { v: "groceries", label: "Groceries" }]} />}>
-          {next && hero && <div className="flex items-center gap-2 mt-3 flex-wrap"><span className="chip chip--live backdrop-blur-md">{next.time}</span><span className="chip chip--live backdrop-blur-md tnum">{Math.round(hero.kcal * next.scale)} kcal</span><span className="chip chip--live backdrop-blur-md">{hero.minutes} min</span><Link href={`/food/${enc(hero.id)}?date=${day.date}`} className="pill pill--sm pill--volt ml-auto">Cook</Link></div>}
+          {next && hero && <div className="flex items-center gap-2 mt-3 flex-wrap"><span className="chip chip--live backdrop-blur-md">{next.time}</span><span className="chip chip--live backdrop-blur-md tnum">{Math.round(hero.kcal * next.scale)} kcal</span><span className="chip chip--live backdrop-blur-md">{hero.minutes} min</span><Link href={`/food/meal?id=${enc(hero.id)}&date=${day.date}`} className="pill pill--sm pill--volt ml-auto">Cook</Link></div>}
         </Hero>
 
         <AnimatePresence mode="wait">
@@ -126,7 +126,7 @@ export default function FoodPage() {
                       <div className="grid grid-cols-[44px_minmax(0,1fr)] lg:grid-cols-[56px_minmax(0,1fr)] gap-3">
                         <div className="relative border-r border-line pr-3 pt-1 text-right"><span className="text-xs tnum text-smoke">{m.time}</span><span className={`absolute -right-[5px] top-2.5 w-[9px] h-[9px] rounded-full border-2 border-paper ${m.done ? "bg-volt" : "bg-line-strong"}`} /></div>
                         <div className={`card overflow-hidden transition-opacity ${m.done ? "opacity-55" : ""}`}>
-                          <Link href={`/food/${enc(meal.id)}?date=${day.date}`} className="block relative h-44 md:h-52 lg:h-56">
+                          <Link href={`/food/meal?id=${enc(meal.id)}&date=${day.date}`} className="block relative h-44 md:h-52 lg:h-56">
                             <Photo src={meal.image} color veil className="absolute inset-0" />
                             <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5 grid gap-1">
                               <span className="meta text-bone/80">{m.slot}{m.scale !== 1 ? ` · ×${m.scale}` : ""} · {meal.minutes} min</span>
@@ -141,7 +141,7 @@ export default function FoodPage() {
                             <span className="py-2.5 grid"><strong className="text-base">{Math.round(meal.sugar * m.scale)} g</strong><span className="meta">sugar</span></span>
                           </div>
                           <div className="flex items-center gap-2 p-3 border-t border-line">
-                            <Link href={`/food/${enc(meal.id)}?date=${day.date}`} className="pill pill--sm pill--bone">Cook</Link>
+                            <Link href={`/food/meal?id=${enc(meal.id)}&date=${day.date}`} className="pill pill--sm pill--bone">Cook</Link>
                             <button type="button" className="pill pill--sm" onClick={() => openSwap(m)}>Swap</button>
                             <span className="ml-auto"><Check on={!!m.done} onToggle={() => toggleDone(m)} label={m.done ? "Unlog meal" : "Log meal"} /></span>
                           </div>

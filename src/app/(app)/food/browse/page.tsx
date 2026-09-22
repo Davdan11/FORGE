@@ -45,7 +45,7 @@ function Browse() {
           {res.items.map((m) => (
             <Item key={m.id}>
               <Press>
-                <Link href={`/food/${encodeURIComponent(m.id)}${date ? `?date=${date}` : ""}`} className="card--photo block aspect-[4/5]">
+                <Link href={`/food/meal?id=${encodeURIComponent(m.id)}${date ? `&date=${date}` : ""}`} className="card--photo block aspect-[4/5]">
                   <Photo src={m.image} veil color className="absolute inset-0" />
                   <div className="absolute inset-x-0 bottom-0 z-10 p-3 grid gap-1">
                     <span className="flex gap-1 flex-wrap"><span className="chip chip--volt tnum">{m.kcal} kcal</span><span className="chip chip--live backdrop-blur-md tnum">{m.protein} P</span>{m.tags.includes("low_sugar") && <span className="chip chip--live backdrop-blur-md">low sugar</span>}</span>

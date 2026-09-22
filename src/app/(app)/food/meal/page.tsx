@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, type NutritionDayRow } from "@/lib/db";
 import { dailyTargets } from "@/lib/nutrition/engine";
@@ -11,13 +11,19 @@ import { fmtDuration } from "@/lib/units";
 import { Screen, Hero, Section, Empty, Check, Toast, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Press, Ring, motion, AnimatePresence } from "@/components/motion";
 
+/* The id arrives as a query parameter, not as a path segment.
+
+   A static export writes one file per route, and these ids only exist once
+   somebody has trained — there is nothing to pre-render. A query parameter
+   needs no file of its own, so the same page serves every id and the iOS and
+   Android builds get a route they can actually ship. */
 export default function RecipePage() {
   return <Suspense fallback={<ScreenSkeleton />}><Recipe /></Suspense>;
 }
 
 function Recipe() {
-  const { id } = useParams<{ id: string }>();
   const params = useSearchParams();
+  const id = params.get("id") ?? "";
   const router = useRouter();
   const date = params.get("date");
   const meal = getMeal(decodeURIComponent(id));

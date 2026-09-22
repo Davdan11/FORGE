@@ -105,7 +105,10 @@ export default function Onboarding() {
           {step === 0 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Let’s build <em>your</em> plan.</h1>
             <p className="text-smoke text-sm">Eight minutes. We measure before we prescribe.</p>
-            <label className="field"><span className="meta">Name</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="What should we call you?" autoFocus /></label>
+            {/* No autoFocus. In a browser it saves a tap; in the native app the
+                keyboard rises before the screen has been read and covers the
+                form, so the first thing anyone sees is two thirds of a keyboard. */}
+            <label className="field"><span className="meta">Name</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="What should we call you?" /></label>
             <div className="grid grid-cols-2 gap-3">
               <div className="field"><span className="meta">Body weight</span><Seg fill value={units.weight} onChange={(weight) => setUnits((u) => ({ ...u, weight }))} options={[{ v: "kg", label: "kg" }, { v: "lb", label: "lb" }]} /></div>
               <div className="field"><span className="meta">Distance</span><Seg fill value={units.distance} onChange={(distance) => setUnits((u) => ({ ...u, distance }))} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} /></div>

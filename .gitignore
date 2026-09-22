@@ -27,3 +27,14 @@ coverage/
 
 # macOS
 .DS_Store
+
+# Capacitor native shells — the projects are committed, their build output is not
+ios/App/App/public/
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/DerivedData/
+android/app/src/main/assets/public/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
