@@ -7,8 +7,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile } from "@/lib/db";
 import { elevationProfile } from "@/lib/geo";
-import { shareActivity } from "@/lib/progress";
 import { shareCard } from "@/lib/share";
+import { PostToFeed } from "@/components/PostToFeed";
 import { WORKOUT_MAP, ZONE_LABEL } from "@/lib/data/workouts";
 import { fmtDist, fmtDuration } from "@/lib/units";
 import { rateFor } from "@/components/move-bits";
@@ -56,7 +56,7 @@ export default function ActivityPage() {
             <Item>
               <div className="flex gap-3 mb-5">
                 <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" onClick={async () => { const r = await shareCard(a, u, profile.name); say(r === "shared" ? "Shared." : "Card downloaded."); }}>Share card</button></Press>
-                {!a.shared && <Press><button type="button" className="pill" onClick={async () => { const xp = await shareActivity(a.id); say(`Posted to your profile. +${xp} XP.`); }}>Post to profile</button></Press>}
+                <PostToFeed activity={a} say={say} />
               </div>
             </Item>
             <Item>

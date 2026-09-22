@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { Activity, Dumbbell, MapPin, UtensilsCrossed, User, type LucideIcon } from "lucide-react";
+import { Activity, Dumbbell, MapPin, UtensilsCrossed, User, Users, type LucideIcon } from "lucide-react";
 
 const ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/today", label: "Today", icon: Activity },
   { href: "/library", label: "Library", icon: Dumbbell },
   { href: "/move", label: "Move", icon: MapPin },
   { href: "/food", label: "Food", icon: UtensilsCrossed },
+  { href: "/feed", label: "Feed", icon: Users },
   { href: "/progress", label: "Profile", icon: User },
 ];
 

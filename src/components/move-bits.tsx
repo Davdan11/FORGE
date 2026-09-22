@@ -76,3 +76,13 @@ export function ActivityRow({ a, units }: { a: Activity; units: UnitPrefs }) {
     </Link>
   );
 }
+
+/** Sport glyph as a component.
+ *
+ *  `sportIcon(t)` hands back a component, and a component that arrives from a
+ *  call cannot be told apart from one built during render — so reaching into
+ *  the table here keeps call sites to a plain element. */
+export function SportGlyph({ sport, className = "", strokeWidth = 1.8 }: { sport: ActivityType; className?: string; strokeWidth?: number }) {
+  const Glyph = ICON[sport] ?? OtherIcon;
+  return <Glyph className={className} strokeWidth={strokeWidth} />;
+}

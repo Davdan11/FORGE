@@ -131,6 +131,23 @@ export async function shareActivity(id: string) {
   return XP.shareActivity;
 }
 
+/**
+ * Take an activity off the feed locally.
+ *
+ * The XP stays. It was earned by the training, and the share bonus was earned
+ * by the act of posting, which did happen. Clawing it back would make taking a
+ * post down feel like a punishment — and a privacy control you are punished
+ * for using is not a control at all.
+ */
+export async function unshareActivity(id: string) {
+  const a = await db.activities.get(id);
+  if (!a || !a.shared) return;
+  await db.activities.update(id, { shared: false, sharedAt: undefined, dirty: 1 });
+  const stats = await getStats();
+  stats.totals.shared = Math.max(0, (stats.totals.shared ?? 1) - 1);
+  await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
+}
+
 export async function logWeighIn(kg: number, date: string) {
   await db.weights.put({ id: date, date, kg, dirty: 1, updatedAt: new Date().toISOString() });
   const p = await getProfile();
