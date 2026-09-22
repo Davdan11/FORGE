@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { getProfile } from "@/lib/db";
+import { documentUrl } from "@/lib/native";
 
 /* ─────────────────────────────────────────────────────────────
    Boot.
@@ -40,7 +41,8 @@ export default function Root() {
     const go = (to: string) => {
       if (done) return;
       done = true;
-      window.location.replace(to);
+      // documentUrl names the file: Capacitor serves files, not directories.
+      window.location.replace(documentUrl(to));
     };
 
     const fail = (why: string) => {
@@ -79,7 +81,7 @@ export default function Root() {
             <p className="text-sm text-danger">{boot.why}</p>
             <div className="flex gap-2 justify-center">
               <button type="button" className="pill pill--sm" onClick={() => window.location.reload()}>Try again</button>
-              <button type="button" className="pill pill--sm pill--volt" onClick={() => window.location.replace("/onboarding/")}>Start anyway</button>
+              <button type="button" className="pill pill--sm pill--volt" onClick={() => window.location.replace(documentUrl("/onboarding/"))}>Start anyway</button>
             </div>
           </div>
         )}
