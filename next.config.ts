@@ -13,6 +13,10 @@ import type { NextConfig } from "next";
 const native = process.env.BUILD_TARGET === "native";
 
 const nextConfig: NextConfig = {
+  // Dev server only: let a phone on the same Wi-Fi open it by LAN address
+  // (http://192.168.x.x:3000). Without this Next blocks the dev scripts for
+  // any hostname but localhost, and the page loads but never starts.
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
   ...(native
     ? {
         output: "export",
