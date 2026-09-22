@@ -15,7 +15,8 @@ let package = Package(
         .package(name: "CapacitorCommunityBackgroundGeolocation", path: "../../../node_modules/@capacitor-community/background-geolocation"),
         .package(name: "CapacitorCommunityBluetoothLe", path: "../../../node_modules/@capacitor-community/bluetooth-le"),
         .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app"),
-        .package(name: "CapacitorBrowser", path: "../../../node_modules/@capacitor/browser")
+        .package(name: "CapacitorBrowser", path: "../../../node_modules/@capacitor/browser"),
+        .package(name: "CapacitorLocalNotifications", path: "../../../node_modules/@capacitor/local-notifications")
     ],
     targets: [
         .target(
@@ -26,7 +27,8 @@ let package = Package(
                 .product(name: "CapacitorCommunityBackgroundGeolocation", package: "CapacitorCommunityBackgroundGeolocation"),
                 .product(name: "CapacitorCommunityBluetoothLe", package: "CapacitorCommunityBluetoothLe"),
                 .product(name: "CapacitorApp", package: "CapacitorApp"),
-                .product(name: "CapacitorBrowser", package: "CapacitorBrowser")
+                .product(name: "CapacitorBrowser", package: "CapacitorBrowser"),
+                .product(name: "CapacitorLocalNotifications", package: "CapacitorLocalNotifications")
             ]
         )
     ]

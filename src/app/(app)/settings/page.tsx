@@ -21,6 +21,7 @@ import { fmtHeight, kgToLb, lbToKg } from "@/lib/units";
 import { Screen, Hero, Section, Seg, MultiSeg, Toggle, Toast, Photo, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Press } from "@/components/motion";
 import { ensureNotificationPermission } from "@/lib/notify";
+import { syncReminders } from "@/lib/remindersSync";
 import { InjuryPanel } from "@/components/InjuryPanel";
 import { AREAS, AVOID, DIETS, DEFAULT_LIFESTYLE, HOME_KIT, PLACES, SLEEP, STRESS, WORK, equipmentFor } from "@/lib/data/choices";
 import { buildNutritionDay } from "@/lib/nutrition/engine";
@@ -165,7 +166,7 @@ export default function SettingsPage() {
                       <div className="field"><span className="meta">Distance &amp; pace</span><Seg fill value={profile.units.distance} onChange={(distance) => update({ units: { ...profile.units, distance } })} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} /></div>
                     </div>
                   </div>
-                  <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Meal nudges</p><p className="text-xs text-smoke">Timed around your session.</p></div><Toggle on={profile.notifications} label="Meal nudges" onChange={async (v) => { if (v) { const p = await ensureNotificationPermission(); if (p !== "granted") { say(p === "denied" ? "Notifications are blocked in your browser settings." : "Notifications aren’t supported here."); return; } } await update({ notifications: v }); say(v ? "Nudges on." : "Nudges off."); }} /></div>
+                  <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Reminders</p><p className="text-xs text-smoke">Morning check-in, an hour before each session, and meals. Arrives with the app closed.</p></div><Toggle on={profile.notifications} label="Reminders" onChange={async (v) => { if (v) { const p = await ensureNotificationPermission(); if (p !== "granted") { say(p === "denied" ? "Notifications are off for FORGE. Turn them on in your phone's settings." : "Notifications aren’t supported here."); return; } } await update({ notifications: v }); await syncReminders(); say(v ? "Reminders on." : "Reminders off."); }} /></div>
                   <div className="p-4 grid gap-3"><div><p className="text-sm font-medium">Timing</p><p className="text-xs text-smoke">Meals are placed around these.</p></div><div className="grid grid-cols-2 gap-3"><label className="field"><span className="meta">Training</span><input className="input" type="time" value={profile.trainTime} onChange={(e) => update({ trainTime: e.target.value })} /></label><label className="field"><span className="meta">Wake</span><input className="input" type="time" value={profile.wakeTime} onChange={(e) => update({ wakeTime: e.target.value })} /></label></div></div>
                   <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Meals per day</p><p className="text-xs text-smoke">Tomorrow’s menu follows.</p></div><Seg fill value={profile.mealsPerDay} onChange={(m) => update({ mealsPerDay: m })} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
                 </div>

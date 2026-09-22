@@ -6,7 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, getStats, todayISO, addDays } from "@/lib/db";
 import { readinessScore, autoRegulate, PAIN_LABEL } from "@/lib/engine/readiness";
 import { adaptationsFor } from "@/lib/engine/injury";
-import { buildNutritionDay, eatenTotals, nudgesFor } from "@/lib/nutrition/engine";
+import { buildNutritionDay, eatenTotals } from "@/lib/nutrition/engine";
 import { getMeal } from "@/lib/nutrition/recipes";
 import { awardReadiness, bestE1rmBySlug } from "@/lib/progress";
 import { levelFromXp, rankFor, subRankFor, tierForLevel } from "@/lib/gamification";
@@ -21,7 +21,8 @@ import { fmtLoad, e1rm } from "@/lib/units";
 import { Screen, Hero, Section, Seg, MultiSeg, RatingScale, Bar, Toast, Photo, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
 import { Sparkline } from "@/components/charts";
-import { atTime, ensureNotificationPermission, scheduleLocal } from "@/lib/notify";
+import { ensureNotificationPermission } from "@/lib/notify";
+import { syncReminders } from "@/lib/remindersSync";
 import type { NutritionDay, PainArea, Readiness, Session, UnitPrefs } from "@/lib/types";
 
 export default function Today() {
@@ -182,11 +183,10 @@ export default function Today() {
 
           <Item>{nutrition && <FoodToday nutrition={nutrition} notifications={profile.notifications} sessionTitle={session?.title} onNotify={async () => {
             const perm = await ensureNotificationPermission();
-            if (perm !== "granted") { say(perm === "denied" ? "Notifications are blocked in your browser settings." : "Notifications aren’t supported here."); return; }
+            if (perm !== "granted") { say(perm === "denied" ? "Notifications are off for FORGE. Turn them on in your phone's settings." : "Notifications aren’t supported here."); return; }
             await db.profile.update(profile.id, { notifications: true, dirty: 1 });
-            const tomorrow = await db.nutrition.get(addDays(today, 1));
-            nudgesFor(nutrition, session ?? null, tomorrow ?? undefined).forEach((n, i) => scheduleLocal(`nudge-${today}-${i}`, atTime(today, n.time), n.title, n.body));
-            say("Nudges scheduled around today’s session.");
+            await syncReminders();
+            say("Reminders on: check-in, sessions and meals.");
           }} />}</Item>
 
           <Item>
@@ -301,6 +301,7 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
     await db.readiness.put({ ...r, dirty: 1 });
     if (session && session.status === "planned") { const adj = autoRegulate(profile, session, r, await bestE1rmBySlug(), adaptationsFor(await db.injuries.toArray(), todayISO())); await db.sessions.put({ ...adj.session, dirty: 1 }); }
     onDone(r);
+    syncReminders().catch(() => {}); // today's check-in reminder is no longer needed
   }
 
   return (
@@ -369,7 +370,7 @@ function FoodToday({ nutrition, notifications, sessionTitle, onNotify }: { nutri
             <span className="flex justify-between gap-2"><span>Fat</span><span className="tnum text-ink">{Math.round(t.fat)} g</span></span>
             <span className="flex justify-between gap-2"><span>Sugar</span><span className="tnum text-ink">{Math.round(t.sugar)} g</span></span>
           </div>
-          {!notifications && <button type="button" className="pill pill--sm justify-self-start" onClick={onNotify}>Enable meal nudges</button>}
+          {!notifications && <button type="button" className="pill pill--sm justify-self-start" onClick={onNotify}>Turn on reminders</button>}
         </div>
       </div>
     </Section>

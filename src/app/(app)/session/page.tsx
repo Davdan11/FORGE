@@ -13,6 +13,7 @@ import { awardSession, bestE1rmBySlug } from "@/lib/progress";
 import { fmtLoad, kgToLb, lbToKg, fmtDuration, platesFor, roundLoad, e1rm } from "@/lib/units";
 import { Screen, Hero, Toast, ScreenSkeleton, Rail, Empty } from "@/components/ui";
 import { removeAdded } from "@/lib/engine/custom";
+import { syncReminders } from "@/lib/remindersSync";
 import { Page, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
 import type { LoggedSet, PrescribedExercise, PrescribedSet, UnitPrefs } from "@/lib/types";
 
@@ -112,6 +113,7 @@ function SessionDetail() {
     await db.logs.put({ ...log, xp, dirty: 1 });
     await db.sessions.update(session.id, { status: "done", dirty: 1 });
     const muscles = [...new Set(sets.flatMap((s) => getExercise(s.slug)?.primary ?? []))];
+    syncReminders().catch(() => {}); // the "session in an hour" reminder is spent
     setSummary({ xp, sets: sets.length, volume, prs: prs.map((p) => getExercise(p)?.name ?? p), badges: earned, minutes: Math.round(durationSec / 60), muscles });
   }
 
