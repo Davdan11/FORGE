@@ -1,0 +1,217 @@
+import type { Exercise } from "../types";
+
+/* ─────────────────────────────────────────────────────────────
+   Exercise bank v0.1 — hand-authored, structured for the engine.
+   Each entry: pattern, muscles, equipment, cues, faults, swaps.
+   `ratio` anchors load estimates relative to back squat e1RM.
+   Media (video / model3d) attach later without changing the schema.
+   ───────────────────────────────────────────────────────────── */
+
+const E = (e: Exercise) => e;
+
+export const EXERCISES: Exercise[] = [
+  /* ── Squat pattern ─────────────────────────────────────── */
+  E({ slug: "back-squat", name: "Back squat", pattern: "squat", pillar: "strength", primary: ["quads", "glutes"], secondary: ["hamstrings", "core", "spine"], equipment: ["barbell", "rack"], level: "intermediate", loadable: true, tempo: "3-1-1-0", ratio: 1,
+    cues: ["Brace before you unrack: big breath into the belt line.", "Knees track over the middle toe.", "Hips and chest rise together — no good-morning."],
+    faults: ["Knees caving in on the way up.", "Heels lifting: ankle mobility or stance too narrow.", "Chest dropping at the bottom."],
+    swaps: ["front-squat", "goblet-squat", "leg-press", "bulgarian-split-squat"], painFlags: ["knee", "back"] }),
+  E({ slug: "front-squat", name: "Front squat", pattern: "squat", pillar: "strength", primary: ["quads"], secondary: ["glutes", "core", "back"], equipment: ["barbell", "rack"], level: "intermediate", loadable: true, tempo: "3-0-1-0", ratio: 0.82,
+    cues: ["Elbows high, bar on the shelf of the shoulders.", "Sit straight down between the heels.", "Stay tall out of the hole."],
+    faults: ["Elbows dropping — bar rolls forward.", "Wrist pain from gripping the bar: use straps or cross grip."],
+    swaps: ["back-squat", "goblet-squat", "safety-bar-squat"], painFlags: ["knee", "wrist"] }),
+  E({ slug: "goblet-squat", name: "Goblet squat", pattern: "squat", pillar: "strength", primary: ["quads", "glutes"], secondary: ["core"], equipment: ["dumbbell", "kettlebell"], level: "new", loadable: true, tempo: "3-1-1-0", ratio: 0.3,
+    cues: ["Hold the bell against the chest, elbows in.", "Push the knees out and sit between them.", "Pause at the bottom, drive the floor away."],
+    faults: ["Leaning forward to counterbalance.", "Rushing the descent."],
+    swaps: ["back-squat", "bodyweight-squat", "leg-press"] }),
+  E({ slug: "bodyweight-squat", name: "Bodyweight squat", pattern: "squat", pillar: "strength", primary: ["quads", "glutes"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false, tempo: "3-1-1-0",
+    cues: ["Arms forward for balance.", "Full depth if the knees allow.", "Control the descent — three seconds."],
+    faults: ["Heels lifting.", "Half reps."],
+    swaps: ["goblet-squat", "wall-sit", "bulgarian-split-squat"] }),
+  E({ slug: "leg-press", name: "Leg press", pattern: "squat", pillar: "strength", primary: ["quads", "glutes"], secondary: ["hamstrings"], equipment: ["machine"], level: "new", loadable: true, ratio: 1.8,
+    cues: ["Feet mid-platform, shoulder width.", "Lower until the hips just start to tuck.", "Don't lock the knees at the top."],
+    faults: ["Lower back rounding off the pad.", "Locking out hard."],
+    swaps: ["back-squat", "goblet-squat", "hack-squat"] }),
+  E({ slug: "hack-squat", name: "Hack squat", pattern: "squat", pillar: "strength", primary: ["quads"], secondary: ["glutes"], equipment: ["machine"], level: "intermediate", loadable: true, ratio: 1.3,
+    cues: ["Back flat on the pad.", "Drive through mid-foot."], faults: ["Heels rising."], swaps: ["leg-press", "front-squat"] }),
+  E({ slug: "safety-bar-squat", name: "Safety-bar squat", pattern: "squat", pillar: "strength", primary: ["quads", "glutes"], secondary: ["back", "core"], equipment: ["barbell", "rack"], level: "intermediate", loadable: true, ratio: 0.9,
+    cues: ["Handles forward, elbows down.", "Fight the bar pulling you forward."], faults: ["Forward collapse."], swaps: ["back-squat", "front-squat"], painFlags: ["shoulder"] }),
+  E({ slug: "wall-sit", name: "Wall sit", pattern: "squat", pillar: "strength", primary: ["quads"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false, timed: true,
+    cues: ["Thighs parallel, back flat on the wall.", "Breathe."], faults: ["Hands on thighs."], swaps: ["bodyweight-squat"] }),
+
+  /* ── Hinge pattern ─────────────────────────────────────── */
+  E({ slug: "deadlift", name: "Deadlift", pattern: "hinge", pillar: "strength", primary: ["hamstrings", "glutes", "back"], secondary: ["traps", "forearms", "core"], equipment: ["barbell"], level: "intermediate", loadable: true, tempo: "1-0-1-1", ratio: 1.2,
+    cues: ["Bar over mid-foot, shins to the bar.", "Pull the slack out before the floor leaves.", "Push the floor away; hips and shoulders rise together."],
+    faults: ["Hips shooting up first.", "Bar drifting away from the legs.", "Rounding the upper back under load."],
+    swaps: ["trap-bar-deadlift", "romanian-deadlift", "kettlebell-swing"], painFlags: ["back"] }),
+  E({ slug: "trap-bar-deadlift", name: "Trap-bar deadlift", pattern: "hinge", pillar: "strength", primary: ["glutes", "quads", "hamstrings"], secondary: ["back", "traps"], equipment: ["barbell"], level: "new", loadable: true, ratio: 1.25,
+    cues: ["Stand in the middle, handles at mid-thigh.", "Big chest, push through the floor."], faults: ["Squatting it up with rounded back."], swaps: ["deadlift", "romanian-deadlift"], painFlags: ["back"] }),
+  E({ slug: "romanian-deadlift", name: "Romanian deadlift", pattern: "hinge", pillar: "strength", primary: ["hamstrings", "glutes"], secondary: ["back"], equipment: ["barbell", "dumbbell"], level: "new", loadable: true, tempo: "3-1-1-0", ratio: 0.75,
+    cues: ["Soft knees, hips back until you feel the hamstrings.", "Bar stays glued to the thighs.", "Neutral spine the whole way."],
+    faults: ["Bending the knees into a squat.", "Going lower than the hamstrings allow — back rounds."],
+    swaps: ["deadlift", "single-leg-rdl", "hip-thrust", "kettlebell-swing"], painFlags: ["back"] }),
+  E({ slug: "single-leg-rdl", name: "Single-leg RDL", pattern: "hinge", pillar: "strength", primary: ["hamstrings", "glutes"], secondary: ["core", "ankles"], equipment: ["dumbbell", "kettlebell", "bodyweight"], level: "new", unilateral: true, loadable: true, tempo: "3-1-1-0", ratio: 0.2,
+    cues: ["Hips square, back leg reaches straight behind.", "Slow down; balance is the point."], faults: ["Hip opening to the side."], swaps: ["romanian-deadlift", "hip-thrust"] }),
+  E({ slug: "hip-thrust", name: "Hip thrust", pattern: "hinge", pillar: "strength", primary: ["glutes"], secondary: ["hamstrings"], equipment: ["barbell", "bench"], level: "new", loadable: true, tempo: "2-1-1-1", ratio: 1.1,
+    cues: ["Chin tucked, ribs down.", "Squeeze hard at the top for one second."], faults: ["Over-arching the lower back at the top."], swaps: ["romanian-deadlift", "glute-bridge"] }),
+  E({ slug: "glute-bridge", name: "Glute bridge", pattern: "hinge", pillar: "strength", primary: ["glutes"], secondary: ["hamstrings"], equipment: ["bodyweight"], level: "new", loadable: false, tempo: "2-1-1-1",
+    cues: ["Heels close, squeeze at the top."], faults: ["Pushing through the toes."], swaps: ["hip-thrust"] }),
+  E({ slug: "kettlebell-swing", name: "Kettlebell swing", pattern: "power", pillar: "strength", primary: ["glutes", "hamstrings"], secondary: ["core", "back"], equipment: ["kettlebell"], level: "new", loadable: true, ratio: 0.25,
+    cues: ["Hinge, don't squat. The bell floats to chest height.", "Snap the hips; arms are ropes."], faults: ["Lifting with the arms.", "Rounded back at the bottom."], swaps: ["romanian-deadlift", "trap-bar-deadlift"], painFlags: ["back"] }),
+  E({ slug: "good-morning", name: "Good morning", pattern: "hinge", pillar: "strength", primary: ["hamstrings", "back"], secondary: ["glutes"], equipment: ["barbell"], level: "advanced", loadable: true, tempo: "3-1-1-0", ratio: 0.45,
+    cues: ["Bar high on the traps, hips back."], faults: ["Rounding."], swaps: ["romanian-deadlift"], painFlags: ["back"] }),
+
+  /* ── Lunge / unilateral ────────────────────────────────── */
+  E({ slug: "bulgarian-split-squat", name: "Bulgarian split squat", pattern: "lunge", pillar: "strength", primary: ["quads", "glutes"], secondary: ["hamstrings", "hips"], equipment: ["dumbbell", "bench", "bodyweight"], level: "new", unilateral: true, loadable: true, tempo: "3-0-1-0", ratio: 0.25,
+    cues: ["Front foot far enough that the knee stays behind the toes.", "Torso slightly forward for glutes, upright for quads."], faults: ["Pushing off the back foot.", "Wobbling: slow down."], swaps: ["walking-lunge", "reverse-lunge", "step-up"], painFlags: ["knee"] }),
+  E({ slug: "reverse-lunge", name: "Reverse lunge", pattern: "lunge", pillar: "strength", primary: ["quads", "glutes"], secondary: ["hips"], equipment: ["dumbbell", "bodyweight"], level: "new", unilateral: true, loadable: true, ratio: 0.25,
+    cues: ["Step back, drop the knee straight down.", "Push through the front heel."], faults: ["Front knee collapsing inward."], swaps: ["walking-lunge", "bulgarian-split-squat", "step-up"] }),
+  E({ slug: "walking-lunge", name: "Walking lunge", pattern: "lunge", pillar: "strength", primary: ["quads", "glutes"], secondary: ["core"], equipment: ["dumbbell", "bodyweight"], level: "new", unilateral: true, loadable: true, ratio: 0.25,
+    cues: ["Long steps, quiet feet."], faults: ["Short choppy steps."], swaps: ["reverse-lunge", "bulgarian-split-squat"], painFlags: ["knee"] }),
+  E({ slug: "step-up", name: "Step-up", pattern: "lunge", pillar: "strength", primary: ["quads", "glutes"], secondary: [], equipment: ["dumbbell", "bench", "bodyweight"], level: "new", unilateral: true, loadable: true, ratio: 0.25,
+    cues: ["Whole foot on the box, drive without pushing off the floor."], faults: ["Bouncing off the back leg."], swaps: ["reverse-lunge", "bulgarian-split-squat"] }),
+
+  /* ── Horizontal push ───────────────────────────────────── */
+  E({ slug: "bench-press", name: "Bench press", pattern: "push_h", pillar: "strength", primary: ["chest"], secondary: ["triceps", "shoulders"], equipment: ["barbell", "bench", "rack"], level: "intermediate", loadable: true, tempo: "2-1-1-0", ratio: 0.75,
+    cues: ["Shoulder blades pinned, feet planted.", "Bar touches at the sternum, elbows about 45°.", "Press back toward the rack."],
+    faults: ["Elbows flared to 90°.", "Bouncing off the chest.", "Feet moving."], swaps: ["dumbbell-bench-press", "push-up", "machine-chest-press"], painFlags: ["shoulder"] }),
+  E({ slug: "dumbbell-bench-press", name: "Dumbbell bench press", pattern: "push_h", pillar: "strength", primary: ["chest"], secondary: ["triceps", "shoulders"], equipment: ["dumbbell", "bench"], level: "new", loadable: true, tempo: "2-1-1-0", ratio: 0.3,
+    cues: ["Kick the bells up with the knees.", "Slight arc — bells come together at the top."], faults: ["Shoulders rolling forward."], swaps: ["bench-press", "push-up", "incline-dumbbell-press"], painFlags: ["shoulder"] }),
+  E({ slug: "incline-dumbbell-press", name: "Incline dumbbell press", pattern: "push_h", pillar: "strength", primary: ["chest", "shoulders"], secondary: ["triceps"], equipment: ["dumbbell", "bench"], level: "new", loadable: true, ratio: 0.26,
+    cues: ["30° incline, elbows under the wrists."], faults: ["Flaring."], swaps: ["dumbbell-bench-press", "push-up"] }),
+  E({ slug: "push-up", name: "Push-up", pattern: "push_h", pillar: "strength", primary: ["chest", "triceps"], secondary: ["core", "shoulders"], equipment: ["bodyweight"], level: "new", loadable: false, tempo: "2-0-1-0",
+    cues: ["Body is one line from heels to head.", "Hands under shoulders, elbows 45°.", "Chest to the floor, not the chin."],
+    faults: ["Hips sagging.", "Head diving first."], swaps: ["dumbbell-bench-press", "incline-push-up", "machine-chest-press"], painFlags: ["wrist"] }),
+  E({ slug: "incline-push-up", name: "Incline push-up", pattern: "push_h", pillar: "strength", primary: ["chest", "triceps"], secondary: ["core"], equipment: ["bodyweight", "bench"], level: "new", loadable: false,
+    cues: ["Hands on a bench; same line from heels to head."], faults: ["Sagging."], swaps: ["push-up"] }),
+  E({ slug: "machine-chest-press", name: "Machine chest press", pattern: "push_h", pillar: "strength", primary: ["chest"], secondary: ["triceps"], equipment: ["machine"], level: "new", loadable: true, ratio: 0.6,
+    cues: ["Handles at mid-chest height."], faults: ["Shrugging."], swaps: ["bench-press", "dumbbell-bench-press"] }),
+  E({ slug: "dip", name: "Dip", pattern: "push_h", pillar: "strength", primary: ["chest", "triceps"], secondary: ["shoulders"], equipment: ["pullup_bar"], level: "intermediate", loadable: false,
+    cues: ["Lean forward for chest, upright for triceps.", "Elbows to 90°, no deeper if the shoulder complains."], faults: ["Going too deep."], swaps: ["push-up", "bench-press"], painFlags: ["shoulder"] }),
+
+  /* ── Vertical push ─────────────────────────────────────── */
+  E({ slug: "overhead-press", name: "Overhead press", pattern: "push_v", pillar: "strength", primary: ["shoulders"], secondary: ["triceps", "core"], equipment: ["barbell"], level: "intermediate", loadable: true, tempo: "2-0-1-0", ratio: 0.5,
+    cues: ["Squeeze the glutes, ribs down.", "Move the head back, bar goes straight up, head through at the top."],
+    faults: ["Leaning back into a standing incline.", "Bar path forward of the face."], swaps: ["dumbbell-shoulder-press", "landmine-press", "push-up"], painFlags: ["shoulder"] }),
+  E({ slug: "dumbbell-shoulder-press", name: "Dumbbell shoulder press", pattern: "push_v", pillar: "strength", primary: ["shoulders"], secondary: ["triceps"], equipment: ["dumbbell"], level: "new", loadable: true, ratio: 0.2,
+    cues: ["Palms slightly in, elbows just in front of the body."], faults: ["Arching the lower back."], swaps: ["overhead-press", "landmine-press"], painFlags: ["shoulder"] }),
+  E({ slug: "landmine-press", name: "Landmine press", pattern: "push_v", pillar: "strength", primary: ["shoulders", "chest"], secondary: ["core"], equipment: ["barbell"], level: "new", unilateral: true, loadable: true, ratio: 0.3,
+    cues: ["Half-kneeling, press up and forward."], faults: ["Twisting."], swaps: ["dumbbell-shoulder-press", "overhead-press"] }),
+  E({ slug: "lateral-raise", name: "Lateral raise", pattern: "push_v", pillar: "strength", primary: ["shoulders"], secondary: [], equipment: ["dumbbell", "cable"], level: "new", loadable: true, tempo: "2-1-2-0", ratio: 0.08,
+    cues: ["Lead with the elbows, thumbs slightly down.", "Stop at shoulder height."], faults: ["Swinging.", "Shrugging."], swaps: ["cable-lateral-raise"] }),
+  E({ slug: "cable-lateral-raise", name: "Cable lateral raise", pattern: "push_v", pillar: "strength", primary: ["shoulders"], secondary: [], equipment: ["cable"], level: "new", loadable: true, ratio: 0.06,
+    cues: ["Cable behind the body."], faults: ["Shrugging."], swaps: ["lateral-raise"] }),
+
+  /* ── Horizontal pull ───────────────────────────────────── */
+  E({ slug: "barbell-row", name: "Barbell row", pattern: "pull_h", pillar: "strength", primary: ["back", "lats"], secondary: ["biceps", "core"], equipment: ["barbell"], level: "intermediate", loadable: true, tempo: "1-1-2-0", ratio: 0.6,
+    cues: ["Hinge to ~45°, bar hangs under the chest.", "Pull to the lower ribs, elbows past the torso.", "Pause, then lower slow."],
+    faults: ["Torso heaving up on every rep.", "Pulling to the neck."], swaps: ["dumbbell-row", "cable-row", "chest-supported-row"], painFlags: ["back"] }),
+  E({ slug: "dumbbell-row", name: "Dumbbell row", pattern: "pull_h", pillar: "strength", primary: ["back", "lats"], secondary: ["biceps"], equipment: ["dumbbell", "bench"], level: "new", unilateral: true, loadable: true, tempo: "1-1-2-0", ratio: 0.3,
+    cues: ["Elbow travels to the hip, not out to the side.", "Squeeze the shoulder blade at the top."], faults: ["Rotating the torso."], swaps: ["barbell-row", "cable-row", "chest-supported-row"] }),
+  E({ slug: "chest-supported-row", name: "Chest-supported row", pattern: "pull_h", pillar: "strength", primary: ["back"], secondary: ["biceps"], equipment: ["dumbbell", "bench", "machine"], level: "new", loadable: true, ratio: 0.28,
+    cues: ["Chest on the pad; pull the elbows back and down."], faults: ["Shrugging."], swaps: ["dumbbell-row", "cable-row"], painFlags: ["back"] }),
+  E({ slug: "cable-row", name: "Seated cable row", pattern: "pull_h", pillar: "strength", primary: ["back", "lats"], secondary: ["biceps"], equipment: ["cable", "machine"], level: "new", loadable: true, ratio: 0.55,
+    cues: ["Tall torso, handle to the belly."], faults: ["Rocking."], swaps: ["dumbbell-row", "barbell-row"] }),
+  E({ slug: "inverted-row", name: "Inverted row", pattern: "pull_h", pillar: "strength", primary: ["back"], secondary: ["biceps", "core"], equipment: ["pullup_bar", "bodyweight"], level: "new", loadable: false,
+    cues: ["Body straight, chest to the bar."], faults: ["Hips sagging."], swaps: ["dumbbell-row", "band-row"] }),
+  E({ slug: "band-row", name: "Band row", pattern: "pull_h", pillar: "strength", primary: ["back"], secondary: ["biceps"], equipment: ["band"], level: "new", loadable: false,
+    cues: ["Anchor at chest height, pull elbows past the ribs."], faults: ["Shrugging."], swaps: ["inverted-row", "dumbbell-row"] }),
+  E({ slug: "face-pull", name: "Face pull", pattern: "pull_h", pillar: "strength", primary: ["shoulders", "back"], secondary: [], equipment: ["cable", "band"], level: "new", loadable: true, ratio: 0.12,
+    cues: ["Pull to the forehead, thumbs back.", "External rotation at the end."], faults: ["Using the arms only."], swaps: ["band-pull-apart"] }),
+  E({ slug: "band-pull-apart", name: "Band pull-apart", pattern: "pull_h", pillar: "mobility", primary: ["shoulders", "back"], secondary: [], equipment: ["band"], level: "new", loadable: false,
+    cues: ["Straight arms, squeeze the shoulder blades."], faults: ["Shrugging."], swaps: ["face-pull"] }),
+
+  /* ── Vertical pull ─────────────────────────────────────── */
+  E({ slug: "pull-up", name: "Pull-up", pattern: "pull_v", pillar: "strength", primary: ["lats", "back"], secondary: ["biceps", "core"], equipment: ["pullup_bar"], level: "intermediate", loadable: false,
+    cues: ["Start from a dead hang, shoulders pulled down first.", "Chin over the bar, chest to the bar if you can.", "Lower under control."],
+    faults: ["Kipping.", "Half reps at the top."], swaps: ["lat-pulldown", "band-assisted-pull-up", "inverted-row"], painFlags: ["shoulder", "elbow"] }),
+  E({ slug: "band-assisted-pull-up", name: "Band-assisted pull-up", pattern: "pull_v", pillar: "strength", primary: ["lats"], secondary: ["biceps"], equipment: ["pullup_bar", "band"], level: "new", loadable: false,
+    cues: ["Band under the feet; same technique as a strict pull-up."], faults: ["Bouncing off the band."], swaps: ["lat-pulldown", "pull-up"] }),
+  E({ slug: "lat-pulldown", name: "Lat pulldown", pattern: "pull_v", pillar: "strength", primary: ["lats"], secondary: ["biceps"], equipment: ["cable", "machine"], level: "new", loadable: true, ratio: 0.55,
+    cues: ["Lean back slightly, pull to the upper chest."], faults: ["Pulling behind the neck."], swaps: ["pull-up", "band-assisted-pull-up"] }),
+  E({ slug: "chin-up", name: "Chin-up", pattern: "pull_v", pillar: "strength", primary: ["lats", "biceps"], secondary: ["back"], equipment: ["pullup_bar"], level: "intermediate", loadable: false,
+    cues: ["Palms toward you; drive the elbows to the ribs."], faults: ["Kipping."], swaps: ["pull-up", "lat-pulldown"] }),
+
+  /* ── Arms ──────────────────────────────────────────────── */
+  E({ slug: "dumbbell-curl", name: "Dumbbell curl", pattern: "pull_h", pillar: "strength", primary: ["biceps"], secondary: ["forearms"], equipment: ["dumbbell"], level: "new", loadable: true, tempo: "2-0-2-0", ratio: 0.12,
+    cues: ["Elbows pinned, rotate the palm up on the way."], faults: ["Swinging."], swaps: ["cable-curl"] }),
+  E({ slug: "cable-curl", name: "Cable curl", pattern: "pull_h", pillar: "strength", primary: ["biceps"], secondary: [], equipment: ["cable"], level: "new", loadable: true, ratio: 0.2,
+    cues: ["Constant tension; don't rest at the bottom."], faults: ["Leaning back."], swaps: ["dumbbell-curl"] }),
+  E({ slug: "triceps-pushdown", name: "Triceps pushdown", pattern: "push_h", pillar: "strength", primary: ["triceps"], secondary: [], equipment: ["cable"], level: "new", loadable: true, ratio: 0.25,
+    cues: ["Elbows stay by the ribs; full extension."], faults: ["Elbows drifting forward."], swaps: ["skull-crusher", "dip"] }),
+  E({ slug: "skull-crusher", name: "Skull crusher", pattern: "push_h", pillar: "strength", primary: ["triceps"], secondary: [], equipment: ["dumbbell", "barbell", "bench"], level: "new", loadable: true, ratio: 0.2,
+    cues: ["Lower behind the head, elbows pointing to the ceiling."], faults: ["Flaring."], swaps: ["triceps-pushdown"], painFlags: ["elbow"] }),
+
+  /* ── Core / carry ─────────────────────────────────────── */
+  E({ slug: "plank", name: "Plank", pattern: "core", pillar: "strength", primary: ["core"], secondary: ["shoulders"], equipment: ["bodyweight"], level: "new", loadable: false, timed: true,
+    cues: ["Squeeze glutes, tuck the ribs, push the floor away.", "Quality over duration: 30 hard seconds beat 3 lazy minutes."], faults: ["Hips sagging or piking."], swaps: ["dead-bug", "side-plank"] }),
+  E({ slug: "side-plank", name: "Side plank", pattern: "core", pillar: "strength", primary: ["core", "hips"], secondary: [], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false, timed: true,
+    cues: ["Elbow under the shoulder, hips stacked and lifted."], faults: ["Hips dropping."], swaps: ["plank", "pallof-press"] }),
+  E({ slug: "dead-bug", name: "Dead bug", pattern: "core", pillar: "strength", primary: ["core"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false,
+    cues: ["Lower back pressed into the floor the whole time.", "Opposite arm and leg, slow."], faults: ["Back arching."], swaps: ["plank", "pallof-press"] }),
+  E({ slug: "pallof-press", name: "Pallof press", pattern: "core", pillar: "strength", primary: ["core"], secondary: [], equipment: ["cable", "band"], level: "new", unilateral: true, loadable: true, ratio: 0.1,
+    cues: ["Press out, resist the rotation, hold two seconds."], faults: ["Twisting toward the anchor."], swaps: ["side-plank", "dead-bug"] }),
+  E({ slug: "hanging-knee-raise", name: "Hanging knee raise", pattern: "core", pillar: "strength", primary: ["core"], secondary: ["forearms"], equipment: ["pullup_bar"], level: "intermediate", loadable: false,
+    cues: ["Tuck the pelvis first, then lift the knees."], faults: ["Swinging."], swaps: ["dead-bug"] }),
+  E({ slug: "farmers-carry", name: "Farmer's carry", pattern: "carry", pillar: "strength", primary: ["forearms", "core", "traps"], secondary: ["full_body"], equipment: ["dumbbell", "kettlebell"], level: "new", loadable: true, timed: true, ratio: 0.35,
+    cues: ["Tall, shoulders down, walk like nothing's in your hands."], faults: ["Leaning to one side."], swaps: ["suitcase-carry"] }),
+  E({ slug: "suitcase-carry", name: "Suitcase carry", pattern: "carry", pillar: "strength", primary: ["core", "forearms"], secondary: [], equipment: ["dumbbell", "kettlebell"], level: "new", unilateral: true, loadable: true, timed: true, ratio: 0.25,
+    cues: ["One side loaded; don't lean away."], faults: ["Side-bending."], swaps: ["farmers-carry"] }),
+
+  /* ── Power / conditioning ─────────────────────────────── */
+  E({ slug: "box-jump", name: "Box jump", pattern: "power", pillar: "strength", primary: ["quads", "glutes"], secondary: ["calves"], equipment: ["bodyweight"], level: "intermediate", loadable: false,
+    cues: ["Land soft, full foot on the box, stand tall.", "Step down, don't jump down."], faults: ["Landing in a deep squat."], swaps: ["kettlebell-swing", "broad-jump"], painFlags: ["knee", "ankle"] }),
+  E({ slug: "broad-jump", name: "Broad jump", pattern: "power", pillar: "strength", primary: ["glutes", "quads"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false,
+    cues: ["Arm swing, land quiet."], faults: ["Stiff landing."], swaps: ["box-jump"] }),
+  E({ slug: "burpee", name: "Burpee", pattern: "cardio", pillar: "endurance", primary: ["full_body"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false,
+    cues: ["Steady rhythm beats sprinting the first ten."], faults: ["Sagging in the push-up."], swaps: ["mountain-climber"] }),
+  E({ slug: "mountain-climber", name: "Mountain climber", pattern: "cardio", pillar: "endurance", primary: ["core", "cardio"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false, timed: true,
+    cues: ["Hips level, knees drive under the chest."], faults: ["Hips piking."], swaps: ["burpee"] }),
+
+  /* ── Cardio modalities ─────────────────────────────────── */
+  E({ slug: "run", name: "Run", pattern: "cardio", pillar: "endurance", primary: ["cardio"], secondary: ["calves", "quads"], equipment: ["outdoor", "treadmill"], level: "new", loadable: false, timed: true,
+    cues: ["Zone 2 = you can speak full sentences.", "Cadence around 170–180 steps per minute."], faults: ["Every run at the same medium-hard pace."], swaps: ["bike", "row", "brisk-walk"], painFlags: ["knee", "ankle"] }),
+  E({ slug: "bike", name: "Bike", pattern: "cardio", pillar: "endurance", primary: ["cardio", "quads"], secondary: [], equipment: ["bike", "outdoor"], level: "new", loadable: false, timed: true,
+    cues: ["Cadence 85–95 rpm for endurance work."], faults: ["Grinding a huge gear."], swaps: ["run", "row"] }),
+  E({ slug: "row", name: "Row", pattern: "cardio", pillar: "endurance", primary: ["cardio", "back"], secondary: ["quads", "core"], equipment: ["rower"], level: "new", loadable: false, timed: true,
+    cues: ["Legs, then back, then arms. Reverse on the way in.", "Damper 4–6, not 10."], faults: ["Arms pulling early."], swaps: ["bike", "run"] }),
+  E({ slug: "brisk-walk", name: "Brisk walk / ruck", pattern: "cardio", pillar: "endurance", primary: ["cardio"], secondary: [], equipment: ["outdoor", "treadmill"], level: "new", loadable: false, timed: true,
+    cues: ["Fast enough that talking takes effort."], faults: ["Strolling."], swaps: ["run", "bike"] }),
+  E({ slug: "stair-sprints", name: "Stair sprints", pattern: "cardio", pillar: "endurance", primary: ["cardio", "quads"], secondary: ["calves"], equipment: ["outdoor"], level: "intermediate", loadable: false, timed: true,
+    cues: ["Drive the knees, walk down for recovery."], faults: ["Sprinting the recovery."], swaps: ["run", "bike"], painFlags: ["knee"] }),
+
+  /* ── Mobility ──────────────────────────────────────────── */
+  E({ slug: "90-90-hip-switch", name: "90/90 hip switch", pattern: "mobility", pillar: "mobility", primary: ["hips"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false, timed: true,
+    cues: ["Both knees at 90°, rotate to the other side without using the hands.", "Slow; breathe out into the hard bit."], faults: ["Leaning back to cheat the rotation."], swaps: ["pigeon-stretch", "deep-squat-hold"] }),
+  E({ slug: "pigeon-stretch", name: "Pigeon", pattern: "mobility", pillar: "mobility", primary: ["hips", "glutes"], secondary: [], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false, timed: true,
+    cues: ["Front shin as parallel to the mat as the hip allows.", "Square the hips, then fold."], faults: ["Front knee pain: bring the foot closer."], swaps: ["90-90-hip-switch"], painFlags: ["knee"] }),
+  E({ slug: "couch-stretch", name: "Couch stretch", pattern: "mobility", pillar: "mobility", primary: ["hips", "quads"], secondary: [], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false, timed: true,
+    cues: ["Back knee in the corner, squeeze that glute, stay tall."], faults: ["Arching the lower back."], swaps: ["pigeon-stretch"], painFlags: ["knee"] }),
+  E({ slug: "deep-squat-hold", name: "Deep squat hold", pattern: "mobility", pillar: "mobility", primary: ["hips", "ankles"], secondary: ["spine"], equipment: ["bodyweight"], level: "new", loadable: false, timed: true,
+    cues: ["Hold something if needed; elbows push the knees out.", "Heels down. If they lift, raise them on a plate."], faults: ["Rounding hard."], swaps: ["90-90-hip-switch", "ankle-rock"] }),
+  E({ slug: "ankle-rock", name: "Ankle rock", pattern: "mobility", pillar: "mobility", primary: ["ankles"], secondary: ["calves"], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false, timed: true,
+    cues: ["Knee over the pinky toe, heel stays down."], faults: ["Heel lifting."], swaps: ["deep-squat-hold"] }),
+  E({ slug: "thoracic-rotation", name: "Thoracic rotation", pattern: "mobility", pillar: "mobility", primary: ["spine", "shoulders"], secondary: [], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false,
+    cues: ["On all fours, hand behind the head, rotate the elbow to the ceiling.", "Hips stay still."], faults: ["Rotating from the lower back."], swaps: ["cat-cow"] }),
+  E({ slug: "cat-cow", name: "Cat–cow", pattern: "mobility", pillar: "mobility", primary: ["spine"], secondary: [], equipment: ["bodyweight"], level: "new", loadable: false,
+    cues: ["Segment by segment; breathe with it."], faults: ["Rushing."], swaps: ["thoracic-rotation"] }),
+  E({ slug: "shoulder-cars", name: "Shoulder CARs", pattern: "mobility", pillar: "mobility", primary: ["shoulders"], secondary: [], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false,
+    cues: ["Slow controlled circle, the rest of the body locked."], faults: ["Shrugging through the top."], swaps: ["band-pull-apart"] }),
+  E({ slug: "hamstring-floss", name: "Hamstring floss", pattern: "mobility", pillar: "mobility", primary: ["hamstrings"], secondary: [], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false,
+    cues: ["Straighten the knee, flex the foot, breathe."], faults: ["Rounding."], swaps: ["pigeon-stretch"] }),
+  E({ slug: "world-greatest-stretch", name: "World's greatest stretch", pattern: "mobility", pillar: "mobility", primary: ["hips", "spine", "shoulders"], secondary: [], equipment: ["bodyweight"], level: "new", unilateral: true, loadable: false,
+    cues: ["Lunge, elbow to instep, rotate to the ceiling."], faults: ["Back knee collapsing."], swaps: ["90-90-hip-switch"] }),
+];
+
+export const EXERCISE_MAP: Record<string, Exercise> = Object.fromEntries(EXERCISES.map((e) => [e.slug, e]));
+export const getExercise = (slug: string) => EXERCISE_MAP[slug];
+
+export function searchExercises(q: string, filters: { pattern?: string; equipment?: string; pillar?: string } = {}) {
+  const needle = q.trim().toLowerCase();
+  return EXERCISES.filter((e) => {
+    if (filters.pattern && e.pattern !== filters.pattern) return false;
+    if (filters.pillar && e.pillar !== filters.pillar) return false;
+    if (filters.equipment && !e.equipment.includes(filters.equipment as never)) return false;
+    if (!needle) return true;
+    return e.name.toLowerCase().includes(needle) || e.primary.some((m) => m.includes(needle)) || e.pattern.includes(needle);
+  });
+}

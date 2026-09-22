@@ -1,0 +1,150 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db, getProfile, getStats, resetAll, todayISO } from "@/lib/db";
+import { generatePlan, goalLabel } from "@/lib/engine/plan";
+import { PAIN_LABEL } from "@/lib/engine/readiness";
+import { levelFromXp, rankFor } from "@/lib/gamification";
+import { supabase, isConfigured } from "@/lib/supabase/client";
+import { syncNow } from "@/lib/sync";
+import { IMG, sessionImage } from "@/lib/data/images";
+import { fmtHeight, kgToLb, lbToKg } from "@/lib/units";
+import { Screen, Hero, Section, Seg, MultiSeg, Toggle, Toast, Photo, ScreenSkeleton } from "@/components/ui";
+import { Page, Stagger, Item, Press, Ring } from "@/components/motion";
+import { ensureNotificationPermission } from "@/lib/notify";
+import type { Goal, PainArea, Profile } from "@/lib/types";
+
+const GOALS: { v: Goal; name: string; image: string }[] = [
+  { v: "strength", name: "Get strong", image: sessionImage("lower", 400, 400) },
+  { v: "build", name: "Build muscle", image: sessionImage("upper", 400, 400) },
+  { v: "recomp", name: "Recomp", image: IMG.weight },
+  { v: "cut", name: "Lose fat", image: sessionImage("cardio_intervals", 400, 400) },
+  { v: "endurance", name: "Endurance", image: sessionImage("cardio_z2", 400, 400) },
+  { v: "perform", name: "Perform", image: IMG.city },
+];
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const profile = useLiveQuery(() => getProfile(), []);
+  const stats = useLiveQuery(() => getStats(), []);
+  const [email, setEmail] = useState("");
+  const [user, setUser] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const say = (t: string) => { setToast(t); setTimeout(() => setToast(null), 3500); };
+
+  useEffect(() => {
+    if (!isConfigured || !supabase) return;
+    supabase.auth.getUser().then(({ data }) => setUser(data.user?.email ?? null));
+  }, []);
+
+  if (!profile || !stats) return <ScreenSkeleton />;
+  const lvl = levelFromXp(stats.xp);
+  const imperial = profile.units === "imperial";
+  const update = (patch: Partial<Profile>) => db.profile.update(profile.id, { ...patch, dirty: 1, updatedAt: new Date().toISOString() });
+
+  /** Anything that changes the prescription rebuilds the remaining weeks. Done sessions stay. */
+  async function rebuild(patch: Partial<Profile>, why: string) {
+    await update(patch);
+    const { plan, sessions } = generatePlan({ ...profile!, ...patch }, todayISO());
+    await db.transaction("rw", db.plans, db.sessions, async () => {
+      await db.sessions.where("status").equals("planned").delete();
+      await db.plans.put({ ...plan, dirty: 1 });
+      await db.sessions.bulkPut(sessions.map((s) => ({ ...s, dirty: 1 })));
+    });
+    say(`Block rebuilt · ${why}.`);
+  }
+  async function signIn() {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + "/settings" } });
+    say(error ? error.message : "Magic link sent. Check your email.");
+  }
+
+  return (
+    <Page>
+      <Screen>
+        <Hero image={IMG.dark} height="h-[280px]" back="/progress" eyebrow={`Member since ${profile.createdAt.slice(0, 10)} · ${rankFor(lvl.level)}`} title={<>{profile.name}<br /><em>settings.</em></>}
+          right={<span className="chip chip--live backdrop-blur-md">FORGE v0.6</span>} />
+
+        <Stagger className="lg:grid lg:grid-cols-2 lg:gap-x-10 lg:items-start">
+          <div className="min-w-0">
+            <Item>
+              <Section title="Profile">
+                <div className="card p-4 grid gap-4">
+                  <div className="flex items-center gap-4">
+                    <Ring value={lvl.into / lvl.need} size={56} stroke={5}><span className="display text-lg tnum">{lvl.level}</span></Ring>
+                    <label className="field flex-1"><span className="meta">Name</span><input className="input" defaultValue={profile.name} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== profile.name) { update({ name: v }); say("Saved."); } }} /></label>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="field"><span className="meta">Weight ({imperial ? "lb" : "kg"})</span><input className="input tnum" inputMode="decimal" key={profile.units} defaultValue={imperial ? Math.round(kgToLb(profile.weightKg)) : Math.round(profile.weightKg * 10) / 10} onBlur={(e) => { const v = Number(e.target.value); if (v) update({ weightKg: imperial ? lbToKg(v) : v }); }} /></label>
+                    <label className="field"><span className="meta">Height</span><input className="input tnum" inputMode="decimal" key={`h-${profile.units}`} defaultValue={imperial ? Math.round(profile.heightCm / 2.54) : Math.round(profile.heightCm)} onBlur={(e) => { const v = Number(e.target.value); if (v) update({ heightCm: imperial ? v * 2.54 : v }); }} /></label>
+                    <label className="field"><span className="meta">Age</span><input className="input tnum" inputMode="numeric" defaultValue={profile.age} onBlur={(e) => update({ age: Number(e.target.value) || profile.age })} /></label>
+                  </div>
+                  <p className="text-xs text-smoke">{fmtHeight(profile.heightCm, profile.units)} · {imperial ? `${Math.round(kgToLb(profile.weightKg))} lb` : `${Math.round(profile.weightKg * 10) / 10} kg`} · calories and loads follow these.</p>
+                </div>
+              </Section>
+            </Item>
+
+            <Item>
+              <Section title="Training" aside={<span className="text-xs text-smoke">changes rebuild the remaining weeks</span>}>
+                <div className="card p-4 grid gap-5">
+                  <div className="field">
+                    <span className="meta">Goal · {goalLabel(profile.goal)}</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {GOALS.map((g) => (
+                        <button key={g.v} type="button" aria-pressed={profile.goal === g.v} onClick={() => profile.goal !== g.v && rebuild({ goal: g.v }, goalLabel(g.v))} className={`relative h-20 rounded-2xl overflow-hidden border text-left transition-colors ${profile.goal === g.v ? "border-volt" : "border-line"}`}>
+                          <Photo src={g.image} veil className="absolute inset-0" />
+                          <span className="on-photo absolute inset-x-0 bottom-0 p-2.5 text-xs font-medium leading-tight">{g.name}</span>
+                          {profile.goal === g.v && <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-volt" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="field"><span className="meta">Sessions / week</span><Seg value={profile.daysPerWeek} onChange={(d) => rebuild({ daysPerWeek: d }, `${d} days a week`)} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} /></div>
+                    <div className="field"><span className="meta">Minutes</span><Seg value={profile.sessionMinutes} onChange={(m) => rebuild({ sessionMinutes: m }, `${m}-minute sessions`)} options={[25, 40, 60, 75].map((m) => ({ v: m as Profile["sessionMinutes"], label: String(m) }))} /></div>
+                  </div>
+                  <div className="field"><span className="meta">Pain flags · clear when healed</span><MultiSeg value={profile.pain} onChange={(pain) => update({ pain })} options={(Object.keys(PAIN_LABEL) as PainArea[]).map((k) => ({ v: k, label: PAIN_LABEL[k] }))} /></div>
+                </div>
+              </Section>
+            </Item>
+          </div>
+
+          <div className="min-w-0">
+            <Item>
+              <Section title="Preferences">
+                <div className="card divide-y divide-line">
+                  <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Units</p><p className="text-xs text-smoke">Loads, distances and body weight.</p></div><Seg value={profile.units} onChange={(units) => update({ units })} options={[{ v: "metric", label: "kg · km" }, { v: "imperial", label: "lb · mi" }]} /></div>
+                  <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Meal nudges</p><p className="text-xs text-smoke">Timed around your session.</p></div><Toggle on={profile.notifications} label="Meal nudges" onChange={async (v) => { if (v) { const p = await ensureNotificationPermission(); if (p !== "granted") { say(p === "denied" ? "Notifications are blocked in your browser settings." : "Notifications aren’t supported here."); return; } } await update({ notifications: v }); say(v ? "Nudges on." : "Nudges off."); }} /></div>
+                  <div className="p-4 grid gap-3"><div><p className="text-sm font-medium">Timing</p><p className="text-xs text-smoke">Meals are placed around these.</p></div><div className="grid grid-cols-2 gap-3"><label className="field"><span className="meta">Training</span><input className="input" type="time" value={profile.trainTime} onChange={(e) => update({ trainTime: e.target.value })} /></label><label className="field"><span className="meta">Wake</span><input className="input" type="time" value={profile.wakeTime} onChange={(e) => update({ wakeTime: e.target.value })} /></label></div></div>
+                  <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Meals per day</p><p className="text-xs text-smoke">Tomorrow’s menu follows.</p></div><Seg value={profile.mealsPerDay} onChange={(m) => update({ mealsPerDay: m })} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
+                </div>
+              </Section>
+            </Item>
+
+            <Item>
+              <Section title="Account">
+                {!isConfigured ? (
+                  <div className="card p-4 grid gap-1"><p className="text-sm font-medium">On this device</p><p className="text-xs text-smoke">Your plan, sessions, routes and meals are stored locally and work offline. Accounts with backup and sync across devices are coming — nothing you log now will be lost.</p></div>
+                ) : user ? (
+                  <div className="card p-4 grid gap-3"><p className="text-sm">Signed in as <strong>{user}</strong></p><div className="flex gap-2"><Press><button type="button" className="pill pill--sm pill--bone" onClick={async () => say(await syncNow())}>Sync now</button></Press><button type="button" className="pill pill--sm" onClick={async () => { await supabase!.auth.signOut(); setUser(null); }}>Sign out</button></div></div>
+                ) : (
+                  <div className="card p-4 grid gap-3"><p className="text-sm">Sign in to back up and sync across devices. No password — a magic link.</p><input className="input" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /><Press className="justify-self-start"><button type="button" className="pill pill--sm pill--bone" onClick={signIn} disabled={!email.includes("@")}>Send magic link</button></Press></div>
+                )}
+              </Section>
+            </Item>
+
+            <Item>
+              <Section title="Danger zone">
+                <div className="card p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Reset this device</p><p className="text-xs text-smoke">Deletes profile, block, logs, routes and meals here. Cannot be undone.</p></div><button type="button" className="pill pill--danger pill--sm shrink-0" onClick={async () => { if (confirm("Delete everything on this device?")) { await resetAll(); router.replace("/onboarding"); } }}>Reset</button></div>
+              </Section>
+            </Item>
+            <Item><p className="text-xs text-smoke">FORGE v0.6 · free, worldwide · offline-first · {stats.xp.toLocaleString("en-US")} XP on this device</p></Item>
+          </div>
+        </Stagger>
+        <Toast text={toast} />
+      </Screen>
+    </Page>
+  );
+}

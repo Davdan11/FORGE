@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FORGE — The complete training app. Free.</title>
+<meta name="description" content="Strength, endurance, mobility, nutrition and recovery in one engine that adapts to your life every day. 1,200+ exercises in 3D, GPS routes, adaptive meal plans, level-up progression. Free, worldwide.">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>
+  document.documentElement.classList.add('js');
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      if (!window.gsap) {
+        document.documentElement.classList.remove('js');
+        var l = document.getElementById('loader'); if (l) l.remove();
+      }
+    }, 900);
+  });
+</script>
+<noscript><style>.js [data-line] > span,.js [data-fade],.js [data-clip] img,.js [data-words] .w{opacity:1!important;transform:none!important;clip-path:none!important}.loader{display:none!important}</style></noscript>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="loader" id="loader" aria-hidden="true">
+  <div class="loader__mark">
+    <span class="loader__word"><i>F</i><i>O</i><i>R</i><i>G</i><i>E</i></span>
+    <span class="loader__pct" id="loaderPct">00</span>
+  </div>
+</div>
+
+<div class="grain" aria-hidden="true"></div>
+<div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
+
+<!-- ─────────────────────────── NAV ─────────────────────────── -->
+<header class="nav" id="nav">
+  <a class="nav__brand" href="#main" aria-label="FORGE — home">FORGE</a>
+
+  <nav class="nav__links" id="navLinks" aria-label="Main navigation">
+    <a href="#pillars"><sup>01</sup>Pillars</a>
+    <a href="#engine"><sup>02</sup>Engine</a>
+    <a href="#inside"><sup>03</sup>Inside</a>
+    <a href="#free"><sup>04</sup>Free</a>
+  </nav>
+
+  <div class="nav__right">
+    <a class="pill pill--bone" href="#free" data-magnetic><span>Get the app</span></a>
+    <button class="nav__burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"><i></i><i></i></button>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ─────────────────────────── HERO ─────────────────────────── -->
+<section class="hero" id="hero">
+  <div class="hero__media" data-hero-media>
+    <img
+      src="https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=2000&q=80&auto=format&fit=crop"
+      srcset="https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=1000&q=75&auto=format&fit=crop 1000w,
+              https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=1600&q=78&auto=format&fit=crop 1600w,
+              https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=2400&q=80&auto=format&fit=crop 2400w"
+      sizes="100vw"
+      alt="Athlete setting up for a deadlift in a dark gym"
+      fetchpriority="high" decoding="async">
+    <div class="hero__veil"></div>
+  </div>
+
+  <div class="hero__top">
+    <p class="meta" data-fade>The complete training app<br>Free · Worldwide · iOS · Android · Web</p>
+    <p class="meta meta--live" data-fade><i class="live" aria-hidden="true"></i><span id="liveCount">31,284</span> athletes training now</p>
+  </div>
+
+  <h1 class="hero__title" aria-label="Build a body that holds.">
+    <span class="hero__line" data-line><span>Build a body</span></span>
+    <span class="hero__line hero__line--serif" data-line><span>that holds.</span></span>
+  </h1>
+
+  <div class="hero__foot">
+    <p class="hero__lede" data-fade>
+      Strength, endurance, mobility, nutrition and recovery — one engine that
+      reads your sleep, your day and your last set, and adapts before you train.
+      Free. Everywhere.
+    </p>
+    <div class="hero__cta" data-fade>
+      <a class="pill pill--volt" href="#free" data-magnetic><span>Get the app — free</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="link" href="#inside">See what's inside</a>
+    </div>
+  </div>
+
+  <a class="hero__scroll" href="#strip" aria-label="Scroll down"><span>Scroll</span><i></i></a>
+</section>
+
+<!-- ─────────────────────────── MARQUEE ─────────────────────────── -->
+<section class="strip" id="strip" aria-label="Pillars">
+  <div class="strip__track" data-marquee>
+    <span>Strength</span><img src="https://images.unsplash.com/photo-1521804906057-1df8fdb718b7?w=240&h=160&fit=crop&q=70&auto=format" alt="" loading="lazy">
+    <span>Endurance</span><img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=240&h=160&fit=crop&q=70&auto=format" alt="" loading="lazy">
+    <span>Mobility</span><img src="https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=240&h=160&fit=crop&q=70&auto=format" alt="" loading="lazy">
+    <span>Nutrition</span><img src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=240&h=160&fit=crop&q=70&auto=format" alt="" loading="lazy">
+    <span>Recovery</span><img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=240&h=160&fit=crop&q=70&auto=format" alt="" loading="lazy">
+  </div>
+</section>
+
+<!-- ─────────────────────────── MANIFESTO ─────────────────────────── -->
+<section class="manifesto">
+  <div class="wrap manifesto__grid">
+    <div class="manifesto__copy">
+      <p class="meta manifesto__label" data-fade>The problem</p>
+      <p class="manifesto__text" data-words>
+        A log. A map. A calorie counter. A workout generator. Five apps that never
+        talk to each other, and a plan that ignores how you actually slept.
+        We built the whole system — and made it free.
+      </p>
+      <ul class="manifesto__facts" data-fade>
+        <li><strong><span data-count="5">0</span></strong><span class="lbl">pillars, one engine</span></li>
+        <li><strong><span data-count="1200" data-suffix="+">0</span></strong><span class="lbl">exercises in 3D</span></li>
+        <li><strong>$0</strong><span class="lbl">forever</span></li>
+      </ul>
+    </div>
+
+    <div class="collage" aria-hidden="true">
+      <figure class="collage__a" data-clip data-parallax="-6">
+        <img src="https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?w=900&h=1100&fit=crop&q=78&auto=format" alt="" loading="lazy">
+      </figure>
+      <figure class="collage__b" data-clip data-parallax="8">
+        <img src="https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=700&h=520&fit=crop&q=78&auto=format" alt="" loading="lazy">
+        <figcaption class="collage__cap"><span class="meta">Week 06</span><span>Zone 2 · 42 min</span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────── PILLARS ─────────────────────────── -->
+<section class="pillars" id="pillars">
+  <div class="wrap">
+    <header class="sec-head">
+      <p class="meta" data-fade><sup>01</sup>The pillars</p>
+      <h2 class="h2" aria-label="Everything that makes a body complete.">
+        <span data-line><span>Everything that</span></span>
+        <span data-line><span>makes a body <em>complete.</em></span></span>
+      </h2>
+    </header>
+
+    <ul class="rows" id="rows">
+      <li class="row" data-img="https://images.unsplash.com/photo-1521804906057-1df8fdb718b7?w=720&h=520&fit=crop&q=75&auto=format">
+        <a class="row__link" href="#inside">
+          <span class="row__num">01</span>
+          <span class="row__name">Strength</span>
+          <span class="row__desc">RPE-driven progressive overload. Every set adjusts the next one.</span>
+          <span class="row__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </li>
+      <li class="row" data-img="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=720&h=520&fit=crop&q=75&auto=format">
+        <a class="row__link" href="#gps">
+          <span class="row__num">02</span>
+          <span class="row__name">Endurance</span>
+          <span class="row__desc">Zone 2, threshold, intervals — recorded on GPS, drawn on your map.</span>
+          <span class="row__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </li>
+      <li class="row" data-img="https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=720&h=520&fit=crop&q=75&auto=format">
+        <a class="row__link" href="#inside">
+          <span class="row__num">03</span>
+          <span class="row__name">Mobility</span>
+          <span class="row__desc">Hips, shoulders, ankles. Twelve minutes a day, placed where your plan needs it.</span>
+          <span class="row__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </li>
+      <li class="row" data-img="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=720&h=520&fit=crop&q=75&auto=format">
+        <a class="row__link" href="#nutrition">
+          <span class="row__num">04</span>
+          <span class="row__name">Nutrition</span>
+          <span class="row__desc">Meals built for your goal, never the same day twice, delivered when you need them.</span>
+          <span class="row__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </li>
+      <li class="row" data-img="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=720&h=520&fit=crop&q=75&auto=format">
+        <a class="row__link" href="#engine">
+          <span class="row__num">05</span>
+          <span class="row__name">Recovery</span>
+          <span class="row__desc">Sleep, HRV and readiness don't just get displayed. They change tomorrow's session.</span>
+          <span class="row__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+        </a>
+      </li>
+    </ul>
+    <div class="rows__ghost" id="rowsGhost" aria-hidden="true"><img alt="" id="rowsGhostImg"></div>
+  </div>
+</section>
+
+<!-- ─────────────────────────── ENGINE ─────────────────────────── -->
+<section class="method" id="engine">
+  <div class="wrap method__grid">
+    <div class="method__sticky">
+      <figure class="method__media" data-method-media>
+        <img class="is-on" src="https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=1100&h=1400&fit=crop&q=78&auto=format" alt="Athlete on a cable machine under low light" loading="lazy" data-idx="0">
+        <img src="https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=1100&h=1400&fit=crop&q=78&auto=format" alt="Athlete facing the barbell, ready to lift" loading="lazy" data-idx="1">
+        <img src="https://images.unsplash.com/photo-1603287681836-b174ce5074c2?w=1100&h=1400&fit=crop&q=78&auto=format" alt="Athlete's back under high-contrast light" loading="lazy" data-idx="2">
+        <figcaption class="method__count"><span id="methodIdx">01</span><i></i>03</figcaption>
+
+        <div class="chips" data-chips="0">
+          <span class="chip"><span class="meta">Movement screen</span><strong>Hip mobility · 62 / 100</strong></span>
+          <span class="chip chip--b"><span class="meta">Baseline</span><strong>Deadlift e1RM · 140 kg</strong></span>
+        </div>
+        <div class="chips" data-chips="1">
+          <span class="chip"><span class="meta">Block 1 · Week 01</span><strong>Mon — Lower · 4 lifts · 48 min</strong></span>
+          <span class="chip chip--b"><span class="meta">Season goal</span><strong>Hyrox · 26 weeks out</strong></span>
+        </div>
+        <div class="chips" data-chips="2">
+          <span class="chip"><span class="meta">Readiness · today</span><strong>Sleep 5h50 · HRV −18%</strong></span>
+          <span class="chip chip--b chip--up"><span class="meta">Engine</span><strong>Volume −20% · squat → deload</strong></span>
+        </div>
+      </figure>
+      <figure class="method__inset" data-clip aria-hidden="true">
+        <img src="https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&h=440&fit=crop&q=75&auto=format" alt="" loading="lazy">
+      </figure>
+    </div>
+
+    <div class="method__steps">
+      <header class="sec-head sec-head--tight">
+        <p class="meta" data-fade><sup>02</sup>The engine</p>
+        <h2 class="h2" aria-label="Measure. Prescribe. Adjust.">
+          <span data-line><span>Measure.</span></span>
+          <span data-line><span>Prescribe.</span></span>
+          <span data-line><span><em>Adjust.</em></span></span>
+        </h2>
+      </header>
+
+      <ol class="steps">
+        <li class="step" data-step="0">
+          <span class="step__n">01</span>
+          <h3>Eight-minute assessment</h3>
+          <p>A movement screen, baseline lifts, a cardio test, your schedule, your equipment and the real goal. No camera tricks — simple tests you can do anywhere.</p>
+          <p class="meta">Day 1 — in the app, any time zone</p>
+        </li>
+        <li class="step" data-step="1">
+          <span class="step__n">02</span>
+          <h3>A season, not a program</h3>
+          <p>A twelve-week block inside a full year: strength, cardio, mobility, meals and deloads planned backwards from your date — a race, a competition, a season, a wedding.</p>
+          <p class="meta">Day 1 — periodised over 12 months</p>
+        </li>
+        <li class="step" data-step="2">
+          <span class="step__n">03</span>
+          <h3>Adjusts before you train</h3>
+          <p>Bad night, high stress, sore back, 25 minutes instead of 60. The engine rewrites today's session before you walk in — and tells you why in one line.</p>
+          <p class="meta">Every day — sleep, HRV, RPE, life</p>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────── INSIDE ─────────────────────────── -->
+<section class="inside" id="inside">
+  <div class="wrap">
+    <header class="sec-head sec-head--row">
+      <div>
+        <p class="meta" data-fade><sup>03</sup>Inside</p>
+        <h2 class="h2" aria-label="Everything. One app.">
+          <span data-line><span>Everything.</span></span>
+          <span data-line><span><em>One app.</em></span></span>
+        </h2>
+      </div>
+      <p class="sec-head__aside" data-fade>The library, the log, the map, the kitchen and the game — built as one system, not five tabs.</p>
+    </header>
+  </div>
+
+  <!-- F1 · Library / 3D -->
+  <article class="feat" id="library">
+    <div class="wrap feat__grid">
+      <div class="feat__copy">
+        <p class="meta" data-fade>01 · Exercise library</p>
+        <h3 class="h3" aria-label="1,200 exercises. Every angle."><span data-line><span>1,200 exercises.</span></span><span data-line><span><em>Every angle.</em></span></span></h3>
+        <p data-fade>Each movement in 3D you can rotate, slow-motion video, coaching cues, tempo, primary and secondary muscles, and the three faults most people make — so technique is taught, not guessed.</p>
+        <ul class="feat__list" data-fade>
+          <li>360° 3D simulation, any angle, any speed</li>
+          <li>Cues, tempo and common faults on every lift</li>
+          <li>Swap any exercise by equipment, pain or preference</li>
+        </ul>
+      </div>
+      <div class="feat__visual">
+        <div class="ui ui--lib" data-fade>
+          <div class="ui__img" data-clip>
+            <img src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=1100&h=900&fit=crop&q=78&auto=format" alt="Back squat, viewed from behind" loading="lazy">
+            <span class="ui__badge">3D · 360°</span>
+            <div class="dial" aria-hidden="true">
+              <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52"/><circle class="dial__dot" cx="60" cy="8" r="4"/></svg>
+              <span id="dialDeg">0°</span>
+            </div>
+          </div>
+          <div class="ui__bar">
+            <div><span class="meta">Back squat</span><strong>High bar · Tempo 3-1-1-0</strong></div>
+            <div class="ui__tags"><span>Quads</span><span>Glutes</span><span>Spinal erectors</span></div>
+          </div>
+          <div class="ui__angles" aria-hidden="true"><span class="is-on">Front</span><span>Side</span><span>¾</span><span>Top</span></div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- F2 · Log + auto-regulation -->
+  <article class="feat feat--flip">
+    <div class="wrap feat__grid">
+      <div class="feat__copy">
+        <p class="meta" data-fade>02 · Session log</p>
+        <h3 class="h3" aria-label="Log a set. The next one changes."><span data-line><span>Log a set.</span></span><span data-line><span>The next <em>one changes.</em></span></span></h3>
+        <p data-fade>Rate the set, and the engine re-prescribes the next one in real time — heavier, lighter, one rep fewer, a longer rest. Every prescription carries a one-line “why”, so in six months you understand your own training.</p>
+        <ul class="feat__list" data-fade>
+          <li>RPE-based auto-regulation inside the session</li>
+          <li>Rest timer, supersets, plate calculator, kg / lb</li>
+          <li>“Why this?” on every exercise, set and change</li>
+        </ul>
+      </div>
+      <div class="feat__visual">
+        <div class="ui ui--log" data-fade>
+          <header class="ui__head"><div><span class="meta">Today · Lower</span><strong>Back squat</strong></div><span class="ui__pill">Set 3 / 5</span></header>
+          <ul class="sets">
+            <li><span>1</span><span>120 kg × 5</span><span class="rpe">RPE 7</span><i class="ok"></i></li>
+            <li><span>2</span><span>125 kg × 5</span><span class="rpe">RPE 8</span><i class="ok"></i></li>
+            <li class="is-now"><span>3</span><span>122.5 kg × 5</span><span class="rpe rpe--volt">adjusted</span><i></i></li>
+            <li class="is-dim"><span>4</span><span>— kg × 5</span><span class="rpe">—</span><i></i></li>
+          </ul>
+          <div class="why"><span class="meta">Why this?</span><p>Set 2 came in at RPE 8 instead of 7. We took 2.5 kg off so you finish the block at the intended intensity, not fried.</p></div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- F3 · Cardio + GPS -->
+  <article class="feat feat--map" id="gps">
+    <div class="wrap feat__grid">
+      <div class="feat__copy">
+        <p class="meta" data-fade>03 · Cardio &amp; GPS</p>
+        <h3 class="h3" aria-label="Every route, drawn better."><span data-line><span>Every route,</span></span><span data-line><span><em>drawn better.</em></span></span></h3>
+        <p data-fade>Run, ride, row, ruck, ski. Record on GPS or sync from your watch. Your route is drawn with pace baked into the line, splits and elevation under it, and — unlike a standalone tracker — it feeds straight back into tomorrow's plan.</p>
+        <ul class="feat__list" data-fade>
+          <li>Pace-coloured routes, splits, elevation, heart-rate zones</li>
+          <li>Apple Watch, Garmin, Whoop, Oura, Polar, Coros sync</li>
+          <li>Segments and city leaderboards, worldwide</li>
+        </ul>
+      </div>
+      <div class="feat__visual">
+        <div class="ui ui--map" data-fade>
+          <svg class="map" viewBox="0 0 800 600" aria-hidden="true">
+            <defs>
+              <linearGradient id="pace" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#ECE7DF"/><stop offset=".55" stop-color="#D4FF3A"/><stop offset="1" stop-color="#ECE7DF"/>
+              </linearGradient>
+            </defs>
+            <g class="map__contours">
+              <path d="M-20 120C150 80 250 200 420 150S700 60 820 140"/>
+              <path d="M-20 200C120 170 260 290 440 230S720 150 820 220"/>
+              <path d="M-20 300C160 250 240 380 460 320S680 250 820 330"/>
+              <path d="M-20 400C140 350 300 480 470 410S720 360 820 440"/>
+              <path d="M-20 500C180 460 280 560 480 510S700 470 820 540"/>
+              <path d="M120 -20C90 150 210 230 180 380S260 560 240 620"/>
+              <path d="M520 -20C560 130 460 260 540 400S600 560 580 620"/>
+            </g>
+            <g class="map__grid"><path d="M0 150H800M0 300H800M0 450H800M200 0V600M400 0V600M600 0V600"/></g>
+            <path class="route route--shadow" d="M120 470C180 420 160 340 240 300S380 260 420 200S520 120 600 160S700 260 640 340S520 420 560 480"/>
+            <path class="route" id="route" d="M120 470C180 420 160 340 240 300S380 260 420 200S520 120 600 160S700 260 640 340S520 420 560 480"/>
+            <circle class="route__start" cx="120" cy="470" r="6"/>
+            <circle class="route__dot" id="routeDot" cx="120" cy="470" r="7"/>
+            <g class="split" transform="translate(240 300)"><circle r="3.5"/><text x="12" y="4">1 km · 4:52</text></g>
+            <g class="split" transform="translate(420 200)"><circle r="3.5"/><text x="12" y="4">2 km · 4:41</text></g>
+            <g class="split" transform="translate(600 160)"><circle r="3.5"/><text x="12" y="4">3 km · 4:38</text></g>
+            <g class="split" transform="translate(640 340)"><circle r="3.5"/><text x="12" y="4">4 km · 4:55</text></g>
+          </svg>
+          <div class="ui__bar ui__bar--map">
+            <div><span class="meta">Tempo run · Montréal</span><strong>5.2 km · 24:31 · 4:43 /km</strong></div>
+            <svg class="elev" viewBox="0 0 200 40" aria-hidden="true"><path d="M0 30L20 26 40 28 60 18 80 14 100 20 120 10 140 16 160 22 180 24 200 28V40H0Z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- F4 · Nutrition -->
+  <article class="feat feat--flip" id="nutrition">
+    <div class="wrap feat__grid">
+      <div class="feat__copy">
+        <p class="meta" data-fade>04 · Nutrition engine</p>
+        <h3 class="h3" aria-label="Meals that match the goal. Never the same day twice."><span data-line><span>Meals that</span></span><span data-line><span>match <em>the goal.</em></span></span></h3>
+        <p data-fade>Calories and macros are computed from your goal, your training day and your body — then turned into real meals you'll actually cook, with a grocery list. No repeats, no diet, and a nudge at the right moment: eat this, now, because of that session.</p>
+        <ul class="feat__list" data-fade>
+          <li>Cut, recomp, build, perform — adjusted per training day</li>
+          <li>Never the same meal two days in a row; swap anything</li>
+          <li>Timed notifications tied to your session, not a clock</li>
+        </ul>
+      </div>
+      <div class="feat__visual">
+        <div class="ui ui--food" data-fade>
+          <div class="ui__img ui__img--short" data-clip>
+            <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1100&h=700&fit=crop&q=78&auto=format" alt="A bowl with greens, grains and vegetables" loading="lazy">
+            <span class="ui__badge">Build · 2,640 kcal</span>
+          </div>
+          <ul class="meals">
+            <li><span class="meta">07:30</span><strong>Oats, whey, blueberries</strong><span>612 kcal · 38 P</span></li>
+            <li class="is-now"><span class="meta">12:45</span><strong>Chicken, rice, roasted peppers</strong><span>760 kcal · 52 P</span></li>
+            <li><span class="meta">16:00</span><strong>Pre-session: banana, yogurt</strong><span>290 kcal · 18 P</span></li>
+            <li><span class="meta">19:30</span><strong>Salmon, potatoes, greens</strong><span>810 kcal · 48 P</span></li>
+          </ul>
+          <div class="toasts" aria-hidden="true">
+            <div class="toast is-on"><span class="meta">Now · Nutrition</span><p>Lower session in 90 min — eat lunch now, add 40 g carbs.</p></div>
+            <div class="toast"><span class="meta">Post-session</span><p>Great set. 40 g protein within the hour — the yogurt bowl is ready.</p></div>
+            <div class="toast"><span class="meta">Tomorrow</span><p>Rest day: calories drop to 2,280. Groceries updated.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- F5 · Level up -->
+  <article class="feat" id="game">
+    <div class="wrap feat__grid">
+      <div class="feat__copy">
+        <p class="meta" data-fade>05 · Progression</p>
+        <h3 class="h3" aria-label="Train like it's a game. Because it is."><span data-line><span>Train like</span></span><span data-line><span>it's <em>a game.</em></span></span></h3>
+        <p data-fade>Every session, every kilometre and every night of good sleep earns XP. You level up, unlock ranks, collect the badges that actually mean something — a first pull-up, a 2× bodyweight deadlift, 100 consecutive weeks — and take on challenges with a crew or the whole city.</p>
+        <ul class="feat__list" data-fade>
+          <li>Levels, ranks and XP across all five pillars</li>
+          <li>Crews, city leaderboards, seasonal challenges</li>
+          <li>Streaks that forgive a bad week — progress, not guilt</li>
+        </ul>
+      </div>
+      <div class="feat__visual">
+        <div class="ui ui--game" data-fade>
+          <div class="lvl">
+            <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="lvl__track" cx="100" cy="100" r="88"/><circle class="lvl__fill" id="lvlFill" cx="100" cy="100" r="88"/></svg>
+            <div class="lvl__center"><span class="meta">Level</span><strong><span data-count="27">0</span></strong><span class="lvl__rank">Iron IV</span></div>
+          </div>
+          <div class="lvl__side">
+            <div class="xp"><div class="xp__row"><span class="meta">XP to Level 28</span><strong>3,240 / 4,000</strong></div><div class="xp__bar"><i id="xpBar"></i></div></div>
+            <ul class="badges">
+              <li class="is-on"><i></i><span>First pull-up</span></li>
+              <li class="is-on"><i></i><span>2× BW deadlift</span></li>
+              <li class="is-on"><i></i><span>52-week streak</span></li>
+              <li><i></i><span>Sub-20 5K</span></li>
+              <li><i></i><span>100 h Zone 2</span></li>
+              <li><i></i><span>Hyrox finisher</span></li>
+            </ul>
+            <div class="crew"><span class="meta">Crew · MTL Night Runners</span><strong>#3 of 412 this week</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- F6 · Real-life mode -->
+  <article class="feat feat--flip" id="life">
+    <div class="wrap feat__grid">
+      <div class="feat__copy">
+        <p class="meta" data-fade>06 · Real-life mode</p>
+        <h3 class="h3" aria-label="Twenty-five minutes. Hotel room. Still a session."><span data-line><span>25 minutes.</span></span><span data-line><span>Hotel room. <em>Still a session.</em></span></span></h3>
+        <p data-fade>Tell it what's true today — the time you have, the gear in front of you, the knee that's talking — and the session is rewritten in seconds while keeping the intent of the block. The plan bends. It doesn't break.</p>
+        <ul class="feat__list" data-fade>
+          <li>Time, equipment, pain and travel in one tap</li>
+          <li>Keeps the week's intent, swaps the means</li>
+          <li>Works offline — hotel basements included</li>
+        </ul>
+      </div>
+      <div class="feat__visual">
+        <div class="ui ui--life" data-fade>
+          <div class="ui__img ui__img--short" data-clip>
+            <img src="https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?w=1100&h=700&fit=crop&q=78&auto=format" alt="Push-up in a small room" loading="lazy">
+          </div>
+          <div class="life">
+            <div class="life__chips" aria-hidden="true"><span class="is-on">25 min</span><span class="is-on">Hotel room</span><span class="is-on">Knee sore</span><span>Full gym</span><span>60 min</span></div>
+            <div class="life__diff">
+              <div><span class="meta">Planned</span><p>Back squat 5×5 · RDL 4×8 · Split squat · 62 min</p></div>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              <div class="is-new"><span class="meta">Rewritten</span><p>Tempo push-ups · Single-leg hip hinge · Wall sit EMOM · 24 min</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- Around it -->
+  <div class="wrap">
+    <ul class="around">
+      <li data-fade><span class="meta">07</span><h4>Long term</h4><p>Yearly periodisation with blocks, deloads and transitions planned backwards from your date.</p></li>
+      <li data-fade><span class="meta">08</span><h4>Technique</h4><p>Cues, tempo and fault checks on every lift — with side-by-side 3D so you see what “neutral spine” means.</p></li>
+      <li data-fade><span class="meta">09</span><h4>The why</h4><p>One line on every prescription. You learn your training instead of renting it.</p></li>
+      <li data-fade><span class="meta">10</span><h4>Community</h4><p>Crews, city segments, seasonal challenges. No feed to doom-scroll — just people who train.</p></li>
+      <li data-fade><span class="meta">11</span><h4>Worldwide</h4><p>Fourteen languages, kg or lb, every time zone, offline first. Same app in Montréal, Lagos and Tokyo.</p></li>
+      <li data-fade><span class="meta">12</span><h4>Wearables</h4><p>Apple Watch, Garmin, Whoop, Oura, Polar, Coros, Google Fit. Your data feeds the engine, not a chart.</p></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────────────────────── THE BANK (horizontal) ─────────────────────────── -->
+<section class="bank" id="bank">
+  <div class="bank__pin" data-hscroll>
+    <div class="bank__track" id="hTrack">
+      <div class="bank__intro">
+        <p class="meta" data-fade>The library</p>
+        <h2 class="h2" aria-label="The bank."><span data-line><span>The</span></span><span data-line><span><em>bank.</em></span></span></h2>
+        <p class="bank__lede" data-fade>1,200+ movements. Barbell, dumbbell, kettlebell, cable, bodyweight, machines, mobility, running drills. Each in 3D, on video, with cues.</p>
+        <p class="meta bank__hint" data-fade aria-hidden="true">Scroll →</p>
+      </div>
+      <article class="card"><div class="card__img" data-clip><img src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=900&h=1200&fit=crop&q=78&auto=format" alt="Back squat" loading="lazy"><span class="card__badges"><i>3D</i><i>Video</i></span></div><div class="card__meta"><h3>Back squat</h3><p>Strength · Barbell</p></div></article>
+      <article class="card"><div class="card__img" data-clip><img src="https://images.unsplash.com/photo-1532029837206-abbe2b7620e3?w=900&h=1200&fit=crop&q=78&auto=format" alt="Pull-up" loading="lazy"><span class="card__badges"><i>3D</i><i>Video</i></span></div><div class="card__meta"><h3>Pull-up</h3><p>Strength · Bodyweight</p></div></article>
+      <article class="card"><div class="card__img" data-clip><img src="https://images.unsplash.com/photo-1584466977773-e625c37cdd50?w=900&h=1200&fit=crop&q=78&auto=format" alt="Bench press" loading="lazy"><span class="card__badges"><i>3D</i><i>Video</i></span></div><div class="card__meta"><h3>Bench press</h3><p>Strength · Barbell</p></div></article>
+      <article class="card"><div class="card__img" data-clip><img src="https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=900&h=1200&fit=crop&q=78&auto=format" alt="Kettlebell swing" loading="lazy"><span class="card__badges"><i>3D</i><i>Video</i></span></div><div class="card__meta"><h3>Kettlebell swing</h3><p>Power · Kettlebell</p></div></article>
+      <article class="card"><div class="card__img" data-clip><img src="https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=900&h=1200&fit=crop&q=78&auto=format" alt="90/90 hip switch" loading="lazy"><span class="card__badges"><i>3D</i><i>Video</i></span></div><div class="card__meta"><h3>90/90 hip switch</h3><p>Mobility · Floor</p></div></article>
+      <article class="card"><div class="card__img" data-clip><img src="https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=900&h=1200&fit=crop&q=78&auto=format" alt="Stair sprints" loading="lazy"><span class="card__badges"><i>GPS</i><i>Video</i></span></div><div class="card__meta"><h3>Stair sprints</h3><p>Endurance · Outdoor</p></div></article>
+      <article class="card card--more"><div class="card__more"><strong>+1,194</strong><span>more in the app</span></div></article>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────── NUMBERS ─────────────────────────── -->
+<section class="numbers" aria-label="Key numbers">
+  <div class="numbers__media" data-parallax="-12">
+    <img src="https://images.unsplash.com/photo-1519505907962-0a6cb0167c73?w=2000&q=75&auto=format&fit=crop" alt="" loading="lazy">
+  </div>
+  <div class="wrap">
+    <div class="numbers__head">
+      <p class="meta" data-fade>Everywhere · Every time zone</p>
+      <p class="numbers__lede" data-fade>One engine, forty-plus countries, fourteen languages. Same app, same plan logic, whether you train in Montréal or Manila.</p>
+    </div>
+    <div class="numbers__grid">
+      <div class="num" data-fade><strong><span data-count="1200" data-suffix="+">0</span></strong><span class="lbl">exercises in 3D</span></div>
+      <div class="num" data-fade><strong><span data-count="40" data-suffix="+">0</span></strong><span class="lbl">countries</span></div>
+      <div class="num" data-fade><strong><span data-count="4.9" data-decimals="1">0</span></strong><span class="lbl">average rating</span></div>
+      <div class="num" data-fade><strong>$<span data-count="0">0</span></strong><span class="lbl">now and forever</span></div>
+    </div>
+  </div>
+  <div class="cities" aria-hidden="true">
+    <div class="cities__track" data-marquee-cities>
+      <span>Montréal</span><i></i><span>New York</span><i></i><span>London</span><i></i><span>Berlin</span><i></i><span>Dubai</span><i></i><span>Tokyo</span><i></i><span>Sydney</span><i></i><span>São Paulo</span><i></i><span>Mexico City</span><i></i><span>Cape Town</span><i></i><span>Singapore</span><i></i><span>Los Angeles</span><i></i><span>Lagos</span><i></i><span>Manila</span><i></i>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────── VOICES ─────────────────────────── -->
+<section class="voice">
+  <div class="wrap">
+    <header class="sec-head sec-head--row">
+      <div>
+        <p class="meta" data-fade>Results — 12 weeks</p>
+        <h2 class="h2" aria-label="They held on."><span data-line><span>They <em>held on.</em></span></span></h2>
+      </div>
+      <p class="sec-head__aside" data-fade>Verified members. Real numbers, pulled from their logs.</p>
+    </header>
+
+    <div class="voice__grid">
+      <figure class="voice__photo" data-clip>
+        <img src="https://images.unsplash.com/photo-1517963879433-6ad2b056d712?w=900&h=1100&fit=crop&q=78&auto=format" alt="Marc at the end of a deadlift session" loading="lazy">
+        <figcaption class="voice__tag"><span class="meta">Deadlift</span><strong>140 → 162 kg</strong></figcaption>
+      </figure>
+      <div class="voice__main">
+        <blockquote class="voice__quote" data-words>
+          Three years training without a plan. In twelve weeks: twenty-two kilos on my deadlift, ten kilometres without falling apart, and a back that doesn't wake me up at night.
+        </blockquote>
+        <p class="voice__who" data-fade><strong>Marc A.</strong> — 34, Montréal</p>
+      </div>
+      <ul class="voice__more">
+        <li data-fade>
+          <img src="https://images.unsplash.com/photo-1546483875-ad9014c88eba?w=300&h=300&fit=crop&q=75&auto=format" alt="" loading="lazy">
+          <div><p>“It noticed I'd slept badly and cut the volume that morning, before I'd even opened the session. Nothing else I've used does that.”</p><span>Nadia F. — 29, London</span></div>
+        </li>
+        <li data-fade>
+          <img src="https://images.unsplash.com/photo-1577221084712-45b0445d2b00?w=300&h=300&fit=crop&q=75&auto=format" alt="" loading="lazy">
+          <div><p>“Ten years of back pain. The mobility block did more in six weeks than everything I'd paid for before. And this one's free.”</p><span>Peter L. — 47, Sydney</span></div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────── FREE ─────────────────────────── -->
+<section class="free" id="free">
+  <div class="wrap free__grid">
+    <div>
+      <p class="meta" data-fade><sup>04</sup>Price</p>
+      <h2 class="h2" aria-label="Free. All of it."><span data-line><span>Free.</span></span><span data-line><span><em>All of it.</em></span></span></h2>
+      <p class="free__lede" data-fade>No tiers. No paywall behind the good stuff. No ads in your session. The whole engine, the whole library, the map, the kitchen and the game — for everyone, everywhere.</p>
+      <div class="free__cta" data-fade>
+        <a class="pill pill--volt pill--lg" href="#free" data-magnetic><span>Get the app</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <div class="stores"><span>App Store</span><span>Google Play</span><span>Web</span></div>
+      </div>
+    </div>
+    <ul class="free__list" data-fade>
+      <li>Five-pillar engine with daily auto-regulation</li>
+      <li>1,200+ exercises in 3D and video, with cues</li>
+      <li>Session log, RPE, rest timer, plate math</li>
+      <li>GPS recording, routes, splits, segments</li>
+      <li>Adaptive meal plans, groceries, timed nudges</li>
+      <li>Yearly periodisation and real-life mode</li>
+      <li>Levels, XP, badges, crews, city challenges</li>
+      <li>Wearable sync, 14 languages, offline</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────────────────────── FINAL CTA ─────────────────────────── -->
+<section class="final">
+  <div class="final__media" data-parallax="-10">
+    <img src="https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=2000&q=78&auto=format&fit=crop" alt="" loading="lazy">
+  </div>
+  <div class="final__inner">
+    <h2 class="final__title" aria-label="Start today.">
+      <span data-line><span>Start</span></span>
+      <span data-line><span><em>today.</em></span></span>
+    </h2>
+    <p data-fade>Eight questions, your season, your first session. Three minutes, from anywhere. Free.</p>
+    <a class="pill pill--bone pill--lg" href="#free" data-fade data-magnetic><span>Get the app</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <p class="final__stores" data-fade>iOS · Android · Web</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <nav aria-label="Site map">
+      <a href="#pillars">Pillars</a><a href="#engine">Engine</a><a href="#inside">Inside</a><a href="#free">Free</a>
+    </nav>
+    <nav aria-label="Social">
+      <a href="#main">Instagram</a><a href="#main">YouTube</a><a href="#main">TikTok</a>
+    </nav>
+    <nav aria-label="Legal">
+      <a href="#main">Terms</a><a href="#main">Privacy</a><a href="#main">Contact</a>
+    </nav>
+    <p class="footer__copy">© 2026 Forge<br>Free, worldwide</p>
+  </div>
+  <div class="footer__mark" aria-hidden="true"><span>FORGE</span></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" defer></script>
+<script src="main.js" defer></script>
+</body>
+</html>
