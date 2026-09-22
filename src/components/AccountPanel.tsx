@@ -46,7 +46,9 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
     const where = "email" in step.to ? step.to.email : step.to.phone;
     return (
       <div className="grid gap-4">
-        <p className="text-sm text-smoke">We sent a six-digit code to <strong className="text-ink">{where}</strong>.</p>
+        <p className="text-sm text-smoke">{"email" in step.to
+          ? <>Check your email at <strong className="text-ink">{where}</strong>. Tap the sign-in link in it — or, if it shows a six-digit code, type it here.</>
+          : <>We sent a six-digit code to <strong className="text-ink">{where}</strong>.</>}</p>
         <label className="field"><span className="meta">Code</span>
           <input className="input tnum text-center text-2xl tracking-[.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="••••••" />
         </label>

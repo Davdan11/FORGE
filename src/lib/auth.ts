@@ -121,8 +121,13 @@ export function normalisePhone(input: string): string | null {
 /** Send a six-digit code. Creates the account if there is none yet. */
 export async function sendCode(to: { email: string } | { phone: string }) {
   const sb = need();
+  // Supabase's default email carries a sign-in link, and its template can only
+  // be changed once a custom SMTP sender is set up. So the email works both
+  // ways: the link comes back here (web callback page, or the app's deep link
+  // on a phone) and a code, when the template includes one, is typed in.
+  const back = isNativeShell() ? NATIVE_CALLBACK : `${window.location.origin}/auth/callback/`;
   const { error } = "email" in to
-    ? await sb.auth.signInWithOtp({ email: to.email.trim(), options: { shouldCreateUser: true } })
+    ? await sb.auth.signInWithOtp({ email: to.email.trim(), options: { shouldCreateUser: true, emailRedirectTo: back } })
     : await sb.auth.signInWithOtp({ phone: to.phone, options: { shouldCreateUser: true } });
   if (error) throw error;
 }
