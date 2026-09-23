@@ -218,7 +218,10 @@ the belt by itself — test it standing on the side rails first.
 - **Account deletion** (required by Apple, Google and the GDPR): Settings →
   Delete account calls `delete_my_account()`. **Run
   `supabase/delete-account.sql` once in the SQL editor** — until then the
-  button says deletion isn't available yet.
+  button says deletion isn't available yet. Installed on the project on
+  2026-09-22: an anonymous call now gets "permission denied for function
+  delete_my_account" (it exists, and only signed-in users may call it). Not
+  yet exercised end to end with a real signed-in account.
 - The stores also need the policy at a **public URL**: host the web build, or
   paste the text into a public page.
 
