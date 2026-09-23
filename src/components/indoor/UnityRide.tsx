@@ -215,14 +215,16 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       avgPaceSecKm: s.distance > 0 ? movingSec / (s.distance / 1000) : undefined,
       elevGainM: Math.round(s.ascent), points: [], splits: a.splits,
       title: `${routeName} · indoor ride`, shared: false, xp: 0,
-      meta: { discipline: "indoor", indoor: { course: routeName, quality, avgW, with: a.maxPeople || undefined } },
+      meta: { discipline: "indoor", indoor: { course: routeName, quality, avgW, workout: s.workout ?? undefined, workoutDone: s.workoutDone || undefined, with: a.maxPeople || undefined } },
       hrSeries: a.hr.length ? a.hr : undefined, streams: a.streams.t.length ? a.streams : undefined, avgHr: hrs?.avg, maxHr: hrs?.max, kcal, kcalSource: k.source,
     };
     const before = (await getStats()).xp;
     const { xp } = await awardIndoor(activity, credit);
     await db.activities.put({ ...activity, xp, dirty: 1, updatedAt: new Date().toISOString() } as Activity);
-    const won = credit > 0 ? await awardChallenges("ride", profile.units.distance) : { xp: 0, titles: [] as string[] };
-    send(rewardMessage(xp + won.xp, before));
+    if (credit > 0) await awardChallenges("ride", profile.units.distance);
+    // What the account actually gained — the session, the week's streak bonus and any challenge —
+    // so the game shows exactly the XP and level the rest of the app shows.
+    send(rewardMessage((await getStats()).xp - before, before));
     exitRef.current?.();
   }
   const routeNames = useRef<Record<string, string>>({});

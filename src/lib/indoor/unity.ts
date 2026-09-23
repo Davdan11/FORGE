@@ -37,6 +37,9 @@ export interface UnitySummary {
   avgCadence: number | null;
   kilojoules: number;
   draftShare: number;
+  /** The workout ridden in the game (its name), and whether it was ridden to its last block. */
+  workout?: string | null;
+  workoutDone?: boolean;
   event: string | null;
 }
 
