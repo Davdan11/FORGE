@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Instrument_Serif } from "next/font/google";
+import { Archivo, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { Providers } from "@/components/Providers";
@@ -9,6 +9,13 @@ const archivo = Archivo({
   subsets: ["latin"],
   axes: ["wdth"],
   weight: "variable",
+});
+
+// Labels, numbers and eyebrows: a technical mono, as on the company's sites.
+const mono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  weight: ["500", "700"],
 });
 
 const instrument = Instrument_Serif({
@@ -36,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${archivo.variable} ${instrument.variable} h-full antialiased`}>
+    <html lang="en" className={`${archivo.variable} ${mono.variable} ${instrument.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
         <PwaRegister />

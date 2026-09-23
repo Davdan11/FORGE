@@ -2,10 +2,10 @@
 
 /* ═══════════════════════════════════════════════════════════════
    FORGE — "Day Shift".
-   A light ground lit by soft lime, mint and cyan glows; near-black type
-   set wide and heavy; one signature gradient (lime → mint → cyan) kept
-   for the few things that matter — the key word of a headline, progress,
-   the primary action, the active tab. White glass cards. Colour photos.
+   A light, flat ground; near-black type set wide and heavy; ONE solid
+   accent and no colour gradients anywhere (the owner's call: blends of
+   colour look cheap). Lime fills carry dark text; green is the accent as
+   text and for progress. White glass cards. Colour photos.
    Token names are kept from the first theme so components read the same:
    ink = dark, bone = light (on photos), volt = accent.
    ═══════════════════════════════════════════════════════════════ */
@@ -25,10 +25,10 @@
   --volt-deep: #0a8a5c;           /* accent as text / border on paper */
   --mint: #3ee89a;
   --cyan: #25c6f2;
-  /* The signature. Bright for fills and for words on photos; deep for words
-     on the light ground, where the bright one would not be legible. */
-  --grad: linear-gradient(100deg, #c8ff2e 0%, #3ee89a 55%, #25c6f2 100%);
-  --grad-deep: linear-gradient(100deg, #4fae00 0%, #00b37e 55%, #0094c9 100%);
+  /* Solid colours only. --grad keeps its name for the call sites, but it is
+     one flat lime: the fill of the primary button, the active tab, a done check. */
+  --grad: #c6f432;
+  --green: #1fc76f;               /* progress, rings, and the accent on light */
   --danger: #d9453d;
   --line: rgba(11, 18, 14, 0.09);
   --line-strong: rgba(11, 18, 14, 0.18);
@@ -91,21 +91,16 @@
   --color-line-strong: var(--line-strong);
   --font-sans: var(--font-archivo), system-ui, sans-serif;
   --font-serif: var(--font-instrument), Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; color-scheme: light; }
+  /* Section numbers (01, 02…) count down each page in reading order. */
+  body { counter-reset: section; }
   body {
-    /* The light comes from somewhere: lime from the top right, cyan from the
-       left, a little mint low down. Fixed, so scrolling moves the content
-       through the light rather than dragging the light along. */
-    background:
-      radial-gradient(110% 38% at 88% -6%, rgba(200,255,46,.42), transparent 62%),
-      radial-gradient(80% 36% at -12% 26%, rgba(37,198,242,.16), transparent 62%),
-      radial-gradient(70% 30% at 110% 78%, rgba(62,232,154,.14), transparent 60%),
-      var(--paper);
-    background-attachment: fixed;
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -142,19 +137,15 @@
   line-height: 0.92;
   text-wrap: balance;
 }
-/* The accent word is the same heavy sans as the headline, lit by the
-   signature gradient — one voice, one moment of colour. */
+/* The accent word is the same heavy sans as the headline, in the solid
+   accent — one voice, one moment of colour. */
 .display em, .serif-accent {
   font-style: normal;
   font-weight: inherit;
   font-stretch: inherit;
   text-transform: inherit;
   letter-spacing: inherit;
-  background: var(--grad-deep);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-box-decoration-break: clone; box-decoration-break: clone;
-  color: transparent;
-  padding-bottom: .06em;
+  color: var(--volt-deep);
 }
 /* Optical tracking: the bigger the type, the tighter it must be set, or large
    headlines read loose and cheap. One step per size band. */
@@ -166,13 +157,13 @@
    — skewing an italic twice reads as a rendering fault, not a gesture. */
 /* inline-block: as a plain inline box, a slab that wraps onto a second line
    collapsed its highlight to a sliver at the line break. */
-/* The old marker slab is retired: the gradient does its job. */
-.display em.slab { color: transparent; }
+/* The old marker slab is retired: the solid accent does its job. */
 
 .meta {
-  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--smoke);
   line-height: 1.5;
@@ -181,19 +172,22 @@
    every block, it is the cheapest mark of authorship in the whole system. */
 .eyebrow {
   display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--font-mono);
   font-size: 0.6875rem; font-weight: 500; line-height: 1;
-  letter-spacing: 0.22em; text-transform: uppercase; color: var(--smoke);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--smoke);
   white-space: nowrap;
 }
-.eyebrow::before { content: ''; width: 28px; height: 3px; border-radius: 3px; background: var(--grad); flex: none; }
+.eyebrow::before { content: ''; width: 20px; height: 8px; flex: none; transform: skewX(-24deg);
+  background: linear-gradient(90deg, var(--volt-deep) 0 42%, transparent 42% 58%, var(--volt-deep) 58% 100%); }
+.photo--veil ~ * .eyebrow::before, .on-photo .eyebrow::before { background: linear-gradient(90deg, var(--volt) 0 42%, transparent 42% 58%, var(--volt) 58% 100%); }
 .photo--veil ~ * .eyebrow, .on-photo .eyebrow { color: rgba(246,243,236,.72); }
-.photo--veil ~ * .eyebrow::before, .on-photo .eyebrow::before { background: var(--grad); }
+
 .tnum { font-variant-numeric: tabular-nums; }
 
 /* ── On photo: anything after a veiled photo is light-on-dark ─── */
 .photo--veil ~ *, .on-photo { color: var(--bone); }
 .photo--veil ~ * .meta, .on-photo .meta { color: rgba(246,243,236,.72); }
-.photo--veil ~ * .display em, .on-photo .display em { background-image: var(--grad); color: transparent; }
+.photo--veil ~ * .display em, .on-photo .display em { color: var(--volt); }
 .photo--veil ~ * .chip--live, .on-photo .chip--live { color: var(--bone); border-color: rgba(246,243,236,.45); background: rgba(16,16,16,.25); }
 .photo--veil ~ * .text-smoke, .on-photo .text-smoke { color: rgba(246,243,236,.7); }
 .photo--veil ~ * .bar, .on-photo .bar { background: rgba(246,243,236,.22); }
@@ -218,7 +212,7 @@ a.card:active, button.card:active { transform: scale(.985); }
 /* ── Buttons ──────────────────────────────────────────────────── */
 .pill {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 48px; padding: 0 20px; border-radius: 999px;
+  min-height: 48px; padding: 0 20px; border-radius: 14px;
   border: 1px solid var(--line-strong); color: var(--ink); background: var(--carbon);
   font-weight: 600; font-size: 0.95rem; white-space: nowrap; letter-spacing: .005em;
   transition: background var(--t-base) var(--ease-out), color var(--t-base) var(--ease-out), border-color var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out), transform var(--t-fast) var(--ease-out);
@@ -227,9 +221,28 @@ a.card:active, button.card:active { transform: scale(.985); }
 .pill:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 /* A faded green read as "almost ready". Not available yet looks neutral. */
 .pill--volt:disabled { opacity: 1; background: rgba(11,18,14,.06); border-color: transparent; color: rgba(11,18,14,.42); box-shadow: none; }
-.pill--volt { background: var(--grad); color: #06240f; border-color: transparent; box-shadow: var(--glow-volt); font-weight: 700; }
+.pill--volt { --sq: 48px; background: var(--grad); color: #06240f; border-color: transparent; box-shadow: var(--glow-volt); font-weight: 700; padding-right: 0; overflow: hidden; }
+/* The split button, as on the company's sites: the label, then a square one
+   shade darker holding an arrow. Drawn with a pseudo-element so every primary
+   button in the app gets it without touching a call site. */
+.pill--volt::after {
+  content: ''; flex: none; align-self: stretch; width: var(--sq); margin-left: 12px;
+  background: rgba(6,36,15,.14) no-repeat center / 20px 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306240f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17 17 7M9 7h8v8'/%3E%3C/svg%3E");
+  transition: background-position var(--t-base) var(--ease-out);
+}
+/* Full-width: an invisible twin on the left keeps the label truly centred. */
+.pill--volt.pill--block { justify-content: space-between; }
+.pill--volt.pill--block::before { content: ''; flex: none; width: var(--sq); margin-right: 12px; }
+.pill--volt.pill--lg { --sq: 56px; }
+.pill--volt.pill--sm { --sq: 40px; padding-right: 0; }
+/* .pill--sm widens its hit area with an absolute ::after; the split square
+   needs that pseudo-element in the flow instead. */
+.pill--volt.pill--sm::after { position: static; inset: auto; margin-left: 10px; background-size: 16px 16px; }
+.pill--volt:not(:disabled):active::after { background-position: calc(50% + 2px) calc(50% - 2px); }
+.pill--volt:disabled::after { background-color: rgba(11,18,14,.05); opacity: .5; }
 .pill--bone { background: var(--ink); color: var(--bone); border-color: var(--ink); }
-.pill--sm { position: relative; min-height: 40px; padding: 0 14px; font-size: 0.85rem; }
+.pill--sm { position: relative; min-height: 40px; padding: 0 14px; font-size: 0.85rem; border-radius: 12px; }
 .pill--sm::after { content: ''; position: absolute; inset: -2px -4px; }
 .pill--lg { min-height: 56px; font-size: 1.05rem; }
 .pill--block { width: 100%; }
@@ -237,6 +250,7 @@ a.card:active, button.card:active { transform: scale(.985); }
 @media (hover: hover) {
   .pill:not(:disabled):hover { border-color: var(--ink); }
   .pill--volt:not(:disabled):hover { box-shadow: 0 16px 36px -12px rgba(40,205,120,.75); filter: brightness(1.04); }
+  .pill--volt:not(:disabled):hover::after { background-position: calc(50% + 2px) calc(50% - 2px); }
   .pill--bone:not(:disabled):hover { background: #222; }
 }
 
@@ -252,7 +266,7 @@ a.card:active, button.card:active { transform: scale(.985); }
    something already typed. */
 .input::placeholder { color: rgba(16,16,16,.36); }
 input[type="range"] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
-input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--mint) var(--fill, 50%), var(--line-strong) var(--fill, 50%)); }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--green) var(--fill, 50%), var(--line-strong) var(--fill, 50%)); }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%; background: var(--carbon); border: 3px solid var(--ink); box-shadow: 0 2px 8px rgba(16,16,16,.25); }
 
 /* Segmented control */
@@ -325,7 +339,7 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26p
 .rail--gutter[data-edge="both"]  { mask-image: linear-gradient(90deg, transparent, #000 var(--rail-pad), #000 calc(100% - var(--rail-pad)), transparent); }
 
 /* Chips */
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--smoke); white-space: nowrap; background: var(--carbon); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line-strong); font-family: var(--font-mono); font-weight: 500; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--smoke); white-space: nowrap; background: var(--carbon); }
 .chip--volt { background: var(--grad); color: #06240f; border-color: transparent; font-weight: 700; }
 .chip--live { color: var(--ink); border-color: var(--line-strong); }
 button.chip, a.chip { min-height: 40px; padding: 0 14px; position: relative; transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
@@ -335,9 +349,7 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 
 /* Progress */
 .bar { height: 6px; border-radius: 999px; background: rgba(16,16,16,.08); overflow: hidden; }
-.bar > i { position: relative; overflow: hidden; display: block; height: 100%; background: var(--grad); border-radius: 999px; box-shadow: 0 2px 10px rgba(40,205,120,.45); transition: width 900ms var(--ease-out); }
-.bar > i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent); transform: translateX(-100%); animation: bar-shine 2.6s 1.2s ease-in-out infinite; }
-@keyframes bar-shine { to { transform: translateX(100%); } }
+.bar > i { display: block; height: 100%; background: var(--green); border-radius: 999px; transition: width 900ms var(--ease-out); }
 
 /* Toggle */
 .toggle { width: 48px; height: 28px; border-radius: 999px; position: relative; background: rgba(16,16,16,.16); border: 1px solid transparent; transition: background var(--t-base) var(--ease-out); flex: none; }
@@ -406,7 +418,7 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 .card--photo > .card__body { position: relative; z-index: 1; }
 .card--photo .meta { color: rgba(246,243,236,.72); }
 .card--photo .text-smoke { color: rgba(246,243,236,.7); }
-.card--photo .display em { background-image: var(--grad); color: transparent; }
+.card--photo .display em { color: var(--volt); }
 
 .section-rule { height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent 70%); }
 .divider-fade { height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
@@ -431,11 +443,13 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 /* Section heading: the label sits on a rule that runs to the edge, so the
    eye gets a horizon line per block instead of floating micro-labels. */
 .section-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 18px; }
+.section-head > h2 { counter-increment: section; }
+.section-head > h2::before { content: counter(section, decimal-leading-zero); color: var(--volt-deep); font-weight: 700; margin-right: .9em; }
 .section-head > .section-head__rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
 @media (min-width: 1024px) { .section-head { margin-bottom: 22px; } }
 
 /* A number big enough to read as a graphic, not as data. */
-.numeral { font-family: var(--font-sans); font-stretch: 125%; font-weight: 800; font-size: var(--text-numeral); line-height: .82; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.numeral { font-family: var(--font-sans); font-stretch: 125%; font-weight: 900; font-size: var(--text-numeral); line-height: .82; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 
 /* ── Navigation ───────────────────────────────────────────────── */
 .nav-float { position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 10px); z-index: 40; margin-inline: auto; max-width: 536px; border-radius: 28px; border: 1px solid rgba(255,255,255,.95); background: rgba(255,255,255,.8); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); box-shadow: 0 24px 48px -20px rgba(0,50,25,.38), inset 0 1px 0 rgba(255,255,255,.9); }
