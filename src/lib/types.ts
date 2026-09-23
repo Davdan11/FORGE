@@ -358,7 +358,11 @@ export interface Meal {
   tip?: string;
   cuisine?: string;
 }
-export interface DayPlanMeal { slot: MealSlot; time: string; mealId: string; scale: number; done?: boolean }
+export interface DayPlanMeal {
+  slot: MealSlot; time: string; mealId: string; scale: number; done?: boolean;
+  /** "Pre-workout" or "Recovery meal" when a regular meal doubles as one. */
+  note?: string;
+}
 export interface NutritionDay {
   id: string;               // date ISO
   date: string;

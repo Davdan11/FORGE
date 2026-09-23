@@ -1,7 +1,7 @@
 import type { Meal } from "../types";
 
 /* ─────────────────────────────────────────────────────────────
-   Meal bank v0.2 — 44 real recipes with photos, cook steps (times,
+   Meal bank v0.3 — real recipes with photos, cook steps (times,
    temperatures), tips. Macros per 1× portion; the engine scales them.
    ───────────────────────────────────────────────────────────── */
 
@@ -193,6 +193,36 @@ export const MEALS: Meal[] = [
     ingredients: [{ item: "Cooked chicken breast", qty: "120 g" }, { item: "Mixed leaves", qty: "60 g" }, { item: "Cherry tomatoes", qty: "50 g" }, { item: "Olive oil", qty: "10 g" }, { item: "Lemon", qty: "½" }],
     steps: ["Slice the chicken over the leaves and tomatoes.", "Dress with the olive oil, lemon, salt and pepper."],
     tip: "Cook a tray of chicken breasts on Sunday: 22 min at 200 °C covers four days of these." }),
+  /* ───────────── Coach snacks: protein that fits a life ───────────── */
+  M({ name: "Iced protein coffee", slot: ["snack", "pre"], kcal: 190, protein: 28, carbs: 8, sugar: 7, fat: 4, fiber: 0, minutes: 2, tags: ["vegetarian", "gluten_free", "quick", "high_protein", "low_sugar"], image: P("1495214783159-3503fd1b572d"), cuisine: "Snack",
+    ingredients: [{ item: "Cold brew or 2 shots of espresso", qty: "250 ml" }, { item: "Vanilla whey protein", qty: "1 scoop · 30 g" }, { item: "Milk", qty: "100 ml" }, { item: "Ice", qty: "a glass" }],
+    steps: ["Shake the whey with the milk until smooth — whey straight into hot coffee clumps.", "Pour over ice and top with the coffee."],
+    tip: "The 3 p.m. coffee you were having anyway, now with 28 g of protein in it." }),
+  M({ name: "Chocolate protein pudding", slot: ["snack"], kcal: 230, protein: 40, carbs: 12, sugar: 7, fat: 3, fiber: 2, minutes: 3, tags: ["vegetarian", "gluten_free", "quick", "high_protein", "low_sugar"], image: P("1517673400267-0251440c45dc"), cuisine: "Snack",
+    ingredients: [{ item: "Skyr or Greek yogurt 0 %", qty: "150 g" }, { item: "Chocolate whey or casein", qty: "1 scoop · 30 g" }, { item: "Cocoa powder", qty: "1 tsp" }, { item: "Pinch of salt", qty: "" }],
+    steps: ["Stir the protein and cocoa into the skyr until thick and smooth.", "Ten minutes in the fridge and it sets like mousse."],
+    tip: "The evening sweet tooth, answered with 40 g of slow protein." }),
+  M({ name: "Pea protein shake and banana", slot: ["post", "snack"], kcal: 305, protein: 31, carbs: 33, sugar: 15, fat: 6, fiber: 4, minutes: 2, tags: ["vegan", "vegetarian", "gluten_free", "lactose_free", "quick", "high_protein"], image: P("1502741224143-90386d7f8c82"), cuisine: "Post-session",
+    ingredients: [{ item: "Pea protein", qty: "1 scoop · 30 g" }, { item: "Unsweetened soy milk", qty: "250 ml" }, { item: "Banana", qty: "1" }],
+    steps: ["Blend everything with a few ice cubes, or shake and eat the banana on the side."] }),
+  M({ name: "Edamame with chili salt", slot: ["snack", "pre"], kcal: 180, protein: 17, carbs: 13, sugar: 3, fat: 8, fiber: 8, minutes: 5, tags: ["vegan", "vegetarian", "gluten_free", "lactose_free", "quick", "high_protein", "low_sugar"], image: P("1543339308-43e59d6b73a6"), cuisine: "Snack",
+    ingredients: [{ item: "Shelled edamame (frozen)", qty: "150 g" }, { item: "Flaky salt, chili flakes, lime", qty: "" }],
+    steps: ["Boil 4 min from frozen, drain.", "Toss with salt, chili and a squeeze of lime."] }),
+  M({ name: "Smoked tofu and hummus rice cakes", slot: ["snack", "pre"], kcal: 260, protein: 19, carbs: 21, sugar: 1, fat: 11, fiber: 3, minutes: 3, tags: ["vegan", "vegetarian", "gluten_free", "lactose_free", "quick", "high_protein", "low_sugar"], image: P("1505253716362-afaea1d3d1af"), cuisine: "Snack",
+    ingredients: [{ item: "Smoked tofu", qty: "100 g" }, { item: "Rice cakes", qty: "2" }, { item: "Hummus", qty: "30 g" }, { item: "Cucumber, black pepper", qty: "" }],
+    steps: ["Spread the hummus on the rice cakes.", "Top with sliced smoked tofu and cucumber, crack pepper over."] }),
+  M({ name: "Beef jerky and a cheese stick", slot: ["snack"], kcal: 200, protein: 22, carbs: 5, sugar: 4, fat: 9, fiber: 0, minutes: 0, tags: ["quick", "high_protein", "low_carb", "low_sugar"], image: P("1505253716362-afaea1d3d1af"), cuisine: "Snack",
+    ingredients: [{ item: "Beef jerky", qty: "40 g" }, { item: "String cheese", qty: "1 stick" }],
+    steps: ["Glovebox, gym bag, desk drawer. No prep."] }),
+  M({ name: "Overnight protein oats", slot: ["breakfast", "snack"], kcal: 420, protein: 38, carbs: 45, sugar: 9, fat: 10, fiber: 9, minutes: 5, tags: ["vegetarian", "quick", "high_protein"], image: P("1447078806655-40579c2520d6"), cuisine: "Classic",
+    ingredients: [{ item: "Rolled oats", qty: "50 g" }, { item: "Vanilla whey protein", qty: "1 scoop · 30 g" }, { item: "Milk", qty: "150 ml" }, { item: "Chia seeds", qty: "10 g" }, { item: "Cinnamon", qty: "" }],
+    steps: ["Stir everything in a jar the night before.", "Fridge overnight; eat cold, or 60 s in the microwave."] }),
+  M({ name: "Casein shake before bed", slot: ["snack"], kcal: 280, protein: 38, carbs: 15, sugar: 13, fat: 7, fiber: 0, minutes: 1, tags: ["vegetarian", "gluten_free", "quick", "high_protein"], image: P("1502741224143-90386d7f8c82"), cuisine: "Snack",
+    ingredients: [{ item: "Casein protein", qty: "1 scoop · 35 g" }, { item: "Milk", qty: "250 ml" }],
+    steps: ["Shake and drink 30–60 min before bed: it digests slowly through the night."] }),
+  M({ name: "Salami, aged cheddar and olives", slot: ["snack"], kcal: 380, protein: 19, carbs: 3, sugar: 0, fat: 33, fiber: 1, minutes: 2, tags: ["gluten_free", "quick", "low_carb", "low_sugar"], image: P("1505253716362-afaea1d3d1af"), cuisine: "Snack",
+    ingredients: [{ item: "Salami", qty: "40 g" }, { item: "Aged cheddar", qty: "40 g" }, { item: "Green olives", qty: "40 g" }],
+    steps: ["On a board, with a knife. For keto days that need the energy."] }),
 ];
 
 export const MEAL_MAP: Record<string, Meal> = Object.fromEntries(MEALS.map((m) => [m.id, m]));

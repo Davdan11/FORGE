@@ -170,7 +170,9 @@ describe("foods people do not eat", () => {
       const rest = buildNutritionDay(p, d, null);
       expect(rest.meals).toHaveLength(4);
       const train = buildNutritionDay(p, d, session);
-      expect(train.meals).toHaveLength(6); // + pre and post
+      // Training fuel is covered: a pre and post slot, or a meal that doubles as one.
+      expect(train.meals.some((m) => m.slot === "pre" || m.note === "Pre-workout")).toBe(true);
+      expect(train.meals.some((m) => m.slot === "post" || m.note === "Recovery meal")).toBe(true);
     }
     const day = buildNutritionDay(p, "2026-01-05", session);
     for (const m of day.meals) { const meal = getMeal(m.mealId)!; expect((meal.carbs * 4) / meal.kcal).toBeLessThanOrEqual(0.12); }
