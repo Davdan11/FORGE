@@ -42,6 +42,16 @@ export function activityFactor(p: Pick<Profile, "daysPerWeek" | "lifestyle">) {
 /** A rest day burns less than the weekly average, a hard day more. */
 export const DAY_FACTOR: Record<DayType, number> = { rest: 0.9, train: 1.0, hard: 1.08 };
 
+/**
+ * The day factor, normalised so the WEEK averages exactly maintenance: with
+ * four training days and three rest days, rest at 0.90 and training at 1.00
+ * would leave the week 4 % short — a hidden deficit on a maintenance plan.
+ */
+export function dayFactor(p: Pick<Profile, "daysPerWeek">, dayType: DayType) {
+  const avg = (p.daysPerWeek * DAY_FACTOR.train + (7 - p.daysPerWeek) * DAY_FACTOR.rest) / 7;
+  return DAY_FACTOR[dayType] / avg;
+}
+
 export const bmi = (p: Pick<Profile, "weightKg" | "heightCm">) => p.weightKg / (p.heightCm / 100) ** 2;
 
 /**
@@ -75,7 +85,7 @@ export interface Step { label: string; value: string; why: string }
 export function explainTargets(p: Profile, dayType: DayType) {
   const rest = bmr(p);
   const factor = activityFactor(p);
-  const maintenance = rest * factor * DAY_FACTOR[dayType];
+  const maintenance = rest * factor * dayFactor(p, dayType);
   const weeklyMaintenance = rest * factor;
 
   // The deficit or surplus comes from the rate, then is held inside safe bounds.
@@ -114,10 +124,10 @@ export function explainTargets(p: Profile, dayType: DayType) {
 
   const signed = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n)}`;
   const steps: Step[] = [
-    { label: "Resting energy", value: `${Math.round(rest)} kcal`, why: `What your body burns doing nothing, from your weight, height, age and sex (Mifflin-St Jeor, the equation dietitians use).` },
-    { label: "Your activity", value: `× ${factor.toFixed(2)}`, why: `${p.daysPerWeek} training days a week${p.lifestyle?.work && p.lifestyle.work !== "desk" ? `, and a ${p.lifestyle.work === "physical" ? "physical" : "on-your-feet"} job` : ""}. That gives your maintenance: ${Math.round(weeklyMaintenance)} kcal.` },
-    { label: dayType === "rest" ? "Rest day" : dayType === "hard" ? "Hard training day" : "Training day", value: `× ${DAY_FACTOR[dayType].toFixed(2)}`, why: dayType === "rest" ? "Less moving today, so a little less food — mostly fewer carbs." : dayType === "hard" ? "More work today, so more fuel — mostly carbs, around the session." : "An average training day." },
-    { label: "Your goal", value: `${signed(kcal - maintenance)} kcal`, why: goalWhy(p.goal, rate, p.weightKg, kcal <= floor + 5 && bounded < 0) },
+    { label: "Resting energy", value: `${Math.round(rest).toLocaleString("en-US")} kcal`, why: `What your body burns doing nothing, from your weight, height, age and sex (Mifflin-St Jeor, the equation dietitians use).` },
+    { label: "Your activity", value: `× ${factor.toFixed(2)}`, why: `${p.daysPerWeek} training days a week${p.lifestyle?.work && p.lifestyle.work !== "desk" ? `, and a ${p.lifestyle.work === "physical" ? "physical" : "on-your-feet"} job` : ""}. That gives your maintenance: ${Math.round(weeklyMaintenance).toLocaleString("en-US")} kcal a day on average.` },
+    { label: dayType === "rest" ? "Rest day" : dayType === "hard" ? "Hard training day" : "Training day", value: `× ${dayFactor(p, dayType).toFixed(2)}`, why: dayType === "rest" ? "Less moving today, so a little less food — mostly fewer carbs." : dayType === "hard" ? "More work today, so more fuel — mostly carbs, around the session." : "An average training day." },
+    { label: "Your goal", value: Math.abs(kcal - maintenance) < 15 ? "±0 kcal" : `${signed(Math.round((kcal - maintenance) / 10) * 10)} kcal`, why: goalWhy(p.goal, rate, p.weightKg, kcal <= floor + 5 && bounded < 0) },
     { label: "Protein", value: `${protein} g`, why: `${proteinPerKg.toFixed(1)} g per kg of ${ref === p.weightKg ? "your bodyweight" : `a reference weight of ${ref} kg (extra fat mass needs no protein)`}. ${p.goal === "cut" ? "High in a deficit to keep the muscle you have." : "Enough to build and repair after training."}` },
     { label: "Fat", value: `${fat} g`, why: `At least 0.8 g per kg and a quarter of your energy: hormones and vitamins need it.` },
     { label: "Carbs", value: `${carbs} g`, why: keto ? "Keto: held under 50 g; fat supplies the rest." : "The rest of your energy. Carbs fuel hard training, so they rise and fall with the day." },

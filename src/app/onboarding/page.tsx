@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { db, todayISO, uid } from "@/lib/db";
 import { generatePlan } from "@/lib/engine/plan";
 import { adaptationsFor } from "@/lib/engine/injury";
-import { buildNutritionDay } from "@/lib/nutrition/engine";
+import { buildNutritionDay, dailyTargets } from "@/lib/nutrition/engine";
+import { NumbersExplained } from "@/components/NumbersExplained";
 import { lbToKg, localeUnits } from "@/lib/units";
 import { APP_NAME, HEALTH_NOTICE, MIN_AGE, minimumAge } from "@/lib/brand";
 import { SPORTS } from "@/lib/data/sports";
@@ -50,6 +51,8 @@ export default function Onboarding() {
   const [signedIn, setSignedIn] = useState(false);
   const [dir, setDir] = useState(1);
   const [busy, setBusy] = useState(false);
+  // Once built: the plan, explained, before the first screen of the app.
+  const [ready, setReady] = useState<{ profile: Profile; blocks: { name: string; intent: string }[] } | null>(null);
   // Units follow the phone's region until the person picks: pounds and miles
   // in the US. Read after hydration, so the static page and the first client
   // render agree.
@@ -126,6 +129,7 @@ export default function Onboarding() {
       // and the first logged sets replace the estimate within a week.
       baselines: {}, lifestyle,
       dietary, avoidFoods, mealsPerDay, wakeTime, trainTime, notifications: false, healthNoticeAt: new Date().toISOString(), consentAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+      startWeightKg: units.weight === "lb" ? lbToKg(weight) : weight,
     };
     const { plan, sessions } = generatePlan(profile, todayISO(), {}, adaptationsFor(await db.injuries.toArray(), todayISO()));
     await db.transaction("rw", db.profile, db.plans, db.sessions, db.nutrition, async () => {
@@ -137,12 +141,48 @@ export default function Onboarding() {
     });
     // Put the new profile and block on the account straight away.
     if (signedIn) await syncNow().catch(() => {});
-    router.replace("/today");
+    setBusy(false);
+    setReady({ profile, blocks: plan.blocks.slice(0, 3).map((b) => ({ name: b.name, intent: b.intent })) });
   }
 
   const unitW = units.weight;
   const unitH = units.weight === "lb" ? "in" : "cm";
   const variants = { enter: (d: number) => ({ opacity: 0, x: d * 40 }), center: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: d * -40 }) };
+
+  if (ready) {
+    const p = ready.profile;
+    return (
+      <main className="min-h-dvh px-5 pt-[calc(var(--safe-top)+28px)] pb-12 max-w-[640px] mx-auto grid gap-6 content-start">
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="grid gap-2">
+          <p className="eyebrow">Your plan is ready</p>
+          <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Built for <em>you, {p.name}.</em></h1>
+          <p className="text-sm text-smoke">Here is what we built, and why — so you know exactly what you are doing and what to expect.</p>
+        </motion.div>
+        <StatRow items={[
+          { label: "Sessions / week", value: String(p.daysPerWeek) },
+          { label: "Minutes each", value: String(p.sessionMinutes) },
+          { label: "Kcal · training day", value: dailyTargets(p, "train").kcal.toLocaleString("en-US") },
+        ]} />
+        <section className="grid gap-2">
+          <span className="meta">Your next 12 weeks</span>
+          <ol className="card divide-y divide-line">
+            {ready.blocks.map((b, i) => (
+              <li key={b.name} className="p-4 grid grid-cols-[34px_minmax(0,1fr)] gap-x-2">
+                <span className="meta text-volt font-bold pt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                <span className="grid gap-0.5"><strong className="text-sm">Weeks {i * 4 + 1}–{i * 4 + 4} · {b.name}</strong><span className="text-xs text-smoke leading-relaxed">{b.intent} Week 4 is lighter so the work can pay off.</span></span>
+              </li>
+            ))}
+          </ol>
+          <p className="text-xs text-smoke">Every four weeks the next block is rewritten from how the last one actually went: the loads you lifted, how hard it felt, what you skipped.</p>
+        </section>
+        <section className="grid gap-2">
+          <span className="meta">Your food</span>
+          <NumbersExplained profile={p} dayType="train" open />
+        </section>
+        <Press><button type="button" className="pill pill--volt pill--block pill--lg" onClick={() => router.replace("/today")}>Start training</button></Press>
+      </main>
+    );
+  }
 
   if (account !== "done") {
     return (

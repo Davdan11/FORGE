@@ -103,3 +103,12 @@ describe("coach panel: menus", () => {
     expect(faults.slice(0, 25)).toEqual([]);
   }, 120_000);
 });
+
+describe("coach panel: a maintenance week is maintenance", () => {
+  it("averages to maintenance over the week for every training frequency", () => {
+    for (const days of [2, 3, 4, 5, 6] as const) {
+      const p = person("male", 30, [80, 180], "endurance", days, []);
+      expect(Math.abs(projection(p).perWeekKg)).toBeLessThan(0.03);
+    }
+  });
+});

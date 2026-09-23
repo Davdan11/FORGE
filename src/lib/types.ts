@@ -131,6 +131,8 @@ export interface Profile {
   wakeTime: string;       // "07:00"
   trainTime: string;      // "18:00"
   notifications: boolean;
+  /** Weight on the day the plan was built: the start line for progress badges. */
+  startWeightKg?: number;
   /** When the health notice was accepted, at onboarding. */
   healthNoticeAt?: string;
   /** When the terms, privacy policy and processing of health data were agreed to. */
@@ -393,4 +395,11 @@ export interface Badge {
   /** Optional [current, target] for a progress bar toward the badge. */
   progress?: (s: Stats, extra: BadgeContext) => [number, number];
 }
-export interface BadgeContext { bestE1rm: Record<string, number>; bodyweightKg: number; best5kSec?: number; zone2Min: number }
+export interface BadgeContext {
+  bestE1rm: Record<string, number>; bodyweightKg: number; best5kSec?: number; zone2Min: number;
+  /** Body-weight change since the plan started, kg (negative = lost). */
+  weightChangeKg?: number;
+  goal?: Goal;
+  /** Training weeks where every planned session was done. */
+  fullWeeks?: number;
+}

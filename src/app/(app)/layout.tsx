@@ -3,6 +3,7 @@ import { SideNav } from "@/components/SideNav";
 import { Guard } from "@/components/Guard";
 import { LevelUpWatcher } from "@/components/LevelUp";
 import { XpBurst } from "@/components/XpBurst";
+import { BadgeUnlocked } from "@/components/BadgeUnlocked";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col lg:pl-[240px]">{children}</main>
       <BottomNav />
       <XpBurst />
+      <BadgeUnlocked />
       <LevelUpWatcher />
     </Guard>
   );

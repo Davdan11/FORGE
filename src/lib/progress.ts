@@ -4,6 +4,12 @@ import { XP, levelFromXp, evaluateBadges } from "./gamification";
 import { verifyActivity, type Verification } from "./verify";
 
 export const LEVEL_UP_EVENT = "forge:levelup";
+export const BADGES_EVENT = "forge:badges";
+/** Fired with the ids of badges just earned, for the celebration card. */
+function announceBadges(ids: string[]) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<string[]>(BADGES_EVENT, { detail: ids }));
+}
 /** Fired when an award pushes the athlete past a level boundary. */
 function announceLevelUp(level: number) {
   if (typeof window === "undefined") return;
@@ -47,8 +53,25 @@ async function finalize(newBadgesExtra: { activityDistanceM?: number } = {}) {
   const acts = await db.activities.toArray();
   const best5k = acts.filter((a) => a.type === "run" && a.distanceM >= 5000).map((a) => (a.durationSec * 5000) / a.distanceM).sort((a, b) => a - b)[0];
   const zone2Min = (await db.logs.toArray()).length * 0; // filled by cardio sessions below
-  const ctx = { bestE1rm: best, bodyweightKg: profile?.weightKg ?? 80, best5kSec: best5k, zone2Min: zone2Min + acts.reduce((a, b) => a + b.durationSec / 60, 0) };
+  // Body change since day one: the profile's start weight, or the first weigh-in.
+  const weighIns = await db.weights.orderBy("date").toArray();
+  const start = profile?.startWeightKg ?? weighIns[0]?.kg;
+  const latest = weighIns.length ? weighIns[weighIns.length - 1].kg : profile?.weightKg;
+  // Weeks where every planned session was done (at least two planned).
+  const sessions = await db.sessions.toArray();
+  const byWeek = new Map<string, { planned: number; done: number }>();
+  for (const s of sessions) {
+    if (s.kind === "rest") continue;
+    const k = `${s.planId}:${s.week}`;
+    const w = byWeek.get(k) ?? { planned: 0, done: 0 };
+    w.planned++; if (s.status === "done") w.done++;
+    byWeek.set(k, w);
+  }
+  const fullWeeks = [...byWeek.values()].filter((w) => w.planned >= 2 && w.done === w.planned).length;
+  const ctx = { bestE1rm: best, bodyweightKg: profile?.weightKg ?? 80, best5kSec: best5k, zone2Min: zone2Min + acts.reduce((a, b) => a + b.durationSec / 60, 0),
+    weightChangeKg: start != null && latest != null ? latest - start : undefined, goal: profile?.goal, fullWeeks };
   const earned = evaluateBadges(stats, ctx);
+  if (earned.length) announceBadges(earned);
   stats.badges.push(...earned);
   // The award path is the one place that knows a level was crossed, so it
   // announces it here rather than having the UI poll the stats row.
@@ -208,11 +231,15 @@ export async function unshareActivity(id: string) {
 export async function logWeighIn(kg: number, date: string) {
   await db.weights.put({ id: date, date, kg, dirty: 1, updatedAt: new Date().toISOString() });
   const p = await getProfile();
-  if (p) await db.profile.update(p.id, { weightKg: kg, dirty: 1 });
+  // The first weigh-in of an older profile becomes its start line.
+  if (p) await db.profile.update(p.id, { weightKg: kg, ...(p.startWeightKg == null ? { startWeightKg: p.weightKg } : {}), dirty: 1 });
   const stats = await getStats();
-  stats.xp += XP.weighIn;
+  // Once a day: re-entering the weight is a correction, not another reward.
+  const xp = payOnce(stats, date, "weighin") ? XP.weighIn : 0;
+  stats.xp += xp;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
-  return XP.weighIn;
+  await finalize();   // weight badges are checked on every weigh-in
+  return xp;
 }
 
 /** Guided mobility flow: minutes × mobility XP, counts toward totals and the streak. */

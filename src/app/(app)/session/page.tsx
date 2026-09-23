@@ -15,7 +15,8 @@ import { Screen, Hero, Toast, ScreenSkeleton, Rail, Empty } from "@/components/u
 import { removeAdded } from "@/lib/engine/custom";
 import { syncReminders } from "@/lib/remindersSync";
 import { Page, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
-import type { LoggedSet, PrescribedExercise, PrescribedSet, UnitPrefs } from "@/lib/types";
+import type { LoggedSet, PrescribedExercise, PrescribedSet, Session, UnitPrefs } from "@/lib/types";
+import { ChevronDown } from "lucide-react";
 
 /* The id arrives as a query parameter, not as a path segment.
 
@@ -129,6 +130,7 @@ function SessionDetail() {
           </div>
         </Hero>
 
+        <SessionWhy session={session} />
         {session.adjustment && <div className="card p-4 mb-5 grid gap-2"><span className="chip chip--volt justify-self-start">Adjusted today</span><p className="text-sm">{session.adjustment.reason}</p></div>}
         {session.cardio && (
           <div className="card p-4 mb-5 grid gap-1">
@@ -363,3 +365,38 @@ function Stepper({ value, onChange, delta, label, hint, disabled }: { value: num
     </div>
   );
 }
+
+/**
+ * "Why this session" — the block it belongs to, what today is for, and how to
+ * read the numbers on every exercise. So the plan reads as coaching, not as a
+ * list someone typed.
+ */
+function SessionWhy({ session }: { session: Session }) {
+  const [open, setOpen] = useState(false);
+  const plan = useLiveQuery(async () => (await db.plans.get(session.planId)) ?? null, [session.planId]);
+  const block = plan?.blocks.find((b) => b.weeks.includes(session.week));
+  const inBlock = block ? block.weeks.indexOf(session.week) + 1 : null;
+  return (
+    <div className="card mb-5 overflow-hidden">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full p-4 flex items-center justify-between gap-3 text-left">
+        <span className="grid"><span className="meta">Why this session</span><span className="text-sm font-semibold">{block ? `${block.name} block · week ${inBlock} of ${block.weeks.length}` : `Week ${session.week}`}</span></span>
+        <ChevronDown className={`w-5 h-5 text-smoke transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <ol className="border-t border-line divide-y divide-line text-sm">
+              {block && <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">01 · The block</span><span>{block.intent}{inBlock === block.weeks.length ? " This is the lighter week: fewer sets, easier effort, so the work of the last three weeks can show." : ""}</span>{block.review && block.review.changes.length > 0 && <span className="text-xs text-smoke">Changed from the last block: {block.review.changes.join(" · ")}</span>}</li>}
+              <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">{block ? "02" : "01"} · Today</span><span>{session.why}</span></li>
+              <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">{block ? "03" : "02"} · Reading the numbers</span>
+                <span><strong>RPE</strong> is how hard a set feels, out of 10. RPE 8 means you could have done 2 more reps; 7 means 3. Stop there — the plan is built on it.</span>
+                <span className="text-xs text-smoke">Loads come from what you have logged: your best recent set gives an estimated max, and each set is a share of it, rounded to plates you can load. No history yet? It starts light, from your bodyweight and experience, and corrects itself within a week.</span>
+              </li>
+            </ol>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+

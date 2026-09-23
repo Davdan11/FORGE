@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, todayISO, addDays } from "@/lib/db";
 import { getMeal, recipeCount } from "@/lib/nutrition/recipes";
-import { buildNutritionDay, dayTotals, eatenTotals, groceryList, swapOptions, dailyTargets } from "@/lib/nutrition/engine";
+import { buildNutritionDay, dayTotals, eatenTotals, groceryList, swapOptions, dailyTargets, retuneDay } from "@/lib/nutrition/engine";
+import { NumbersExplained } from "@/components/NumbersExplained";
 import { awardMeal } from "@/lib/progress";
 import { ART } from "@/lib/data/images";
 import { Screen, Hero, Section, Bar, Toast, Photo, Check, ScreenSkeleton, Seg } from "@/components/ui";
@@ -53,7 +54,9 @@ export default function FoodPage() {
   function openSwap(m: DayPlanMeal) { setSwapFor(m); setSwaps(swapOptions(profile!, day!, m)); }
   async function doSwap(to: string) {
     if (!swapFor) return;
-    await db.nutrition.update(day!.id, { meals: day!.meals.map((x) => (x === swapFor ? { ...x, mealId: to, done: false } : x)), dirty: 1 });
+    // Re-balance every portion around the new plate, so the day still adds up.
+    const swapped = retuneDay(profile!, { ...day!, meals: day!.meals.map((x) => (x === swapFor ? { ...x, mealId: to, done: false } : x)) });
+    await db.nutrition.update(day!.id, { meals: swapped.meals, dirty: 1 });
     setSwapFor(null);
   }
   async function rebuildToday() {
@@ -111,6 +114,7 @@ export default function FoodPage() {
                   <div className="flex gap-3 text-[11px] tnum"><span className={t.sugar > tg.sugarMax ? "text-danger" : "text-smoke"}>Sugar {Math.round(t.sugar)} / {tg.sugarMax} g max</span><span className={t.fiber >= tg.fiberMin ? "text-volt" : "text-smoke"}>Fiber {Math.round(t.fiber)} / {tg.fiberMin} g</span><span className="text-smoke ml-auto">Water {Math.round(day.waterMl / 100) / 10} L</span></div>
                 </div>
               </div>
+              <div className="mb-4"><NumbersExplained profile={profile} dayType={day.dayType} /></div>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <Link href="/food/browse" className="pill pill--sm">Browse {recipeCount().toLocaleString("en-US")} recipes</Link>
                 <button type="button" className="pill pill--sm" onClick={rebuildToday}>↻ New menu</button>
@@ -130,7 +134,7 @@ export default function FoodPage() {
                           <Link href={`/food/meal?id=${enc(meal.id)}&date=${day.date}`} className="block relative h-44 md:h-52 lg:h-56">
                             <Photo src={meal.image} color veil className="absolute inset-0" />
                             <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5 grid gap-1">
-                              <span className="meta text-bone/80">{m.slot}{m.scale !== 1 ? ` · ×${m.scale}` : ""} · {meal.minutes} min</span>
+                              <span className="meta text-bone/80">{m.note ? <span className="font-bold" style={{ color: "#c6f432" }}>{m.note}</span> : m.slot === "pre" ? "Pre-workout" : m.slot === "post" ? "Recovery" : m.slot}{m.scale !== 1 ? ` · ×${m.scale}` : ""} · {meal.minutes} min</span>
                               <span className="display text-2xl lg:text-3xl leading-[.95]">{meal.name.split(" with ")[0]}</span>
                               {meal.name.includes(" with ") && <span className="text-sm text-bone/85">with {meal.name.split(" with ")[1]}</span>}
                             </div>

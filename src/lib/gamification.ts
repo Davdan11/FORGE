@@ -1,4 +1,4 @@
-import type { Badge, Stats } from "./types";
+import type { Badge, Stats, BadgeContext } from "./types";
 
 /* ─────────────────────────────────────────────────────────────
    THE LADDER.
@@ -155,8 +155,24 @@ export const BADGES: Badge[] = [
   { id: "zone2_100h", name: "100 h Zone 2", desc: "One hundred hours of easy aerobic work.", pillar: "endurance", check: (_s, c) => c.zone2Min >= 6000, progress: (_s, c) => [Math.round(c.zone2Min / 60), 100] },
   { id: "shared_10", name: "Out loud", desc: "Ten activities shared to your profile.", pillar: "endurance", check: (s) => (s.totals.shared ?? 0) >= 10, progress: (s) => [s.totals.shared ?? 0, 10] },
   { id: "mobility_10h", name: "Ten hours of mobility", desc: "600 minutes of mobility done.", pillar: "mobility", check: (s) => s.totals.mobilityMin >= 600, progress: (s) => [Math.round(s.totals.mobilityMin), 600] },
+  /* Body change, counted from the day the plan was built. Loss badges for fat-loss goals,
+     gain badges for muscle-gain goals: nobody is congratulated for the opposite of what they asked for. */
+  { id: "down_1lb", name: "First pound down", desc: "1 lb (0.45 kg) lighter than day one.", pillar: "nutrition", check: (_s, c) => isLoss(c) && (c.weightChangeKg ?? 0) <= -0.45, progress: (_s, c) => [lost(c, 0.45), 1] },
+  { id: "down_5lb", name: "Five down", desc: "5 lb (2.3 kg) lighter than day one.", pillar: "nutrition", check: (_s, c) => isLoss(c) && (c.weightChangeKg ?? 0) <= -2.27, progress: (_s, c) => [lost(c, 0.45), 5] },
+  { id: "down_10lb", name: "Ten down", desc: "10 lb (4.5 kg) lighter than day one.", pillar: "nutrition", check: (_s, c) => isLoss(c) && (c.weightChangeKg ?? 0) <= -4.54, progress: (_s, c) => [lost(c, 0.45), 10] },
+  { id: "down_20lb", name: "Twenty down", desc: "20 lb (9 kg) lighter than day one.", pillar: "nutrition", check: (_s, c) => isLoss(c) && (c.weightChangeKg ?? 0) <= -9.07, progress: (_s, c) => [lost(c, 0.45), 20] },
+  { id: "up_2lb", name: "First gains", desc: "2 lb (0.9 kg) heavier than day one, on a muscle-gain plan.", pillar: "strength", check: (_s, c) => isGain(c) && (c.weightChangeKg ?? 0) >= 0.9, progress: (_s, c) => [gained(c, 0.45), 2] },
+  { id: "up_5lb", name: "Five up", desc: "5 lb (2.3 kg) heavier than day one, on a muscle-gain plan.", pillar: "strength", check: (_s, c) => isGain(c) && (c.weightChangeKg ?? 0) >= 2.27, progress: (_s, c) => [gained(c, 0.45), 5] },
+  { id: "full_week", name: "Full week", desc: "Every planned session of a week, done.", pillar: "all", check: (_s, c) => (c.fullWeeks ?? 0) >= 1, progress: (_s, c) => [Math.min(1, c.fullWeeks ?? 0), 1] },
+  { id: "full_month", name: "Four full weeks", desc: "Four weeks with every planned session done.", pillar: "all", check: (_s, c) => (c.fullWeeks ?? 0) >= 4, progress: (_s, c) => [Math.min(4, c.fullWeeks ?? 0), 4] },
   { id: "meals_100", name: "Fed", desc: "100 meals logged.", pillar: "nutrition", check: (s) => s.totals.mealsLogged >= 100, progress: (s) => [s.totals.mealsLogged, 100] },
 ];
+
+function isLoss(c: BadgeContext) { return c.goal === "cut" || c.goal === "recomp"; }
+function isGain(c: BadgeContext) { return c.goal === "build" || c.goal === "strength"; }
+/** Pounds lost / gained so far, for progress bars (whole pounds). */
+function lost(c: BadgeContext, perLb: number) { return Math.max(0, Math.floor(-(c.weightChangeKg ?? 0) / perLb)); }
+function gained(c: BadgeContext, perLb: number) { return Math.max(0, Math.floor((c.weightChangeKg ?? 0) / perLb)); }
 
 export function evaluateBadges(stats: Stats, ctx: Parameters<Badge["check"]>[1]) {
   return BADGES.filter((b) => !stats.badges.includes(b.id) && b.check(stats, ctx)).map((b) => b.id);
