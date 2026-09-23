@@ -144,6 +144,9 @@ export interface Profile {
   /** Structured indoor workouts the athlete built. Stored on the profile so
    *  they travel with the account without a table of their own. */
   indoorWorkouts?: import("./indoor/workouts").StructuredWorkout[];
+  /** The Unity indoor game's state that follows the account: the trophy case
+   *  (JSON the game writes) and the outfit code. Opaque to the app. */
+  indoorGame?: { palmares?: string; look?: string };
   createdAt: string;
   supabaseUserId?: string;
 }

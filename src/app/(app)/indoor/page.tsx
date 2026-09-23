@@ -16,6 +16,7 @@ import { Screen, Hero, Photo, Section, ScreenSkeleton, Toast, Seg, Stat } from "
 import { ART } from "@/lib/data/images";
 import { Page, Press } from "@/components/motion";
 import { Ride, type RideResult, type Sport } from "@/components/indoor/Ride";
+import { UnityRide } from "@/components/indoor/UnityRide";
 import { WorkoutBuilder, pace } from "@/components/indoor/WorkoutBuilder";
 import { WorkoutChart } from "@/components/indoor/WorkoutChart";
 import type { Activity, Profile as AthleteProfile, UnitPrefs } from "@/lib/types";
@@ -26,7 +27,7 @@ const BUILT_IN = [
   { id: "plaine", name: "La Plaine", lengthM: 20_000, hilliness: 0.08 },
 ];
 
-type View = { v: "pick" } | { v: "ride" } | { v: "build"; w: StructuredWorkout; isNew: boolean } | { v: "summary"; r: RideResult };
+type View = { v: "pick" } | { v: "ride" } | { v: "unity" } | { v: "build"; w: StructuredWorkout; isNew: boolean } | { v: "summary"; r: RideResult };
 
 export default function IndoorPage() {
   const profile = useLiveQuery(() => getProfile(), []);
@@ -102,6 +103,15 @@ export default function IndoorPage() {
     );
   }
 
+  if (view.v === "unity") {
+    return (
+      <Page>
+        <UnityRide profile={profile} ftpW={ftpW} say={say} onExit={(msg) => { setView({ v: "pick" }); if (msg) say(msg); }} />
+        <Toast text={toast} />
+      </Page>
+    );
+  }
+
   if (view.v === "summary") {
     return (
       <Page>
@@ -141,6 +151,18 @@ export default function IndoorPage() {
         </Hero>
 
         <div className="mb-6"><Seg fill value={sport} onChange={(v) => { setSport(v); setWorkoutId(null); }} options={[{ v: "ride", label: "Ride" }, { v: "run", label: "Run" }]} /></div>
+
+        {sport === "ride" && (
+          <Press className="block mb-6">
+            <button type="button" onClick={() => setView({ v: "unity" })} className="card p-4 w-full text-left flex items-center gap-4 !border-volt">
+              <span className="w-11 h-11 rounded-xl grid place-items-center shrink-0 bg-volt text-ink"><Users className="w-5 h-5" strokeWidth={2} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">FORGE Ride · 3D world, online</span>
+                <span className="block text-xs text-smoke mt-0.5">Nine routes in six countries, group rides every 30 minutes, drafting, medals. Everyone on the same road rides with you.</span>
+              </span>
+            </button>
+          </Press>
+        )}
 
         <Section title="Pick a course">
           <div className="grid gap-2">

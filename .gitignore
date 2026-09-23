@@ -38,3 +38,6 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+
+# Unity Web build of the indoor game (tens of MB, built from the FORGE-Unity repo)
+public/unity/

@@ -24,6 +24,10 @@ import { supabase } from "../supabase/client";
 export interface Peer {
   id: string;
   name: string;
+  /** Outfit code from the Unity game ("3.7.0.…"), when the peer rides it. */
+  look?: string;
+  /** Hex colour of the peer's name tag, when sent. */
+  color?: string;
   /** Metres along the course at `at`. */
   distanceM: number;
   speedMs: number;
@@ -68,7 +72,8 @@ export interface Room {
   peers: Map<string, Peer>;
   /** How many people presence reports, me included. */
   count: () => number;
-  send: (distanceM: number, speedMs: number) => void;
+  /** `extra` rides along for the Unity game: outfit code and tag colour. */
+  send: (distanceM: number, speedMs: number, extra?: { look?: string; color?: string }) => void;
   leave: () => void;
 }
 
@@ -92,12 +97,12 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
 
   channel
     .on("broadcast", { event: "pos" }, ({ payload }) => {
-      const p = payload as { id?: string; n?: string; d?: number; v?: number };
+      const p = payload as { id?: string; n?: string; d?: number; v?: number; lk?: unknown; c?: unknown };
       if (!p?.id || p.id === me || typeof p.d !== "number" || typeof p.v !== "number") return;
       // Bounds, because this is another client's word: nobody rides 30 m/s.
       if (!Number.isFinite(p.d) || p.d < 0 || p.v < 0 || p.v > 30) return;
       const had = peers.has(p.id);
-      peers.set(p.id, { id: p.id, name: (p.n ?? "Rider").slice(0, 24), distanceM: p.d, speedMs: p.v, at: Date.now() });
+      peers.set(p.id, { id: p.id, name: (p.n ?? "Rider").slice(0, 24), distanceM: p.d, speedMs: p.v, at: Date.now(), look: lookCode(p.lk), color: hexColor(p.c) });
       if (!had) onChange();
     })
     .on("presence", { event: "sync" }, () => {
@@ -121,7 +126,15 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
   return {
     peers,
     count: () => present,
-    send: (d, v) => { channel.send({ type: "broadcast", event: "pos", payload: { id: me, n: firstName, d: Math.round(d * 10) / 10, v: Math.round(v * 100) / 100 } }); },
+    send: (d, v, extra) => { channel.send({ type: "broadcast", event: "pos", payload: { id: me, n: firstName, d: Math.round(d * 10) / 10, v: Math.round(v * 100) / 100, lk: extra?.look, c: extra?.color } }); },
     leave: () => { channel.untrack().catch(() => {}); supabase?.removeChannel(channel); },
   };
+}
+
+/** Another client's word again: an outfit code is 14 small numbers, nothing else. */
+export function lookCode(v: unknown): string | undefined {
+  return typeof v === "string" && /^-?\d{1,3}(\.-?\d{1,3}){13}$/.test(v) ? v : undefined;
+}
+export function hexColor(v: unknown): string | undefined {
+  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : undefined;
 }
