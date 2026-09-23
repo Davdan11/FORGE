@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion, animate, useInView, AnimatePresence } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, useId } from "react";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -58,14 +58,24 @@ export function CountUp({ value, decimals = 0, suffix = "", prefix = "", duratio
 }
 
 /** Circular progress ring (0–1). */
+/** A progress ring. `color="grad"` draws it in the signature gradient. */
 export function Ring({ value, size = 120, stroke = 8, children, color = "var(--volt)" }: { value: number; size?: number; stroke?: number; children?: ReactNode; color?: string }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
   const reduce = useReducedMotion();
+  const id = useId().replace(/:/g, "");
+  const grad = color === "grad";
   return (
     <div className="relative" style={{ width: size, height: size }}>
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full -rotate-90">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full -rotate-90" style={grad ? { filter: "drop-shadow(0 4px 10px rgba(30,190,120,.35))" } : undefined}>
+        {grad && (
+          <defs>
+            <linearGradient id={`ring-${id}`} x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stopColor="#9be000" /><stop offset=".6" stopColor="#1fd08a" /><stop offset="1" stopColor="#16b4e6" />
+            </linearGradient>
+          </defs>
+        )}
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line)" strokeWidth={stroke} />
-        <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c}
+        <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={grad ? `url(#ring-${id})` : color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c}
           initial={reduce ? false : { strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - Math.max(0, Math.min(1, value))) }} transition={{ duration: 1.1, ease: EASE }} />
       </svg>
       <div className="absolute inset-0 grid place-content-center text-center">{children}</div>

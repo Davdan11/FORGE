@@ -1,28 +1,37 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   FORGE — light editorial theme.
-   Paper background, near-black type, one green accent, black & white
-   photography. Token names are kept from the dark theme so components
-   read the same:  ink = dark, bone = light (used on photos), volt = accent.
+   FORGE — "Day Shift".
+   A light ground lit by soft lime, mint and cyan glows; near-black type
+   set wide and heavy; one signature gradient (lime → mint → cyan) kept
+   for the few things that matter — the key word of a headline, progress,
+   the primary action, the active tab. White glass cards. Colour photos.
+   Token names are kept from the first theme so components read the same:
+   ink = dark, bone = light (on photos), volt = accent.
    ═══════════════════════════════════════════════════════════════ */
 :root {
-  --ink: #101010;                 /* primary text, dark buttons */
-  --paper: #f5f4ef;               /* page */
+  --ink: #0b120e;                 /* primary text, dark buttons */
+  --paper: #f3f6f2;               /* page */
   --carbon: #ffffff;              /* cards */
-  --graphite: #eeece6;            /* inputs, thumbs, wells */
-  --slate: #e3e0d8;
+  --graphite: #eaefe9;            /* inputs, thumbs, wells */
+  --slate: #dde4dd;
   --bone: #f6f3ec;                /* light text on photos / dark surfaces */
   /* Secondary/tertiary text is never a grey — it is ink at reduced alpha, so it
      stays tinted by whatever sits behind it. Same three stops, mirrored on dark
      surfaces below (.on-photo), which is what keeps the two modes related. */
-  --smoke: rgba(16,16,16,.62);
-  --faint: rgba(16,16,16,.40);
-  --volt: #1fc76f;                /* accent fills */
-  --volt-deep: #0e7a45;           /* accent as text / border on paper */
+  --smoke: rgba(11,18,14,.60);
+  --faint: rgba(11,18,14,.38);
+  --volt: #b8f03a;                /* accent fills: lime, always under dark text */
+  --volt-deep: #0a8a5c;           /* accent as text / border on paper */
+  --mint: #3ee89a;
+  --cyan: #25c6f2;
+  /* The signature. Bright for fills and for words on photos; deep for words
+     on the light ground, where the bright one would not be legible. */
+  --grad: linear-gradient(100deg, #c8ff2e 0%, #3ee89a 55%, #25c6f2 100%);
+  --grad-deep: linear-gradient(100deg, #4fae00 0%, #00b37e 55%, #0094c9 100%);
   --danger: #d9453d;
-  --line: rgba(16, 16, 16, 0.12);
-  --line-strong: rgba(16, 16, 16, 0.22);
+  --line: rgba(11, 18, 14, 0.09);
+  --line-strong: rgba(11, 18, 14, 0.18);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --shell-left: 0px;              /* desktop sidebar width; see .bleed */
@@ -53,18 +62,18 @@
   --stack-section: clamp(64px, 11vh, 132px);
 
   /* Elevation: four graded steps, all low-opacity and wide — never muddy. */
-  --e1: 0 1px 2px rgba(16,16,16,.04);
-  --e2: 0 1px 2px rgba(16,16,16,.04), 0 10px 30px -22px rgba(16,16,16,.18);
-  --e3: 0 2px 4px rgba(16,16,16,.04), 0 18px 40px -24px rgba(16,16,16,.28);
-  --e4: 0 24px 50px -26px rgba(16,16,16,.35), 0 1px 2px rgba(16,16,16,.06);
+  --e1: 0 1px 2px rgba(0,40,20,.05);
+  --e2: 0 1px 2px rgba(0,40,20,.05), 0 16px 36px -26px rgba(0,60,30,.30);
+  --e3: 0 2px 4px rgba(0,40,20,.05), 0 22px 44px -24px rgba(0,60,30,.36);
+  --e4: 0 28px 56px -26px rgba(0,50,25,.40), 0 1px 2px rgba(0,40,20,.06);
   --edge: var(--e2);   /* legacy aliases */
   --lift: var(--e4);
-  --glow-volt: 0 12px 30px -14px rgba(31,199,111,.6);
+  --glow-volt: 0 12px 28px -10px rgba(40,205,120,.55);
 
   /* Radii: one family, so nothing looks borrowed. */
   --r-control: 12px;
-  --r-card: 18px;
-  --r-panel: 26px;
+  --r-card: 22px;
+  --r-panel: 28px;
 }
 
 @theme inline {
@@ -88,7 +97,15 @@
 @layer base {
   html { -webkit-text-size-adjust: 100%; color-scheme: light; }
   body {
-    background: radial-gradient(90% 40% at 50% -5%, rgba(31,199,111,.08), transparent 60%), var(--paper);
+    /* The light comes from somewhere: lime from the top right, cyan from the
+       left, a little mint low down. Fixed, so scrolling moves the content
+       through the light rather than dragging the light along. */
+    background:
+      radial-gradient(110% 38% at 88% -6%, rgba(200,255,46,.42), transparent 62%),
+      radial-gradient(80% 36% at -12% 26%, rgba(37,198,242,.16), transparent 62%),
+      radial-gradient(70% 30% at 110% 78%, rgba(62,232,154,.14), transparent 60%),
+      var(--paper);
+    background-attachment: fixed;
     color: var(--ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -125,16 +142,19 @@
   line-height: 0.92;
   text-wrap: balance;
 }
+/* The accent word is the same heavy sans as the headline, lit by the
+   signature gradient — one voice, one moment of colour. */
 .display em, .serif-accent {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  font-stretch: 100%;
-  text-transform: none;
-  letter-spacing: -0.01em;
-  color: var(--volt-deep);
-  font-size: 1.12em;
-  line-height: 0.85;
+  font-style: normal;
+  font-weight: inherit;
+  font-stretch: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  background: var(--grad-deep);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  color: transparent;
+  padding-bottom: .06em;
 }
 /* Optical tracking: the bigger the type, the tighter it must be set, or large
    headlines read loose and cheap. One step per size band. */
@@ -146,13 +166,8 @@
    — skewing an italic twice reads as a rendering fault, not a gesture. */
 /* inline-block: as a plain inline box, a slab that wraps onto a second line
    collapsed its highlight to a sliver at the line break. */
-.display em.slab { position: relative; isolation: isolate; color: var(--ink); padding: 0 .16em; display: inline-block; }
-.display em.slab::before {
-  content: ''; position: absolute; z-index: -1;
-  inset: .12em -.04em .1em; border-radius: 3px;
-  background: var(--volt); transform: skewX(-8deg);
-}
-.on-photo .display em.slab, .photo--veil ~ * .display em.slab { color: var(--ink); }
+/* The old marker slab is retired: the gradient does its job. */
+.display em.slab { color: transparent; }
 
 .meta {
   font-size: 0.72rem;
@@ -170,27 +185,29 @@
   letter-spacing: 0.22em; text-transform: uppercase; color: var(--smoke);
   white-space: nowrap;
 }
-.eyebrow::before { content: ''; width: 40px; height: 1px; background: var(--volt-deep); flex: none; }
+.eyebrow::before { content: ''; width: 28px; height: 3px; border-radius: 3px; background: var(--grad); flex: none; }
 .photo--veil ~ * .eyebrow, .on-photo .eyebrow { color: rgba(246,243,236,.72); }
-.photo--veil ~ * .eyebrow::before, .on-photo .eyebrow::before { background: var(--volt); }
+.photo--veil ~ * .eyebrow::before, .on-photo .eyebrow::before { background: var(--grad); }
 .tnum { font-variant-numeric: tabular-nums; }
 
 /* ── On photo: anything after a veiled photo is light-on-dark ─── */
 .photo--veil ~ *, .on-photo { color: var(--bone); }
 .photo--veil ~ * .meta, .on-photo .meta { color: rgba(246,243,236,.72); }
-.photo--veil ~ * .display em, .on-photo .display em { color: var(--volt); }
+.photo--veil ~ * .display em, .on-photo .display em { background-image: var(--grad); color: transparent; }
 .photo--veil ~ * .chip--live, .on-photo .chip--live { color: var(--bone); border-color: rgba(246,243,236,.45); background: rgba(16,16,16,.25); }
 .photo--veil ~ * .text-smoke, .on-photo .text-smoke { color: rgba(246,243,236,.7); }
 .photo--veil ~ * .bar, .on-photo .bar { background: rgba(246,243,236,.22); }
 .photo--veil ~ * h1.display, .on-photo h1.display { text-shadow: 0 2px 24px rgba(0,0,0,.45); }
 
 /* ── Surfaces ─────────────────────────────────────────────────── */
-/* Cards are a gradient wash plus a hairline, and carry NO resting shadow. A
-   drop shadow under every card is what makes a light UI look like a template;
-   the border does the separating and the wash gives the surface its depth. */
+/* Cards are white glass: translucent over the page light, a white rim that
+   catches it, and a long soft shadow tinted green rather than grey — a grey
+   shadow on a lit page reads as dirt. */
 .card {
-  background: linear-gradient(180deg, var(--carbon) 0%, #f1ebe1 100%);
-  border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: none;
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.95); border-radius: var(--r-card);
+  box-shadow: var(--e2);
 }
 .card--flat { background: transparent; border: 1px solid var(--line); border-radius: var(--r-card); }
 .hairline { border-top: 1px solid var(--line); }
@@ -209,8 +226,8 @@ a.card:active, button.card:active { transform: scale(.985); }
 .pill:active { transform: scale(0.97); }
 .pill:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 /* A faded green read as "almost ready". Not available yet looks neutral. */
-.pill--volt:disabled { opacity: 1; background: rgba(16,16,16,.06); border-color: transparent; color: rgba(16,16,16,.42); }
-.pill--volt { background: var(--volt); color: var(--ink); border-color: var(--volt); box-shadow: var(--glow-volt); }
+.pill--volt:disabled { opacity: 1; background: rgba(11,18,14,.06); border-color: transparent; color: rgba(11,18,14,.42); box-shadow: none; }
+.pill--volt { background: var(--grad); color: #06240f; border-color: transparent; box-shadow: var(--glow-volt); font-weight: 700; }
 .pill--bone { background: var(--ink); color: var(--bone); border-color: var(--ink); }
 .pill--sm { position: relative; min-height: 40px; padding: 0 14px; font-size: 0.85rem; }
 .pill--sm::after { content: ''; position: absolute; inset: -2px -4px; }
@@ -219,7 +236,7 @@ a.card:active, button.card:active { transform: scale(.985); }
 .pill--danger { border-color: var(--danger); color: var(--danger); background: transparent; }
 @media (hover: hover) {
   .pill:not(:disabled):hover { border-color: var(--ink); }
-  .pill--volt:not(:disabled):hover { box-shadow: 0 16px 36px -14px rgba(31,199,111,.75); filter: brightness(1.03); }
+  .pill--volt:not(:disabled):hover { box-shadow: 0 16px 36px -12px rgba(40,205,120,.75); filter: brightness(1.04); }
   .pill--bone:not(:disabled):hover { background: #222; }
 }
 
@@ -230,12 +247,12 @@ a.card:active, button.card:active { transform: scale(.985); }
   background: var(--carbon); border: 1px solid var(--line-strong); color: var(--ink);
   transition: border-color var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out);
 }
-.input:focus { border-color: var(--volt-deep); box-shadow: 0 0 0 4px rgba(31,199,111,.16); outline: none; }
+.input:focus { border-color: var(--volt-deep); box-shadow: 0 0 0 4px rgba(62,232,154,.22); outline: none; }
 /* An example, not an answer: at the body-text grey a placeholder read as
    something already typed. */
 .input::placeholder { color: rgba(16,16,16,.36); }
 input[type="range"] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
-input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--volt) var(--fill, 50%), var(--line-strong) var(--fill, 50%)); }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--mint) var(--fill, 50%), var(--line-strong) var(--fill, 50%)); }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%; background: var(--carbon); border: 3px solid var(--ink); box-shadow: 0 2px 8px rgba(16,16,16,.25); }
 
 /* Segmented control */
@@ -309,7 +326,7 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26p
 
 /* Chips */
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--smoke); white-space: nowrap; background: var(--carbon); }
-.chip--volt { background: var(--volt); color: var(--ink); border-color: var(--volt); }
+.chip--volt { background: var(--grad); color: #06240f; border-color: transparent; font-weight: 700; }
 .chip--live { color: var(--ink); border-color: var(--line-strong); }
 button.chip, a.chip { min-height: 40px; padding: 0 14px; position: relative; transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
 button.chip::after, a.chip::after { content: ''; position: absolute; inset: -4px; }
@@ -318,12 +335,14 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 
 /* Progress */
 .bar { height: 6px; border-radius: 999px; background: rgba(16,16,16,.08); overflow: hidden; }
-.bar > i { display: block; height: 100%; background: linear-gradient(90deg, #17a85c, var(--volt)); border-radius: 999px; transition: width 600ms var(--ease-out); }
+.bar > i { position: relative; overflow: hidden; display: block; height: 100%; background: var(--grad); border-radius: 999px; box-shadow: 0 2px 10px rgba(40,205,120,.45); transition: width 900ms var(--ease-out); }
+.bar > i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent); transform: translateX(-100%); animation: bar-shine 2.6s 1.2s ease-in-out infinite; }
+@keyframes bar-shine { to { transform: translateX(100%); } }
 
 /* Toggle */
 .toggle { width: 48px; height: 28px; border-radius: 999px; position: relative; background: rgba(16,16,16,.16); border: 1px solid transparent; transition: background var(--t-base) var(--ease-out); flex: none; }
 .toggle::after { content: ''; position: absolute; inset: -8px; }
-.toggle[aria-checked="true"] { background: var(--volt); box-shadow: var(--glow-volt); }
+.toggle[aria-checked="true"] { background: var(--grad); box-shadow: var(--glow-volt); }
 .toggle > i { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: var(--carbon); box-shadow: 0 2px 6px rgba(16,16,16,.3); }
 
 /* Check */
@@ -332,22 +351,25 @@ button.chip:active, a.chip:active { transform: scale(.96); }
    repeated interaction in the app; a 24px target makes it a chore. */
 .check { position: relative; width: 24px; height: 24px; border-radius: 7px; border: 1.5px solid var(--line-strong); background: var(--carbon); display: grid; place-items: center; flex: none; transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out); }
 .check::after { content: ''; position: absolute; inset: -10px; }
-.check[aria-checked="true"] { background: var(--ink); border-color: var(--ink); }
-.check svg { width: 14px; height: 14px; stroke: var(--bone); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.check[aria-checked="true"] { background: var(--grad); border-color: transparent; box-shadow: 0 4px 12px -2px rgba(40,205,120,.55); }
+.check svg { width: 14px; height: 14px; stroke: #06240f; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
 .check[aria-checked="true"] svg { opacity: 1; }
 
 /* ── Motion ───────────────────────────────────────────────────── */
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise 500ms var(--ease-out) both; }
-@keyframes pulse-dot { 0% { box-shadow: 0 0 0 0 rgba(31,199,111,.55); } 100% { box-shadow: 0 0 0 12px rgba(31,199,111,0); } }
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--volt); animation: pulse-dot 2.2s ease-out infinite; }
+@keyframes pulse-dot { 0% { box-shadow: 0 0 0 0 rgba(62,232,154,.6); } 100% { box-shadow: 0 0 0 12px rgba(62,232,154,0); } }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); animation: pulse-dot 2s ease-out infinite; }
+/* A flame that breathes: the streak is alive while it is alive. */
+@keyframes flicker { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.12) rotate(3deg); } }
+.flicker { display: inline-block; transform-origin: 50% 90%; animation: flicker 1.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
 
-/* ── Photos: black & white editorial, colour for food ─────────── */
+/* ── Photos: colour, lightly graded ────────────────────────────── */
 .photo { overflow: hidden; background: var(--graphite); }
-/* Monochrome, but graded like film rather than desaturated: blacks sit down,
-   midtones open up. Flat greyscale is the single biggest "stock photo" tell. */
-.photo img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(1) contrast(1.24) brightness(.86) saturate(0); transition: opacity 600ms var(--ease-out), transform 1.2s var(--ease-out); }
+/* Colour, with a touch of contrast so the blacks sit down. The black-and-white
+   grade read as editorial — and as lifeless next to a lit, green interface. */
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(1.08) contrast(1.06); transition: opacity 600ms var(--ease-out), transform 1.2s var(--ease-out); }
 .photo--color img { filter: saturate(1.06) contrast(1.04); }
 .photo--kb img { animation: photo-kb 18s ease-in-out infinite alternate; }
 @keyframes photo-kb { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.14) translate(-1.6%, -1.2%); } }
@@ -377,14 +399,14 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 .cook-step { font-size: clamp(1.4rem, 5.2vw, 1.9rem); line-height: 1.25; letter-spacing: -.01em; font-weight: 500; }
 
 .badge-glyph { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--graphite); border: 1px solid var(--line); color: var(--ink); }
-.badge-glyph--on { background: var(--volt); border-color: var(--volt); }
+.badge-glyph--on { background: var(--grad); border-color: transparent; }
 
 .card--photo { position: relative; overflow: hidden; border-radius: 18px; border: 1px solid var(--line); background: var(--graphite); box-shadow: var(--lift); color: var(--bone); }
 .card--photo .photo { position: absolute; inset: 0; }
 .card--photo > .card__body { position: relative; z-index: 1; }
 .card--photo .meta { color: rgba(246,243,236,.72); }
 .card--photo .text-smoke { color: rgba(246,243,236,.7); }
-.card--photo .display em { color: var(--volt); }
+.card--photo .display em { background-image: var(--grad); color: transparent; }
 
 .section-rule { height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent 70%); }
 .divider-fade { height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
@@ -416,7 +438,7 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 .numeral { font-family: var(--font-sans); font-stretch: 125%; font-weight: 800; font-size: var(--text-numeral); line-height: .82; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 
 /* ── Navigation ───────────────────────────────────────────────── */
-.nav-float { position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 10px); z-index: 40; margin-inline: auto; max-width: 536px; border-radius: 26px; border: 1px solid var(--line); background: rgba(255,255,255,.82); backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%); box-shadow: 0 24px 48px -20px rgba(16,16,16,.35), inset 0 1px 0 rgba(255,255,255,.8); }
+.nav-float { position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 10px); z-index: 40; margin-inline: auto; max-width: 536px; border-radius: 28px; border: 1px solid rgba(255,255,255,.95); background: rgba(255,255,255,.8); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); box-shadow: 0 24px 48px -20px rgba(0,50,25,.38), inset 0 1px 0 rgba(255,255,255,.9); }
 .nav-float a { min-height: 60px; }
 .pb-nav { padding-bottom: calc(var(--safe-bottom) + 108px) !important; }
 @media (min-width: 1024px) {

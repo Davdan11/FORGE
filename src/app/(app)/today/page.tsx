@@ -83,7 +83,6 @@ export default function Today() {
           ]}>
           <div className="flex gap-1.5 flex-wrap lg:hidden">
             <span className="chip chip--live backdrop-blur-md tnum">{doneThisWeek}/{weekSessions.length} this week</span>
-            <span className="chip chip--live backdrop-blur-md tnum">{stats.streakWeeks} wk streak</span>
             {nutrition && <span className="chip chip--live backdrop-blur-md tnum">{nutrition.targets.kcal.toLocaleString("en-US")} kcal</span>}
             {readiness && <span className="chip chip--volt tnum">Readiness {readiness.score}</span>}
           </div>
@@ -91,23 +90,42 @@ export default function Today() {
 
         <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
           <div className="min-w-0">
-          {/* Player card + daily quests: the game loop, visible */}
+          {/* The numbers that move: readiness as a ring, the streak, the next level. */}
+          <Item>
+            <div className="grid grid-cols-[1.12fr_1fr] gap-3 mb-6 lg:mb-8">
+              <a href="#readiness" className="card p-4 grid justify-items-center gap-2 text-center">
+                <Ring value={readiness ? readiness.score / 100 : 0} size={128} stroke={11} color="grad">
+                  {readiness
+                    ? <><strong className="numeral !text-[2.6rem] tnum"><CountUp value={readiness.score} /></strong><span className="meta !text-[.62rem] mt-1">Readiness</span></>
+                    : <><strong className="numeral !text-[2.4rem]">—</strong><span className="meta !text-[.62rem] mt-1">Readiness</span></>}
+                </Ring>
+                <span className="text-[11px] font-bold tracking-[.12em] uppercase" style={{ color: !readiness ? "var(--smoke)" : readiness.score >= 65 ? "var(--volt-deep)" : readiness.score >= 40 ? "#9a6414" : "var(--danger)" }}>
+                  {!readiness ? "Check in to score" : readiness.score >= 65 ? "Good to train" : readiness.score >= 40 ? "Take it easier" : "Recovery day"}
+                </span>
+              </a>
+              <div className="grid gap-3">
+                <div className="card p-4 grid content-between">
+                  <span className="meta">Streak</span>
+                  <span className="flex items-center gap-2 mt-2"><Flame className="w-7 h-7 flicker text-[#ff6a3d]" strokeWidth={2.2} fill="#ffb347" /><strong className="numeral !text-[2.2rem] tnum"><CountUp value={stats.streakWeeks} /></strong><span className="text-sm text-smoke font-semibold">wk</span></span>
+                </div>
+                <Link href="/ranks" className="card p-4 grid gap-2">
+                  <span className="flex items-center justify-between gap-2"><span className="meta truncate">{rankFor(lvl.level)} · lvl {lvl.level}</span><RankEmblem tier={tierForLevel(lvl.level)} sub={subRankFor(lvl.level)} size={30} className="shrink-0" /></span>
+                  <span className="flex items-baseline gap-1"><strong className="numeral !text-[2rem] tnum"><CountUp value={lvl.need - lvl.into} /></strong><span className="text-sm text-smoke font-semibold">xp to go</span></span>
+                  <div className="bar"><i style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
+                </Link>
+              </div>
+            </div>
+          </Item>
+
+          {/* Daily quests: the game loop, visible */}
           <Item>
             <div className="card overflow-hidden mb-6 lg:mb-8">
-              <div className="p-4 lg:p-5 grid grid-cols-[auto_1fr_auto] gap-4 items-center">
-                <Link href="/ranks" aria-label="Your rank"><RankEmblem tier={tierForLevel(lvl.level)} sub={subRankFor(lvl.level)} size={68} /></Link>
-                <div className="grid gap-1 min-w-0">
-                  <span className="meta">{rankFor(lvl.level)} · level {lvl.level}</span>
-                  <div className="bar"><i style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
-                  <span className="text-xs text-smoke tnum">{(lvl.need - lvl.into).toLocaleString("en-US")} XP to level {lvl.level + 1}</span>
-                </div>
-                <div className="text-right"><span className="flex items-center gap-1 justify-end text-sm font-semibold tnum"><Flame className="w-4 h-4 text-volt" strokeWidth={2} />{stats.streakWeeks} wk</span><span className="meta">streak</span></div>
-              </div>
+              <div className="px-4 pt-4 pb-3 flex items-baseline justify-between"><h2 className="display text-xl">Today’s <em>quests</em></h2><span className="text-xs font-bold tnum text-volt">+{quests.reduce((a, q) => a + q.xp, 0)} XP</span></div>
               <ul className="divide-y divide-line border-t border-line">
                 {quests.map((qst) => {
                   const inner = (
                     <>
-                      <span className={`w-7 h-7 rounded-full grid place-items-center border shrink-0 ${qst.done ? "bg-volt border-volt text-ink" : "border-line-strong text-transparent"}`}><Check className="w-4 h-4" strokeWidth={3} /></span>
+                      <span className={`w-7 h-7 rounded-full grid place-items-center border-2 shrink-0 ${qst.done ? "border-transparent text-[#06240f] shadow-[0_4px_12px_-2px_rgba(40,205,120,.55)]" : "border-line-strong text-transparent"}`} style={qst.done ? { background: "var(--grad)" } : undefined}><Check className="w-4 h-4" strokeWidth={3} /></span>
                       <span className="min-w-0 flex-1"><span className={`block text-sm font-medium truncate ${qst.done ? "line-through text-smoke" : ""}`}>{qst.label}</span><span className="block text-xs text-smoke truncate">{qst.progress && !qst.done ? `${qst.progress[0]} / ${qst.progress[1]} · ` : ""}{qst.detail}</span></span>
                       <span className={`chip tnum ${qst.done ? "chip--volt" : ""}`}>+{qst.xp} XP</span>
                       {!qst.done && <ChevronRight className="w-4 h-4 text-smoke shrink-0" />}
@@ -132,7 +150,7 @@ export default function Today() {
                   <Section title="Readiness" aside={<button className="text-xs text-smoke underline" onClick={() => db.readiness.delete(today)}>Redo</button>}>
                     <div className="card p-4 grid gap-4">
                       <div className="grid grid-cols-[auto_1fr] gap-4 items-center">
-                        <Ring value={readiness.score / 100} size={92} stroke={7} color={readiness.score >= 65 ? "var(--volt)" : readiness.score >= 40 ? "var(--bone)" : "var(--danger)"}><strong className="display text-3xl"><CountUp value={readiness.score} /></strong></Ring>
+                        <Ring value={readiness.score / 100} size={92} stroke={8} color={readiness.score >= 40 ? "grad" : "var(--danger)"}><strong className="display text-3xl"><CountUp value={readiness.score} /></strong></Ring>
                         <div className="grid gap-1 text-sm">
                           <span>Sleep {readiness.sleepHours} h · soreness {readiness.soreness}/5 · stress {readiness.stress}/5</span>
                           <span className="text-smoke text-xs">{session?.adjustment?.reason ?? "Train as planned. Chase the target RPE, not a number."}</span>

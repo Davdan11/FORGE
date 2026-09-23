@@ -103,7 +103,7 @@ export function Hero({ image, eyebrow, title, right, back, height = "h-[300px]",
       <motion.div style={{ opacity: fade }} className="absolute inset-x-0 bottom-0 pb-7 lg:pb-14">
         <div className="screen">
           {eyebrow && <motion.p initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }} className="eyebrow mb-5">{eyebrow}</motion.p>}
-          <div className="overflow-hidden pb-[.14em] -mb-[.14em]">
+          <div className="overflow-hidden pb-[.3em] -mb-[.3em] pr-[.1em] -mr-[.1em]">
             <motion.h1 initial={reduce ? false : { y: "115%" }} animate={{ y: 0 }} transition={{ duration: 1.15, ease: [0.16, 1, 0.3, 1] }} className="display display--xl leading-[0.9] max-w-[14ch]" style={{ fontSize: "var(--text-display-xl)" }}>{title}</motion.h1>
           </div>
           {children && <motion.div initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }} className="mt-6">{children}</motion.div>}
@@ -231,8 +231,8 @@ export function RatingScale<T extends 1 | 2 | 3 | 4 | 5>({ label, value, onChang
 }) {
   const id = useId();
   const good = better === "high" ? (value - 1) / 4 : (5 - value) / 4;
-  const tone = good >= 0.75 ? "var(--volt)" : good >= 0.5 ? "var(--ink)" : good >= 0.25 ? "#c9892b" : "var(--danger)";
-  const text = good >= 0.75 ? "var(--volt-deep)" : good >= 0.5 ? "var(--ink)" : good >= 0.25 ? "#9a6414" : "var(--danger)";
+  const tone = good >= 0.75 ? "#3ee89a" : good >= 0.5 ? "#b8f03a" : good >= 0.25 ? "#f2b33d" : "var(--danger)";
+  const text = good >= 0.75 ? "var(--volt-deep)" : good >= 0.5 ? "#4f7d00" : good >= 0.25 ? "#9a6414" : "var(--danger)";
   return (
     <div className="grid gap-2 min-w-0">
       <div className="flex items-baseline justify-between gap-3">
@@ -249,7 +249,7 @@ export function RatingScale<T extends 1 | 2 | 3 | 4 | 5>({ label, value, onChang
             <button key={n} type="button" role="radio" aria-checked={n === value} aria-label={words[n - 1]} onClick={() => onChange(n)}
               className="h-11 flex items-end rounded-xl focus-visible:outline-offset-1">
               <motion.span className="block w-full rounded-lg" initial={false}
-                animate={{ height: 10 + n * 6, backgroundColor: on ? tone : "rgba(16,16,16,.08)" }}
+                animate={{ height: 10 + n * 6, backgroundColor: on ? tone : "rgba(11,18,14,.07)" }}
                 transition={{ type: "spring", stiffness: 420, damping: 32 }} />
             </button>
           );
