@@ -202,6 +202,28 @@ the belt by itself — test it standing on the side rails first.
 
 ---
 
+## Legal and launch compliance (US first)
+
+- **Privacy Policy and Terms** are at `/legal/privacy` and `/legal/terms`,
+  written from what the code actually does. Fill in `LEGAL` in
+  `src/lib/brand.ts` (company, address, email, date, governing law, the
+  Supabase data region), have a lawyer read both, then set `draft: false` —
+  until then both pages show a "Draft" banner. If the app starts collecting
+  something new or sending it somewhere new, the policy changes in the same
+  commit.
+- **Consent**: onboarding requires ticking the health notice and the terms /
+  health-data consent; both are timestamped on the profile.
+- **Minimum age**: 13, or 16 when the phone's language region or time zone is
+  in the EU/EEA/Switzerland (`minimumAge()` in brand.ts).
+- **Account deletion** (required by Apple, Google and the GDPR): Settings →
+  Delete account calls `delete_my_account()`. **Run
+  `supabase/delete-account.sql` once in the SQL editor** — until then the
+  button says deletion isn't available yet.
+- The stores also need the policy at a **public URL**: host the web build, or
+  paste the text into a public page.
+
+---
+
 ## Open work
 
 1. **Android build** — the project is generated and untested.

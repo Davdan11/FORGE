@@ -133,6 +133,8 @@ export interface Profile {
   notifications: boolean;
   /** When the health notice was accepted, at onboarding. */
   healthNoticeAt?: string;
+  /** When the terms, privacy policy and processing of health data were agreed to. */
+  consentAt?: string;
   /** Functional threshold power, watts. Unset until tested or entered. */
   ftpW?: number;
   /** Threshold running speed, km/h. */

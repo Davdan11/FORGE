@@ -185,3 +185,18 @@ create trigger post_likes_count after insert or delete on post_likes
 -- The trigger runs as its owner so it can touch a row the liker does not own.
 -- Everything else about that row stays untouchable: the policies above still
 -- decide who may write posts, and this function only ever moves the counter.
+
+-- Account deletion: see delete-account.sql for why.
+create or replace function delete_my_account() returns void
+language plpgsql security definer set search_path = public, auth as $$
+declare
+  me uuid := auth.uid();
+begin
+  if me is null then
+    raise exception 'not signed in';
+  end if;
+  delete from auth.users where id = me;
+end $$;
+
+revoke all on function delete_my_account() from public, anon;
+grant execute on function delete_my_account() to authenticated;

@@ -7,7 +7,7 @@ import { db, getProfile, type NutritionDayRow } from "@/lib/db";
 import { dailyTargets } from "@/lib/nutrition/engine";
 import { getMeal } from "@/lib/nutrition/recipes";
 import { awardMeal } from "@/lib/progress";
-import { fmtDuration } from "@/lib/units";
+import { fmtDuration, localizeCooking } from "@/lib/units";
 import { Screen, Hero, Section, Empty, Check, Toast, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Press, Ring, motion, AnimatePresence } from "@/components/motion";
 
@@ -97,12 +97,12 @@ function Recipe() {
                     <li className="flex gap-3"><span className="w-1.5 h-1.5 rounded-full bg-volt mt-2 shrink-0" /><span><strong className="tnum">{Math.round(kcal)} kcal</strong> — {Math.round((kcal / t.kcal) * 100)}% of your {t.kcal} kcal, sized ×{scale} for this slot.</span></li>
                     <li className="flex gap-3"><span className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${sugar <= sugarShare ? "bg-volt" : "bg-danger"}`} /><span><strong className="tnum">{Math.round(sugar)} g sugar</strong> — {sugar <= sugarShare ? "inside" : "over"} your per-meal share of {sugarShare} g ({t.sugarMax} g a day max).{meal.fiber ? ` ${Math.round(meal.fiber * scale)} g fiber.` : ""}</span></li>
                   </ul>
-                  {meal.tip && <p className="text-sm text-smoke border-t border-line pt-3">{meal.tip}</p>}
+                  {meal.tip && <p className="text-sm text-smoke border-t border-line pt-3">{localizeCooking(meal.tip, profile.units)}</p>}
                 </div>
               </Item>
             );
           })()}
-          {(!profile || !day || !planned) && meal.tip && <Item><div className="card p-4 mb-6 flex gap-3"><span className="display text-volt text-2xl">!</span><p className="text-sm">{meal.tip}</p></div></Item>}
+          {(!profile || !day || !planned) && meal.tip && <Item><div className="card p-4 mb-6 flex gap-3"><span className="display text-volt text-2xl">!</span><p className="text-sm">{localizeCooking(meal.tip, profile?.units ?? "kg")}</p></div></Item>}
 
           <Item>
             <Section title="Ingredients" aside={<span className="text-xs text-smoke">{Object.values(have).filter(Boolean).length}/{meal.ingredients.length} ready</span>}>
@@ -122,7 +122,7 @@ function Recipe() {
             <Section title="Method">
               <ol className="grid gap-3">
                 {meal.steps.map((s, i) => { const sec = minutesIn(s); return (
-                  <li key={s} className="card p-4 flex gap-4"><span className="display text-2xl text-volt tnum w-7">{i + 1}</span><div className="grid gap-1 flex-1"><p className="text-sm">{s}</p>{sec && <span className="chip justify-self-start">⏱ {fmtDuration(sec)}</span>}</div></li>); })}
+                  <li key={s} className="card p-4 flex gap-4"><span className="display text-2xl text-volt tnum w-7">{i + 1}</span><div className="grid gap-1 flex-1"><p className="text-sm">{localizeCooking(s, profile?.units ?? "kg")}</p>{sec && <span className="chip justify-self-start">⏱ {fmtDuration(sec)}</span>}</div></li>); })}
               </ol>
             </Section>
           </Item>
@@ -139,7 +139,7 @@ function Recipe() {
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="flex-1 grid content-center gap-6 px-6">
                 <span className="numeral text-volt">{step + 1}</span>
-                <p className="cook-step">{meal.steps[step]}</p>
+                <p className="cook-step">{localizeCooking(meal.steps[step], profile?.units ?? "kg")}</p>
                 {(() => { const sec = minutesIn(meal.steps[step]); if (!sec) return null; return (
                   <div className="flex items-center gap-4">
                     <Ring value={timerTotal ? 1 - (timer ?? timerTotal) / timerTotal : 0} size={88} stroke={7} color={timer === 0 ? "var(--danger)" : "var(--volt)"}><span className="text-sm font-semibold tnum">{fmtDuration(timer ?? sec)}</span></Ring>

@@ -20,6 +20,20 @@ export function localeUnits(locale?: string): UnitPrefs {
   return { weight: "kg", distance: "km" };
 }
 
+/**
+ * Cooking temperatures in Fahrenheit for people who use pounds — in practice,
+ * the US. Oven settings round to 25 °F, the way US ovens are marked; doneness
+ * temperatures (under 100 °C) round to 5 °F, so 75 °C reads 165 °F.
+ */
+export function localizeCooking(text: string, u: WeightLike): string {
+  if (w(u) !== "lb") return text;
+  const f = (c: string) => {
+    const x = (Number(c) * 9) / 5 + 32;
+    return Number(c) >= 100 ? Math.round(x / 25) * 25 : Math.round(x / 5) * 5;
+  };
+  return text.replace(/(\d+)(?:[–-](\d+))?\s?°C/g, (_m, a: string, b?: string) => (b ? `${f(a)}–${f(b)} °F` : `${f(a)} °F`));
+}
+
 export const kgToLb = (kg: number) => kg * 2.2046226218;
 export const lbToKg = (lb: number) => lb / 2.2046226218;
 

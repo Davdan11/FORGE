@@ -13,7 +13,7 @@ import { rebuildRemaining } from "@/lib/engine/rebuild";
 import { levelFromXp, rankFor, subRankFor, tierForLevel } from "@/lib/gamification";
 import { RankEmblem } from "@/components/RankEmblem";
 import { supabase, isConfigured } from "@/lib/supabase/client";
-import { accountLabel, restoreAccount, signOut } from "@/lib/auth";
+import { accountLabel, deleteAccount, restoreAccount, signOut } from "@/lib/auth";
 import { AccountPanel } from "@/components/AccountPanel";
 import { syncNow } from "@/lib/sync";
 import { readSyncStatus } from "@/lib/autosync";
@@ -213,9 +213,22 @@ export default function SettingsPage() {
             <Item>
               <Section title="Danger zone">
                 <div className="card p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Reset this device</p><p className="text-xs text-smoke">Deletes profile, block, logs, routes and meals here. Cannot be undone.</p></div><button type="button" className="pill pill--danger pill--sm shrink-0" onClick={async () => { if (confirm("Delete everything on this device?")) { await resetAll(); router.replace("/onboarding"); } }}>Reset</button></div>
+                {user && (
+                  <div className="card p-4 mt-2 flex items-center justify-between gap-4">
+                    <div><p className="text-sm font-medium">Delete account</p><p className="text-xs text-smoke">Deletes your account and everything saved with it — plan, workouts, activities, posts — on every device. Cannot be undone.</p></div>
+                    <button type="button" className="pill pill--danger pill--sm shrink-0" onClick={async () => {
+                      if (prompt("Type DELETE to delete your account and all its data.") !== "DELETE") return;
+                      const err = await deleteAccount();
+                      if (err) { say(err); return; }
+                      await resetAll();
+                      router.replace("/onboarding");
+                    }}>Delete</button>
+                  </div>
+                )}
               </Section>
             </Item>
             <Item><p className="text-xs text-smoke leading-relaxed mb-2">{HEALTH_NOTICE}</p></Item>
+            <Item><p className="text-xs mb-2"><Link href="/legal/privacy" className="underline">Privacy Policy</Link> · <Link href="/legal/terms" className="underline">Terms of Use</Link></p></Item>
             <Item><p className="text-xs text-smoke">{APP_NAME} v0.6 · works offline · {stats.xp.toLocaleString("en-US")} XP on this device</p></Item>
           </div>
         </Stagger>

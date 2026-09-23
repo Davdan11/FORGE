@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
@@ -8,7 +9,7 @@ import { generatePlan } from "@/lib/engine/plan";
 import { adaptationsFor } from "@/lib/engine/injury";
 import { buildNutritionDay } from "@/lib/nutrition/engine";
 import { lbToKg, localeUnits } from "@/lib/units";
-import { APP_NAME, HEALTH_NOTICE, MIN_AGE } from "@/lib/brand";
+import { APP_NAME, HEALTH_NOTICE, MIN_AGE, minimumAge } from "@/lib/brand";
 import { ART, IMG, sessionImage } from "@/lib/data/images";
 import { AREAS, AVOID, DIETS, HOME_KIT, PLACES, SLEEP, STRESS, WORK, DEFAULT_LIFESTYLE, equipmentFor } from "@/lib/data/choices";
 import { Seg, MultiSeg, Photo } from "@/components/ui";
@@ -53,6 +54,7 @@ export default function Onboarding() {
   const [chosenUnits, setUnits] = useState<UnitPrefs | null>(null);
   const units = chosenUnits ?? (hydrated ? localeUnits() : METRIC);
   const [ack, setAck] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [name, setName] = useState("");
   const [sex, setSex] = useState<Sex>("male");
   const [age, setAge] = useState(30);
@@ -99,8 +101,10 @@ export default function Onboarding() {
     setAccount("done");
   }, [router]);
 
-  const tooYoung = age > 0 && age < MIN_AGE;
-  const canNext = useMemo(() => (step === 0 ? name.trim().length > 0 && age >= MIN_AGE && age <= 100 : true), [step, name, age]);
+  // 13 in the US, 16 in the EU/EEA — read after hydration, like the units.
+  const minAge = hydrated ? minimumAge() : MIN_AGE;
+  const tooYoung = age > 0 && age < minAge;
+  const canNext = useMemo(() => (step === 0 ? name.trim().length > 0 && age >= minAge && age <= 100 : true), [step, name, age, minAge]);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
 
   const [stage, setStage] = useState(-1);
@@ -118,7 +122,7 @@ export default function Onboarding() {
       // No lifts asked up front: loads start from bodyweight and training age,
       // and the first logged sets replace the estimate within a week.
       baselines: {}, lifestyle,
-      dietary, avoidFoods, mealsPerDay, wakeTime, trainTime, notifications: false, healthNoticeAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+      dietary, avoidFoods, mealsPerDay, wakeTime, trainTime, notifications: false, healthNoticeAt: new Date().toISOString(), consentAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     };
     const { plan, sessions } = generatePlan(profile, todayISO(), {}, adaptationsFor(await db.injuries.toArray(), todayISO()));
     await db.transaction("rw", db.profile, db.plans, db.sessions, db.nutrition, async () => {
@@ -157,6 +161,7 @@ export default function Onboarding() {
               <AccountPanel onSignedIn={onSignedIn} />
               <button type="button" className="text-sm text-smoke underline justify-self-start" onClick={() => { try { localStorage.setItem(SKIPPED, "1"); } catch { /* private mode */ } setAccount("done"); }}>Continue without an account</button>
               <p className="text-xs text-smoke">Without an account, everything stays on this phone. You can create one later in Settings.</p>
+              <p className="text-xs text-smoke">By continuing you agree to the <Link href="/legal/terms" className="underline">Terms of Use</Link> and <Link href="/legal/privacy" className="underline">Privacy Policy</Link>.</p>
             </div>
           )}
         </div>
@@ -196,11 +201,11 @@ export default function Onboarding() {
             </div>
             <div className="field"><span className="meta">Sex (for calorie math)</span><Seg value={sex} onChange={setSex} options={[{ v: "female", label: "Female" }, { v: "male", label: "Male" }, { v: "other", label: "Other" }]} /></div>
             <div className="grid grid-cols-3 gap-3">
-              <label className="field"><span className="meta">Age</span><input className="input tnum" type="number" inputMode="numeric" min={MIN_AGE} max={100} value={age} onChange={(e) => setAge(Number(e.target.value))} /></label>
+              <label className="field"><span className="meta">Age</span><input className="input tnum" type="number" inputMode="numeric" min={minAge} max={100} value={age} onChange={(e) => setAge(Number(e.target.value))} /></label>
               <label className="field"><span className="meta">Height ({unitH})</span><input className="input tnum" type="number" inputMode="decimal" value={height} onChange={(e) => setHeight(Number(e.target.value))} /></label>
               <label className="field"><span className="meta">Weight ({unitW})</span><input className="input tnum" type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(Number(e.target.value))} /></label>
             </div>
-            {tooYoung && <p className="text-sm text-danger">{APP_NAME} is for people {MIN_AGE} and older.</p>}
+            {tooYoung && <p className="text-sm text-danger">{APP_NAME} is for people {minAge} and older.</p>}
           </>)}
           {step === 1 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>What’s the <em>real</em> goal?</h1>
@@ -265,6 +270,10 @@ export default function Onboarding() {
               <input type="checkbox" className="mt-1 w-5 h-5 accent-[var(--volt)] shrink-0" checked={ack} onChange={(e) => setAck(e.target.checked)} />
               <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">I understand.</strong> {HEALTH_NOTICE}</span>
             </label>
+            <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
+              <input type="checkbox" className="mt-1 w-5 h-5 accent-[var(--volt)] shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">I agree</strong> to the <Link href="/legal/terms" className="underline">Terms of Use</Link> and <Link href="/legal/privacy" className="underline">Privacy Policy</Link>, and I consent to {APP_NAME} using the health information I enter — like my weight, injuries and heart rate — to build my plan.</span>
+            </label>
           </>)}
         </motion.div>
       </AnimatePresence>
@@ -291,7 +300,7 @@ export default function Onboarding() {
         {step < STEPS.length - 1 ? (
           <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={!canNext} onClick={() => go(step + 1)}>Continue</button></Press>
         ) : (
-          <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={busy || !ack} onClick={finish}>{busy ? "Building your training…" : "Create my training"}</button></Press>
+          <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={busy || !ack || !consent} onClick={finish}>{busy ? "Building your training…" : "Create my training"}</button></Press>
         )}
       </div>
       </div>

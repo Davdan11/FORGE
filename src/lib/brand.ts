@@ -9,9 +9,52 @@
 
 export const APP_NAME = "FORGE";
 
-/** Youngest age the app accepts. 13 is the US floor (COPPA); some EU
- *  countries set 16 for consent to data processing — check before launching there. */
+/** Youngest age the app accepts outside Europe: the US floor (COPPA). */
 export const MIN_AGE = 13;
+/** In the EU/EEA and Switzerland. GDPR lets each country set its own age of
+ *  digital consent between 13 and 16; taking the highest everywhere there is
+ *  the one answer that is right in every one of them. */
+export const MIN_AGE_EUROPE = 16;
+
+const EEA = new Set(["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "IS", "LI", "NO", "CH"]);
+/** Time zones inside the EEA and Switzerland. The UK (13) and non-EU Europe are left out. */
+const EEA_ZONES = new Set([
+  "Europe/Vienna", "Europe/Brussels", "Europe/Sofia", "Europe/Zagreb", "Asia/Nicosia", "Asia/Famagusta", "Europe/Nicosia", "Europe/Prague",
+  "Europe/Copenhagen", "Europe/Tallinn", "Europe/Helsinki", "Europe/Mariehamn", "Europe/Paris", "Europe/Berlin", "Europe/Busingen", "Europe/Athens",
+  "Europe/Budapest", "Europe/Dublin", "Europe/Rome", "Europe/Riga", "Europe/Vilnius", "Europe/Luxembourg", "Europe/Malta", "Europe/Amsterdam",
+  "Europe/Warsaw", "Europe/Lisbon", "Atlantic/Madeira", "Atlantic/Azores", "Europe/Bucharest", "Europe/Bratislava", "Europe/Ljubljana",
+  "Europe/Madrid", "Africa/Ceuta", "Atlantic/Canary", "Europe/Stockholm", "Atlantic/Reykjavik", "Europe/Vaduz", "Europe/Oslo", "Europe/Zurich",
+]);
+
+/**
+ * The youngest age accepted where this phone is. Either signal is enough —
+ * the language region (fr-FR) or the clock's time zone (Europe/Paris) — so
+ * an American phone set up in Berlin still gets the European rule.
+ */
+export function minimumAge(locale?: string, timeZone?: string): number {
+  const tag = locale ?? (typeof navigator !== "undefined" ? navigator.language : "");
+  const region = (tag.split(/[-_]/)[1] ?? "").toUpperCase();
+  let zone = timeZone;
+  if (zone === undefined) { try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { zone = ""; } }
+  return EEA.has(region) || EEA_ZONES.has(zone ?? "") ? MIN_AGE_EUROPE : MIN_AGE;
+}
+
+/**
+ * Who stands behind the app, for the privacy policy and the terms.
+ *
+ * `draft` stays true until every bracketed value is filled in AND a lawyer
+ * has read both documents: while it is true, both pages say so at the top.
+ */
+export const LEGAL = {
+  draft: true,
+  company: "[COMPANY LEGAL NAME]",
+  address: "[MAILING ADDRESS]",
+  email: "[PRIVACY CONTACT EMAIL]",
+  effective: "[EFFECTIVE DATE]",
+  governingLaw: "[STATE / PROVINCE AND COUNTRY]",
+  /** Where the Supabase project stores data (Project Settings → General). */
+  dataRegion: "[DATA REGION, e.g. United States (us-east-1)]",
+};
 
 /** Shown before the first plan is built, and in Settings. */
 export const HEALTH_NOTICE =

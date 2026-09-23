@@ -157,3 +157,22 @@ export async function restoreAccount(): Promise<{ hasProfile: boolean; message: 
 export async function signOut() {
   if (supabase) await supabase.auth.signOut();
 }
+
+/**
+ * Delete the account and everything stored with it on the server, then sign
+ * out. Returns an error message, or null when it is gone. The caller wipes
+ * this device afterwards; what is here is not the server's to delete.
+ */
+export async function deleteAccount(): Promise<string | null> {
+  if (!supabase) return "Accounts aren't set up in this build.";
+  const { error } = await supabase.rpc("delete_my_account");
+  if (error) {
+    // The function is created by supabase/delete-account.sql. Until it has
+    // been run, say so plainly rather than pretending the account is gone.
+    return /function|schema cache/i.test(error.message)
+      ? "Account deletion isn't available yet. Contact support and we'll delete it for you."
+      : `Couldn't delete the account: ${error.message}`;
+  }
+  await supabase.auth.signOut().catch(() => {});
+  return null;
+}
