@@ -24,6 +24,8 @@ export interface GameRoute {
   loop?: boolean;
   /** Free ride: no length, a junction every 6 km where the rider picks the next country. */
   free?: boolean;
+  /** A real road (real track, relief and towns, from OpenStreetMap and public elevation data). */
+  real?: boolean;
 }
 
 const r = (id: number, name: [string, string], country: [string, string], level: [string, string], about: [string, string], km: number, gainM: number, accent: string, image: string, challenge = false, loop = false): GameRoute =>
@@ -49,6 +51,19 @@ export const GAME_ROUTES: GameRoute[] = [
   r(13, ["Balade libre", "Free ride"], ["Europe", "Europe"], ["Sans fin · carrefours", "Endless · junctions"], ["Sans fin : à chaque carrefour, choisis ta route et ton pays", "Endless: at every junction, pick your road and your country"], 0, 0, "#8CFF8C", "polders"),
 ];
 GAME_ROUTES[13].free = true;
+// Real French roads, climbs and stages (the game's "Real France" page).
+const real = (id: number, name: [string, string], level: [string, string], about: [string, string], km: number, gainM: number, accent: string, image: string) =>
+  ({ ...r(id, name, ["France", "France"], level, about, km, gainM, accent, image), real: true });
+GAME_ROUTES.push(
+  real(14, ["Alpe d'Huez", "Alpe d'Huez"], ["Col réel · 21 lacets", "Real climb · 21 hairpins"], ["La vraie montée depuis Bourg-d'Oisans", "The real climb from Bourg-d'Oisans"], 14, 1132, "#FFD94D", "giant"),
+  real(15, ["Mont Ventoux", "Mont Ventoux"], ["Col réel · Provence", "Real climb · Provence"], ["Depuis Bédoin, jusqu'aux pierres du sommet", "From Bédoin up to the bare stones"], 21.4, 1606, "#F2F2E6", "provence"),
+  real(16, ["Col du Tourmalet", "Col du Tourmalet"], ["Col réel · Pyrénées", "Real climb · Pyrenees"], ["Depuis Luz-Saint-Sauveur, par Barèges", "From Luz-Saint-Sauveur, through Barèges"], 19.1, 1407, "#FF8C4D", "alpine"),
+  real(17, ["Col du Galibier", "Col du Galibier"], ["Col réel · 2 642 m", "Real climb · 2,642 m"], ["Depuis Valloire, au-dessus des arbres", "From Valloire, above the trees"], 17.7, 1262, "#99D9FF", "alpine"),
+  real(18, ["Col d'Izoard", "Col d'Izoard"], ["Col réel · Casse Déserte", "Real climb · Casse Déserte"], ["Depuis Briançon, par Cervières", "From Briançon, through Cervières"], 20.1, 1224, "#F2B373", "alpine"),
+  real(19, ["Col de la Madeleine", "Col de la Madeleine"], ["Col réel · HC", "Real climb · HC"], ["Depuis La Chambre", "From La Chambre"], 20, 1563, "#8CFFB3", "alpine"),
+  real(20, ["Étape reine des Alpes", "Queen stage of the Alps"], ["Étape réelle · 112 km", "Real stage · 112 km"], ["Modane, Télégraphe, Galibier, La Grave, Alpe d'Huez", "Modane, Télégraphe, Galibier, La Grave, Alpe d'Huez"], 111.6, 3901, "#FF4D66", "giant"),
+  real(21, ["Étape du Tourmalet", "Tourmalet stage"], ["Étape réelle · 49 km", "Real stage · 49 km"], ["De Lourdes au sommet du Tourmalet", "From Lourdes to the top of the Tourmalet"], 48.6, 2054, "#FFCC40", "alpine"),
+);
 
 export interface GameEvent { id: string; race: boolean; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 

@@ -184,6 +184,7 @@ export default function IndoorPage() {
                 <div className="relative h-[190px] md:h-[210px] overflow-hidden">
                   <img src={r.image} alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-700" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#07090d] via-transparent" />
+                  {r.real && <span className="absolute top-3 right-3 fr-skew px-3 py-1 text-[11px] font-black italic uppercase text-ink" style={{ background: "#FFD94D" }}><span>{t("Route réelle", "Real road")}</span></span>}
                   {r.challenge && <span className="absolute top-3 left-3 fr-skew px-3 py-1 text-[11px] font-black italic uppercase text-white" style={{ background: PINK }}><span>{t("Défi", "Challenge")}</span></span>}
                   {(online[r.key] ?? 0) > 0 && <span className="absolute top-3 right-3 rounded-full bg-black/55 px-2.5 h-6 inline-flex items-center gap-1 text-[11px] font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-[#74EB8A]" />{online[r.key]}</span>}
                 </div>
