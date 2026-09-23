@@ -19,7 +19,7 @@ import { MobilityFlow } from "@/components/MobilityFlow";
 import { Check, ChevronRight, Flame } from "lucide-react";
 import { dailyQuests, markFlowDone } from "@/lib/quests";
 import { fmtLoad, e1rm } from "@/lib/units";
-import { Screen, Hero, Section, Seg, MultiSeg, RatingScale, Bar, Toast, Photo, ScreenSkeleton } from "@/components/ui";
+import { Screen, Hero, Section, RadioField, MultiSeg, RatingScale, Bar, Toast, Photo, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Ring, CountUp, Press, motion, AnimatePresence } from "@/components/motion";
 import { Sparkline } from "@/components/charts";
 import { ensureNotificationPermission } from "@/lib/notify";
@@ -363,8 +363,8 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
         <button type="button" className="text-left text-xs text-smoke underline" onClick={() => setOpen(!open)}>{open ? "Hide" : "Adjust today’s workout: time, equipment, pain"}</button>
         <AnimatePresence>{open && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="grid gap-4 overflow-hidden">
-            <div className="field"><span className="meta">Minutes I actually have</span><Seg value={minutes ?? 0} onChange={(v) => setMinutes(v || undefined)} options={[{ v: 0, label: "As planned" }, { v: 25, label: "25" }, { v: 40, label: "40" }, { v: 60, label: "60" }]} /></div>
-            <div className="field"><span className="meta">Gear today</span><Seg value={gear ?? "full"} onChange={setGear} options={[{ v: "full", label: "Full gym" }, { v: "dumbbells", label: "Dumbbells" }, { v: "bodyweight", label: "Nothing" }]} /></div>
+            <RadioField label="Minutes I actually have" value={minutes ?? 0} onChange={(v) => setMinutes(v || undefined)} options={[{ v: 0, label: "As planned" }, { v: 25, label: "25" }, { v: 40, label: "40" }, { v: 60, label: "60" }]} />
+            <RadioField label="Gear today" value={gear ?? "full"} onChange={setGear} options={[{ v: "full", label: "Full gym" }, { v: "dumbbells", label: "Dumbbells" }, { v: "bodyweight", label: "Nothing" }]} />
             <div className="field"><span className="meta">Anything talking?</span><MultiSeg value={pain} onChange={setPain} options={(Object.keys(PAIN_LABEL) as PainArea[]).map((k) => ({ v: k, label: PAIN_LABEL[k] }))} /></div>
             <label className="field"><span className="meta">HRV (ms, optional)</span><input className="input tnum" inputMode="numeric" value={hrv} onChange={(e) => setHrv(e.target.value)} placeholder="From your watch" /></label>
           </motion.div>

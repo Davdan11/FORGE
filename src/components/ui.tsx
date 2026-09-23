@@ -239,6 +239,54 @@ export function Seg<T extends string | number>({ value, options, onChange, fill,
 }
 
 /**
+ * One answer out of a few, as radio cards: a form question ("Body weight: kg or
+ * lb?"). Seg is for switching what is shown (tabs, list filters); a choice that
+ * gets saved is a radio group, so it reads, tabs and arrows like one. Real
+ * radio inputs underneath: arrow keys move the choice, screen readers announce
+ * "1 of 3". `label` names the group when no RadioField legend does.
+ */
+export function RadioCards<T extends string | number>({ value, options, onChange, label, min }: { value: T; options: { v: T; label: string }[]; onChange: (v: T) => void; label?: string; min?: number }) {
+  const name = useId();
+  min ??= cardMin(options.map((o) => o.label));
+  return (
+    <div className="radio-cards" role="radiogroup" aria-label={label} style={{ ["--rc-min" as string]: `${min}px` }}>
+      {options.map((o) => {
+        const on = value === o.v;
+        return (
+          <label key={String(o.v)} className="radio-card" data-on={on || undefined}>
+            <input type="radio" name={name} value={String(o.v)} checked={on} onChange={() => onChange(o.v)} />
+            <span className="radio-card__dot" aria-hidden="true" />
+            <span className="radio-card__label">{o.label}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+/* Narrowest card for these labels, chosen so a phone (about 335 px of column)
+   gets a balanced grid: one row if everything fits, otherwise two columns
+   (2 × 2, not 3 + 1), and three long answers stack one per line rather than
+   2 + 1 or a word broken in half. Wider screens fit more per row. */
+function cardMin(labels: string[]) {
+  const n = labels.length, est = Math.max(...labels.map((l) => l.length)) * 8 + 52, phone = 335;
+  if (n * est + (n - 1) * 8 <= phone) return est;
+  if (n === 3) return 170;
+  if (2 * est + 8 <= phone) return Math.max(est, 114);
+  return phone + 1;
+}
+
+/** A labelled form question answered with RadioCards (fieldset + legend). */
+export function RadioField<T extends string | number>({ label, ...rest }: { label: string; value: T; options: { v: T; label: string }[]; onChange: (v: T) => void; min?: number }) {
+  return (
+    <fieldset className="field radio-field">
+      <legend className="meta">{label}</legend>
+      <RadioCards {...rest} />
+    </fieldset>
+  );
+}
+
+/**
  * A 1–5 self-rating as five rising bars, named in words.
  *
  * A row of the digits 1 to 5 asks people to translate how they feel into a

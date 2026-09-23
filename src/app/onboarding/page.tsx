@@ -16,7 +16,7 @@ import { EXERCISES } from "@/lib/data/exercises";
 import { recipeCount } from "@/lib/nutrition/recipes";
 import { ART, IMG, sessionImage } from "@/lib/data/images";
 import { AREAS, AVOID, DIETS, HOME_KIT, PLACES, SLEEP, STRESS, WORK, DEFAULT_LIFESTYLE, equipmentFor } from "@/lib/data/choices";
-import { Seg, MultiSeg, Photo, StatRow } from "@/components/ui";
+import { RadioField, RadioCards, MultiSeg, Photo, StatRow } from "@/components/ui";
 import { motion, AnimatePresence, Press } from "@/components/motion";
 import { AccountPanel } from "@/components/AccountPanel";
 import { isConfigured } from "@/lib/supabase/client";
@@ -245,10 +245,10 @@ export default function Onboarding() {
                 form, so the first thing anyone sees is two thirds of a keyboard. */}
             <label className="field"><span className="meta">Name</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="What should we call you?" /></label>
             <div className="grid grid-cols-2 gap-3">
-              <div className="field"><span className="meta">Body weight</span><Seg fill value={units.weight} onChange={(weight) => setUnits({ ...units, weight })} options={[{ v: "kg", label: "kg" }, { v: "lb", label: "lb" }]} /></div>
-              <div className="field"><span className="meta">Distance</span><Seg fill value={units.distance} onChange={(distance) => setUnits({ ...units, distance })} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} /></div>
+              <RadioField label="Body weight" value={units.weight} onChange={(weight) => setUnits({ ...units, weight })} options={[{ v: "kg", label: "kg" }, { v: "lb", label: "lb" }]} />
+              <RadioField label="Distance" value={units.distance} onChange={(distance) => setUnits({ ...units, distance })} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} />
             </div>
-            <div className="field"><span className="meta">Sex (for calorie math)</span><Seg value={sex} onChange={setSex} options={[{ v: "female", label: "Female" }, { v: "male", label: "Male" }, { v: "other", label: "Other" }]} /></div>
+            <RadioField label="Sex (for calorie math)" value={sex} onChange={setSex} options={[{ v: "female", label: "Female" }, { v: "male", label: "Male" }, { v: "other", label: "Other" }]} />
             <div className="grid grid-cols-3 gap-3">
               <label className="field"><span className="meta">Age</span><input className="input tnum" type="number" inputMode="numeric" min={minAge} max={100} value={age} onChange={(e) => setAge(Number(e.target.value))} /></label>
               <label className="field"><span className="meta">Height ({unitH})</span><input className="input tnum" type="number" inputMode="decimal" value={height} onChange={(e) => setHeight(Number(e.target.value))} /></label>
@@ -268,13 +268,13 @@ export default function Onboarding() {
               ))}
             </div>
             {goal === "perform" && <div className="grid grid-cols-2 gap-3"><label className="field"><span className="meta">Event</span><input className="input" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="Hyrox, marathon…" /></label><label className="field"><span className="meta">Date</span><input className="input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} /></label></div>}
-            <div className="field"><span className="meta">How long have you been training?</span><Seg value={level} onChange={setLevel} options={[{ v: "new", label: "Just starting" }, { v: "intermediate", label: "1–3 years" }, { v: "advanced", label: "3+ years" }]} /></div>
+            <RadioField label="How long have you been training?" value={level} onChange={setLevel} options={[{ v: "new", label: "Just starting" }, { v: "intermediate", label: "1–3 years" }, { v: "advanced", label: "3+ years" }]} />
             <p className="text-sm text-smoke">Your goal sets your calories, your reps and how much cardio goes with the lifting. Change it any time and your plan updates.</p>
           </>)}
           {step === 2 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>How much <em>time</em> is real?</h1>
-            <div className="field"><span className="meta">Sessions per week</span><Seg value={days} onChange={setDays} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} /></div>
-            <div className="field"><span className="meta">Minutes per session</span><Seg value={minutes} onChange={setMinutes} options={[25, 40, 60, 75].map((m) => ({ v: m as Profile["sessionMinutes"], label: `${m} min` }))} /></div>
+            <RadioField label="Sessions per week" value={days} onChange={setDays} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} />
+            <RadioField label="Minutes per session" value={minutes} onChange={setMinutes} options={[25, 40, 60, 75].map((m) => ({ v: m as Profile["sessionMinutes"], label: `${m} min` }))} />
             <div className="grid grid-cols-2 gap-3"><label className="field"><span className="meta">Usual training time</span><input className="input" type="time" value={trainTime} onChange={(e) => setTrainTime(e.target.value)} /></label><label className="field"><span className="meta">Wake time</span><input className="input" type="time" value={wakeTime} onChange={(e) => setWakeTime(e.target.value)} /></label></div>
             <p className="text-sm text-smoke">A plan for the week you actually have beats a perfect plan for a week you don’t. Meals are timed around your training.</p>
           </>)}
@@ -293,9 +293,9 @@ export default function Onboarding() {
             {injured.length > 0 && (
               <div className="grid gap-3 card p-4">
                 {injured.map((a) => (
-                  <div key={a} className="flex items-center justify-between gap-3">
-                    <span className="text-sm">{AREAS.find((x) => x.v === a)?.label}</span>
-                    <Seg value={healed.includes(a) ? "healed" : "hurts"} onChange={(v) => setHealed((h) => (v === "healed" ? [...h.filter((x) => x !== a), a] : h.filter((x) => x !== a)))} options={[{ v: "hurts", label: "Still hurts" }, { v: "healed", label: "Healed" }]} />
+                  <div key={a} className="grid gap-2">
+                    <span className="text-sm font-medium">{AREAS.find((x) => x.v === a)?.label}</span>
+                    <RadioCards label={AREAS.find((x) => x.v === a)?.label} value={healed.includes(a) ? "healed" : "hurts"} onChange={(v) => setHealed((h) => (v === "healed" ? [...h.filter((x) => x !== a), a] : h.filter((x) => x !== a)))} options={[{ v: "hurts", label: "Still hurts" }, { v: "healed", label: "Healed" }]} />
                   </div>
                 ))}
               </div>
@@ -304,16 +304,16 @@ export default function Onboarding() {
           </>)}
           {step === 4 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Life <em>outside</em> the gym.</h1>
-            <div className="field"><span className="meta">Sleep on a normal night</span><Seg fill value={lifestyle.sleep} onChange={(sleep) => setLifestyle((l) => ({ ...l, sleep }))} options={SLEEP} /></div>
-            <div className="field"><span className="meta">Stress these days</span><Seg fill value={lifestyle.stress} onChange={(stress) => setLifestyle((l) => ({ ...l, stress }))} options={STRESS} /></div>
-            <div className="field"><span className="meta">Your days are mostly</span><Seg fill value={lifestyle.work} onChange={(work) => setLifestyle((l) => ({ ...l, work }))} options={WORK} /></div>
+            <RadioField label="Sleep on a normal night" value={lifestyle.sleep} onChange={(sleep) => setLifestyle((l) => ({ ...l, sleep }))} options={SLEEP} />
+            <RadioField label="Stress these days" value={lifestyle.stress} onChange={(stress) => setLifestyle((l) => ({ ...l, stress }))} options={STRESS} />
+            <RadioField label="Your days are mostly" value={lifestyle.work} onChange={(work) => setLifestyle((l) => ({ ...l, work }))} options={WORK} />
             <p className="text-sm text-smoke">Muscle is built while you recover. Short sleep, high stress or a physical job mean fewer sets per workout, and a physical job means more food. Every four weeks, your plan is rewritten from how the last four actually went.</p>
           </>)}
           {step === 5 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>How do you <em>eat</em>?</h1>
             <div className="field"><span className="meta">Way of eating</span><MultiSeg value={dietary} onChange={setDietary} options={DIETS} /></div>
             <div className="field"><span className="meta">Foods you don’t eat</span><MultiSeg value={avoidFoods} onChange={setAvoidFoods} options={AVOID} /></div>
-            <div className="field"><span className="meta">Meals per day</span><Seg value={mealsPerDay} onChange={setMealsPerDay} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
+            <RadioField label="Meals per day" value={mealsPerDay} onChange={setMealsPerDay} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} />
             <p className="text-sm text-smoke">Targets come from your body, your goal and the kind of day it is. 30,000+ recipes with step-by-step cooking; meals never repeat within three days.</p>
             <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
               <input type="checkbox" className="tick mt-0.5 shrink-0" checked={ack} onChange={(e) => setAck(e.target.checked)} />

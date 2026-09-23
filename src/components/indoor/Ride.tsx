@@ -12,7 +12,7 @@ import { startPacers, stepPacers, startRunPacers, stepRunPacers, placeInBunch, g
 import { joinRoom, extrapolate, prune, type Room } from "@/lib/indoor/live";
 import { fmtDist, fmtDuration } from "@/lib/units";
 import { Press } from "@/components/motion";
-import { Seg } from "@/components/ui";
+import { RadioCards } from "@/components/ui";
 import type { Rider } from "./World";
 import { WorkoutChart } from "./WorkoutChart";
 import { pace } from "./WorkoutBuilder";
@@ -430,7 +430,7 @@ export function Ride({ course, profile, sport, workout, thresholds, onEnd, say }
                 {control.state === "ok" && sport === "ride" && (
                   <>
                     <div className="flex items-center gap-3">
-                      <Seg value={trainerMode} onChange={setTrainerMode} options={[{ v: "slope", label: "Slope" }, { v: "erg", label: "ERG" }]} />
+                      <RadioCards label="Trainer mode" value={trainerMode} onChange={setTrainerMode} options={[{ v: "slope", label: "Slope" }, { v: "erg", label: "ERG" }]} />
                       <span className="text-[11px] text-smoke leading-tight">{trainerMode === "slope" ? "Resistance follows the road." : workout ? "Holding the workout's watts." : "Holding a fixed power."}</span>
                     </div>
                     {trainerMode === "erg" && !workout && (

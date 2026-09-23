@@ -269,6 +269,21 @@ input[type="range"] { -webkit-appearance: none; appearance: none; height: 28px; 
 input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--green) var(--fill, 50%), var(--line-strong) var(--fill, 50%)); }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%; background: var(--carbon); border: 3px solid var(--ink); box-shadow: 0 2px 8px rgba(16,16,16,.25); }
 
+/* Radio cards: a form answer (one of a few). Seg stays for tabs and filters. */
+.radio-field { display: block; border: 0; margin: 0; padding: 0; min-width: 0; }
+.radio-field > legend { padding: 0; margin-bottom: 8px; }
+.radio-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--rc-min, 88px)), 1fr)); gap: 8px; min-width: 0; }
+.radio-card { position: relative; display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 10px; border-radius: var(--r-control); border: 1px solid var(--line-strong, rgba(11,18,14,.16)); background: var(--carbon); color: var(--ink); font-size: 0.9rem; font-weight: 500; line-height: 1.2; cursor: pointer; transition: border-color var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out), background var(--t-base) var(--ease-out); }
+.radio-card > input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.radio-card__dot { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(11,18,14,.28); background: var(--carbon); display: grid; place-items: center; transition: border-color var(--t-base) var(--ease-out); }
+.radio-card__dot::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--volt-deep); transform: scale(0); transition: transform var(--t-base) var(--ease-out); }
+.radio-card__label { min-width: 0; overflow-wrap: break-word; hyphens: manual; }
+.radio-card[data-on] { border-color: var(--volt-deep); background: rgba(10,138,92,.06); box-shadow: 0 0 0 1px var(--volt-deep) inset; }
+.radio-card[data-on] .radio-card__dot { border-color: var(--volt-deep); }
+.radio-card[data-on] .radio-card__dot::after { transform: scale(1); }
+.radio-card:has(> input:focus-visible) { outline: 2px solid var(--volt-deep); outline-offset: 2px; }
+@media (hover: hover) { .radio-card:not([data-on]):hover { border-color: rgba(11,18,14,.3); } }
+
 /* Segmented control */
 .seg { display: flex; gap: 4px; flex-wrap: wrap; padding: 4px; border-radius: 999px; background: rgba(16,16,16,.05); border: 1px solid var(--line); width: fit-content; max-width: 100%; }
 /* Fixed-length scales (1–5) fill their column as equal cells and never wrap:

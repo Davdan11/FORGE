@@ -18,7 +18,7 @@ import { sportSpec } from "@/lib/data/sports";
 import { ART } from "@/lib/data/images";
 import { WORKOUTS, WORKOUT_MAP, ZONE_LABEL, expandSegments } from "@/lib/data/workouts";
 import { fmtDist, fmtDuration, fmtPace } from "@/lib/units";
-import { Screen, Section, Toast, Photo, ScreenSkeleton, Seg, Toggle, Rail, StatRow } from "@/components/ui";
+import { Screen, Section, Toast, Photo, ScreenSkeleton, Seg, RadioField, Toggle, Rail, StatRow } from "@/components/ui";
 import { Page, Stagger, Item, Press, CountUp, Ring, motion, AnimatePresence } from "@/components/motion";
 import { Bars } from "@/components/charts";
 import { TYPES, SegmentBar, MiniRoute, ActivityRow, rateFor, sportIcon } from "@/components/move-bits";
@@ -398,16 +398,16 @@ function SaveSheet({ a, units, onCancel, onSave, onChange }: { a: Activity; unit
       <motion.div initial={{ y: 60 }} animate={{ y: 0 }} exit={{ y: 60 }} transition={{ type: "spring", stiffness: 300, damping: 30 }} className="bg-carbon border-t border-line rounded-t-3xl p-5 pb-[calc(var(--safe-bottom)+20px)] grid gap-4 max-h-[88vh] overflow-y-auto max-w-[560px] w-full mx-auto">
         <div className="flex items-center gap-3"><MiniRoute points={a.points} size={64} /><div className="flex-1"><span className="meta">Save activity</span><p className="display text-2xl">{fmtDist(a.distanceM, units)} · {fmtDuration(a.durationSec)}</p><p className="text-xs text-smoke">{fmtPace(a.avgPaceSecKm, units)} · ↑{Math.round(a.elevGainM)} m · {a.splits.length} km splits{a.laps ? ` · ${a.laps.length} laps` : ""}</p></div></div>
         <label className="field"><span className="meta">Title</span><input className="input" value={a.title} onChange={(e) => onChange({ ...a, title: e.target.value })} /></label>
-        <div className="field"><span className="meta">Sport</span><Seg scroll value={a.type} onChange={(type) => onChange({ ...a, type })} options={TYPES.map((t) => ({ v: t.v, label: t.label }))} /></div>
+        <RadioField label="Sport" value={a.type} onChange={(type) => onChange({ ...a, type })} options={TYPES.map((t) => ({ v: t.v, label: t.label }))} />
         {a.type === "swim" && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="field"><span className="meta">Pool</span><Seg value={a.meta?.poolM ?? 25} onChange={(poolM) => onChange({ ...a, meta: { ...a.meta, poolM }, distanceM: (a.meta?.laps ?? 0) * poolM || a.distanceM })} options={[{ v: 25 as const, label: "25 m" }, { v: 50 as const, label: "50 m" }]} /></div>
+            <RadioField label="Pool" value={a.meta?.poolM ?? 25} onChange={(poolM) => onChange({ ...a, meta: { ...a.meta, poolM }, distanceM: (a.meta?.laps ?? 0) * poolM || a.distanceM })} options={[{ v: 25 as const, label: "25 m" }, { v: 50 as const, label: "50 m" }]} />
             <label className="field"><span className="meta">Laps</span><input className="input tnum" inputMode="numeric" value={a.meta?.laps ?? ""} placeholder="e.g. 40" onChange={(e) => { const laps = Number(e.target.value) || 0; onChange({ ...a, meta: { ...a.meta, laps }, distanceM: laps ? laps * (a.meta?.poolM ?? 25) : a.distanceM }); }} /></label>
           </div>
         )}
-        {a.type === "ski" && <div className="field"><span className="meta">Discipline</span><Seg value={a.meta?.discipline ?? "xc-classic"} onChange={(discipline) => onChange({ ...a, meta: { ...a.meta, discipline } })} options={[{ v: "xc-classic", label: "XC classic" }, { v: "xc-skate", label: "XC skate" }, { v: "alpine", label: "Alpine" }, { v: "touring", label: "Touring" }]} /></div>}
-        {a.type === "ride" && <div className="field"><span className="meta">Bike</span><Seg value={a.meta?.bike ?? "road"} onChange={(bike) => onChange({ ...a, meta: { ...a.meta, bike } })} options={[{ v: "road", label: "Road" }, { v: "gravel", label: "Gravel" }, { v: "mtb", label: "MTB" }, { v: "indoor", label: "Indoor" }]} /></div>}
-        <div className="field"><span className="meta">How did it feel?</span><Seg value={a.feel ?? 0} onChange={(v) => onChange({ ...a, feel: (v || undefined) as Activity["feel"] })} options={[{ v: 1, label: "Rough" }, { v: 2, label: "Meh" }, { v: 3, label: "OK" }, { v: 4, label: "Good" }, { v: 5, label: "Flying" }]} /></div>
+        {a.type === "ski" && <RadioField label="Discipline" value={a.meta?.discipline ?? "xc-classic"} onChange={(discipline) => onChange({ ...a, meta: { ...a.meta, discipline } })} options={[{ v: "xc-classic", label: "XC classic" }, { v: "xc-skate", label: "XC skate" }, { v: "alpine", label: "Alpine" }, { v: "touring", label: "Touring" }]} />}
+        {a.type === "ride" && <RadioField label="Bike" value={a.meta?.bike ?? "road"} onChange={(bike) => onChange({ ...a, meta: { ...a.meta, bike } })} options={[{ v: "road", label: "Road" }, { v: "gravel", label: "Gravel" }, { v: "mtb", label: "MTB" }, { v: "indoor", label: "Indoor" }]} />}
+        <RadioField label="How did it feel?" value={a.feel ?? 0} onChange={(v) => onChange({ ...a, feel: (v || undefined) as Activity["feel"] })} options={[{ v: 1, label: "Rough" }, { v: 2, label: "Meh" }, { v: 3, label: "OK" }, { v: 4, label: "Good" }, { v: 5, label: "Flying" }]} />
         <label className="field"><span className="meta">Note (optional)</span><input className="input" placeholder="Windy, new shoes, felt strong on the hill…" value={a.note ?? ""} onChange={(e) => onChange({ ...a, note: e.target.value })} /></label>
         <div className="card p-3 flex items-center justify-between gap-3">
           <span><span className="block text-sm font-medium">Share to my profile</span><span className="text-xs text-smoke">Shows in your feed with the route card. +40 XP.</span></span>

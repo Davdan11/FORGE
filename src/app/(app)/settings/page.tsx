@@ -21,7 +21,7 @@ import { readSyncStatus } from "@/lib/autosync";
 import { downloadBackup, restoreBackup } from "@/lib/backup";
 import { IMG, sessionImage } from "@/lib/data/images";
 import { fmtHeight, kgToLb, lbToKg } from "@/lib/units";
-import { Screen, Hero, Section, Seg, MultiSeg, Toggle, Toast, Photo, ScreenSkeleton } from "@/components/ui";
+import { Screen, Hero, Section, RadioField, RadioCards, MultiSeg, Toggle, Toast, Photo, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Press } from "@/components/motion";
 import { ensureNotificationPermission } from "@/lib/notify";
 import { syncReminders } from "@/lib/remindersSync";
@@ -129,13 +129,10 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="grid gap-4">
-                    <div className="field"><span className="meta">Sessions / week</span><Seg fill value={profile.daysPerWeek} onChange={(d) => rebuild({ daysPerWeek: d }, `${d} days a week`)} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} /></div>
-                    <div className="field"><span className="meta">Minutes</span><Seg fill value={profile.sessionMinutes} onChange={(m) => rebuild({ sessionMinutes: m }, `${m}-minute sessions`)} options={[25, 40, 60, 75].map((m) => ({ v: m as Profile["sessionMinutes"], label: String(m) }))} /></div>
+                    <RadioField label="Sessions / week" value={profile.daysPerWeek} onChange={(d) => rebuild({ daysPerWeek: d }, `${d} days a week`)} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} />
+                    <RadioField label="Minutes" value={profile.sessionMinutes} onChange={(m) => rebuild({ sessionMinutes: m }, `${m}-minute sessions`)} options={[25, 40, 60, 75].map((m) => ({ v: m as Profile["sessionMinutes"], label: String(m) }))} />
                   </div>
-                  <div className="field">
-                    <span className="meta">Where you train</span>
-                    <Seg fill value={place} onChange={(v) => rebuild({ trainingPlace: v, equipment: equipmentFor(v, homeKit) }, PLACES.find((x) => x.v === v)!.name.toLowerCase())} options={PLACES.map((x) => ({ v: x.v, label: x.name }))} />
-                  </div>
+                  <RadioField label="Where you train" value={place} onChange={(v) => rebuild({ trainingPlace: v, equipment: equipmentFor(v, homeKit) }, PLACES.find((x) => x.v === v)!.name.toLowerCase())} options={PLACES.map((x) => ({ v: x.v, label: x.name }))} />
                   {place === "home_gym" && <div className="field"><span className="meta">In your home gym</span><MultiSeg value={homeKit} onChange={(kit) => rebuild({ equipment: equipmentFor("home_gym", kit) }, "home gym updated")} options={HOME_KIT} /></div>}
                   <div className="field"><span className="meta">Old injuries · healed</span><MultiSeg value={profile.injuryHistory ?? []} onChange={(injuryHistory) => rebuild({ injuryHistory }, "old injuries noted")} options={AREAS} /><span className="text-xs text-smoke">Not excluded — the gentler version of each movement comes first.</span></div>
                   <div className="field"><span className="meta">Pain flags · clear when healed</span><MultiSeg value={profile.pain} onChange={(pain) => update({ pain })} options={(Object.keys(PAIN_LABEL) as PainArea[]).map((k) => ({ v: k, label: PAIN_LABEL[k] }))} /></div>
@@ -145,9 +142,9 @@ export default function SettingsPage() {
             <Item>
               <Section title="Recovery" aside={<span className="text-xs text-smoke">sets volume and food</span>}>
                 <div className="card p-4 grid gap-4">
-                  <div className="field"><span className="meta">Sleep on a normal night</span><Seg fill value={life.sleep} onChange={(sleep) => rebuild({ lifestyle: { ...life, sleep } }, "recovery updated")} options={SLEEP} /></div>
-                  <div className="field"><span className="meta">Stress these days</span><Seg fill value={life.stress} onChange={(stress) => rebuild({ lifestyle: { ...life, stress } }, "recovery updated")} options={STRESS} /></div>
-                  <div className="field"><span className="meta">Your days are mostly</span><Seg fill value={life.work} onChange={(work) => rebuild({ lifestyle: { ...life, work } }, "recovery updated")} options={WORK} /></div>
+                  <RadioField label="Sleep on a normal night" value={life.sleep} onChange={(sleep) => rebuild({ lifestyle: { ...life, sleep } }, "recovery updated")} options={SLEEP} />
+                  <RadioField label="Stress these days" value={life.stress} onChange={(stress) => rebuild({ lifestyle: { ...life, stress } }, "recovery updated")} options={STRESS} />
+                  <RadioField label="Your days are mostly" value={life.work} onChange={(work) => rebuild({ lifestyle: { ...life, work } }, "recovery updated")} options={WORK} />
                 </div>
               </Section>
             </Item>
@@ -165,13 +162,13 @@ export default function SettingsPage() {
                   <div className="p-4 grid gap-3">
                     <div><p className="text-sm font-medium">Units</p><p className="text-xs text-smoke">Body weight and distance are set separately — plenty of people weigh in pounds and run in kilometers.</p></div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="field"><span className="meta">Body weight &amp; loads</span><Seg fill value={profile.units.weight} onChange={(weight) => update({ units: { ...profile.units, weight } })} options={[{ v: "kg", label: "kg" }, { v: "lb", label: "lb" }]} /></div>
-                      <div className="field"><span className="meta">Distance &amp; pace</span><Seg fill value={profile.units.distance} onChange={(distance) => update({ units: { ...profile.units, distance } })} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} /></div>
+                      <RadioField label="Body weight & loads" value={profile.units.weight} onChange={(weight) => update({ units: { ...profile.units, weight } })} options={[{ v: "kg", label: "kg" }, { v: "lb", label: "lb" }]} />
+                      <RadioField label="Distance & pace" value={profile.units.distance} onChange={(distance) => update({ units: { ...profile.units, distance } })} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} />
                     </div>
                   </div>
                   <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Reminders</p><p className="text-xs text-smoke">Morning check-in, an hour before each session, and meals. Arrives with the app closed.</p></div><Toggle on={profile.notifications} label="Reminders" onChange={async (v) => { if (v) { const p = await ensureNotificationPermission(); if (p !== "granted") { say(p === "denied" ? "Notifications are off for FORGE. Turn them on in your phone's settings." : "Notifications aren’t supported here."); return; } } await update({ notifications: v }); await syncReminders(); say(v ? "Reminders on." : "Reminders off."); }} /></div>
                   <div className="p-4 grid gap-3"><div><p className="text-sm font-medium">Timing</p><p className="text-xs text-smoke">Meals are placed around these.</p></div><div className="grid grid-cols-2 gap-3"><label className="field"><span className="meta">Training</span><input className="input" type="time" value={profile.trainTime} onChange={(e) => update({ trainTime: e.target.value })} /></label><label className="field"><span className="meta">Wake</span><input className="input" type="time" value={profile.wakeTime} onChange={(e) => update({ wakeTime: e.target.value })} /></label></div></div>
-                  <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Meals per day</p><p className="text-xs text-smoke">Tomorrow’s menu follows.</p></div><Seg fill value={profile.mealsPerDay} onChange={(m) => update({ mealsPerDay: m })} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
+                  <div className="p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Meals per day</p><p className="text-xs text-smoke">Tomorrow’s menu follows.</p></div><RadioCards label="Meals per day" value={profile.mealsPerDay} onChange={(m) => update({ mealsPerDay: m })} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
                 </div>
               </Section>
             </Item>

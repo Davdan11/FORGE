@@ -7,7 +7,7 @@ import { db, todayISO, uid } from "@/lib/db";
 import { PAIN_LABEL } from "@/lib/engine/readiness";
 import { AREA_LABEL, RED_FLAGS, adaptationFor, activeInjuries } from "@/lib/engine/injury";
 import { rebuildRemaining } from "@/lib/engine/rebuild";
-import { Section, Seg } from "./ui";
+import { Section, RadioField } from "./ui";
 import { Press } from "./motion";
 import type { Injury, InjurySeverity, PainArea } from "@/lib/types";
 
@@ -53,14 +53,8 @@ export function InjuryPanel({ onSay }: { onSay?: (t: string) => void }) {
 
         {adding && (
           <div className="card p-4 grid gap-4">
-            <div className="field">
-              <span className="meta">Where</span>
-              <Seg scroll value={area} onChange={setArea} options={(Object.keys(PAIN_LABEL) as PainArea[]).map((k) => ({ v: k, label: PAIN_LABEL[k] }))} />
-            </div>
-            <div className="field">
-              <span className="meta">How much is it limiting you</span>
-              <Seg fill value={severity} onChange={setSeverity} options={SEVERITY} />
-            </div>
+            <RadioField label="Where" value={area} onChange={setArea} options={(Object.keys(PAIN_LABEL) as PainArea[]).map((k) => ({ v: k, label: PAIN_LABEL[k] }))} />
+            <RadioField label="How much is it limiting you" value={severity} onChange={setSeverity} options={SEVERITY} />
             <p className="text-xs text-smoke">FORGE adapts your training around it. It doesn’t diagnose or treat anything — if any of the signs below apply, see a professional first.</p>
             <div className="flex gap-2">
               <Press><button type="button" className="pill pill--sm pill--bone" onClick={add}>Log it</button></Press>
