@@ -80,7 +80,7 @@ export default function ProgressPage() {
             <div className="grid gap-1 flex-1 max-w-[420px]">
               <div className="flex justify-between text-xs"><span className="text-bone/80">{lvl.into.toLocaleString("en-US")} / {lvl.need.toLocaleString("en-US")} XP</span><span className="text-smoke">next: {RANKS[Math.min(RANKS.length - 1, rankIdx + 1)]} at level {(rankIdx + 1) * 10 + 1}</span></div>
               <div className="bar"><i style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
-              <span className="flex gap-4"><Link href="/trends" className="text-xs underline text-bone/80">See your progress</Link><Link href="/ranks" className="text-xs underline text-bone/80">Rank and rewards</Link></span>
+              <span className="flex gap-4"><Link href="/journey" className="text-xs underline text-bone/80">Your journey</Link><Link href="/trends" className="text-xs underline text-bone/80">See your progress</Link><Link href="/ranks" className="text-xs underline text-bone/80">Rank and rewards</Link></span>
             </div>
           </div>
         </Hero>

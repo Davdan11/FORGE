@@ -220,6 +220,8 @@ export interface Plan {
   weeks: number;
   blocks: PlanBlock[];
   season?: { eventName: string; eventDate: string; phases: { name: string; from: string; to: string }[] };
+  /** The last break that was eased (see engine/comeback.ts). */
+  comeback?: { lastTrained: string; at: string; daysAway: number; until: string; loadMul: number };
   createdAt: string;
 }
 

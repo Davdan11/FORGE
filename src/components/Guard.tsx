@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getProfile } from "@/lib/db";
 import { advanceProgramme } from "@/lib/engine/progression";
+import { applyComeback } from "@/lib/engine/comeback";
 import { syncReminders } from "@/lib/remindersSync";
 import { listenForReminderTaps } from "@/lib/notify";
 import { ScreenSkeleton } from "./ui";
@@ -18,7 +19,8 @@ export function Guard({ children }: { children: React.ReactNode }) {
       setOk(true);
       // Review the last block and extend the programme if a new one has begun.
       // Pages read the plan live, so they pick the result up when it lands.
-      advanceProgramme().catch((e) => console.error("programme advance failed", e))
+      // Then, after a break of two weeks or more, ease the coming week.
+      advanceProgramme().then(() => applyComeback()).catch((e) => console.error("programme advance failed", e))
         // Reminders follow the plan, so they are rebuilt after it moves.
         .then(() => syncReminders()).catch((e) => console.error("reminders failed", e));
       listenForReminderTaps().catch(() => {});

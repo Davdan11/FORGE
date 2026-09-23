@@ -53,6 +53,7 @@ export default function Today() {
 
   // Week ring: planned vs done (sessions + activities) this ISO week.
   const week = useMemo(() => { const d = new Date(today + "T00:00:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const mon = d.toISOString().slice(0, 10); return { mon, sun: addDays(mon, 6) }; }, [today]);
+  const plan = useLiveQuery(() => db.plans.orderBy("startDate").last().then((p) => p ?? null), []);
   const weekSessions = useLiveQuery(() => db.sessions.where("date").between(week.mon, week.sun, true, true).toArray(), [week.mon]) ?? [];
 
   if (!profile || !stats || session === undefined) return <ScreenSkeleton />;
@@ -90,6 +91,18 @@ export default function Today() {
 
         <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
           <div className="min-w-0">
+          {/* Back after a break: say so, ease the week, and point to the story so far. */}
+          {plan?.comeback && today <= plan.comeback.until && (
+            <Item>
+              <div className="card p-4 mb-4 grid gap-2 border-l-4" style={{ borderLeftColor: "var(--volt)" }}>
+                <span className="meta text-volt font-bold">Welcome back</span>
+                <p className="display text-2xl leading-tight">Good to see you, <em>{profile.name}.</em></p>
+                <p className="text-sm text-smoke">{plan.comeback.daysAway} days away. Until {new Date(plan.comeback.until + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" })}, your loads are {Math.round((1 - plan.comeback.loadMul) * 100)} % lighter and the effort a point easier, so you rebuild without getting hurt. Step on the scale this week: your food targets follow your weight.</p>
+                <div className="flex gap-2 flex-wrap mt-1"><Link href="/journey" className="pill pill--sm">Your journey</Link><Link href="/progress" className="pill pill--sm">Log your weight</Link></div>
+              </div>
+            </Item>
+          )}
+
           {/* The numbers that move: readiness as a ring, the streak, the next level. */}
           <Item>
             <div className="grid grid-cols-[1.12fr_1fr] gap-3 mb-6 lg:mb-8">
