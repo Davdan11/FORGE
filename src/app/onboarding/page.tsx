@@ -10,9 +10,12 @@ import { adaptationsFor } from "@/lib/engine/injury";
 import { buildNutritionDay } from "@/lib/nutrition/engine";
 import { lbToKg, localeUnits } from "@/lib/units";
 import { APP_NAME, HEALTH_NOTICE, MIN_AGE, minimumAge } from "@/lib/brand";
+import { SPORTS } from "@/lib/data/sports";
+import { EXERCISES } from "@/lib/data/exercises";
+import { recipeCount } from "@/lib/nutrition/recipes";
 import { ART, IMG, sessionImage } from "@/lib/data/images";
 import { AREAS, AVOID, DIETS, HOME_KIT, PLACES, SLEEP, STRESS, WORK, DEFAULT_LIFESTYLE, equipmentFor } from "@/lib/data/choices";
-import { Seg, MultiSeg, Photo } from "@/components/ui";
+import { Seg, MultiSeg, Photo, StatRow } from "@/components/ui";
 import { motion, AnimatePresence, Press } from "@/components/motion";
 import { AccountPanel } from "@/components/AccountPanel";
 import { isConfigured } from "@/lib/supabase/client";
@@ -158,6 +161,12 @@ export default function Onboarding() {
                 <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>Create your <em>account.</em></h1>
                 <p className="text-sm text-smoke">Gym, runs, rides — one rank for all of it, earned for real. An account keeps your plan, workouts and rank on every device. Already have one? Use the same button.</p>
               </div>
+              {/* What is inside, in numbers — the proof row, as on the company's sites. */}
+              <StatRow items={[
+                { label: "Sports", value: String(SPORTS.length) },
+                { label: "Exercises", value: String(EXERCISES.length) },
+                { label: "Recipes", value: `${Math.floor(recipeCount() / 1000)}k+`, unit: "" },
+              ]} />
               <AccountPanel onSignedIn={onSignedIn} />
               <button type="button" className="text-sm text-smoke underline justify-self-start" onClick={() => { try { localStorage.setItem(SKIPPED, "1"); } catch { /* private mode */ } setAccount("done"); }}>Continue without an account</button>
               <p className="text-xs text-smoke">Without an account, everything stays on this phone. You can create one later in Settings.</p>
@@ -179,7 +188,7 @@ export default function Onboarding() {
         <span className="on-photo absolute top-[calc(var(--safe-top)+16px)] left-5 lg:top-8 lg:left-8 display text-lg lg:text-2xl">{APP_NAME}<span className="text-volt">.</span></span>
         <div className="on-photo absolute inset-x-0 bottom-0 px-5 pb-4 lg:px-10 lg:pb-10 grid gap-3">
           <p className="hidden md:block display display--lg leading-[0.95] max-w-[12ch]" style={{ fontSize: "var(--text-display-lg)" }}><AnimatePresence mode="wait"><motion.span key={step} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.5 }} className="block">{CLAIMS[step]}</motion.span></AnimatePresence></p>
-          <p className="meta text-bone/80">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
+          <p className="meta text-bone/80"><span className="text-volt font-bold">{String(step + 1).padStart(2, "0")}</span> / {String(STEPS.length).padStart(2, "0")} · {STEPS[step]}</p>
           <div className="flex gap-1.5">{STEPS.map((st, i) => <span key={st} className={`h-1 flex-1 rounded-full transition-colors ${i < step ? "bg-volt" : i === step ? "bg-bone" : "bg-[rgba(236,231,223,.18)]"}`} />)}</div>
         </div>
       </div>
@@ -267,11 +276,11 @@ export default function Onboarding() {
             <div className="field"><span className="meta">Meals per day</span><Seg value={mealsPerDay} onChange={setMealsPerDay} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} /></div>
             <p className="text-sm text-smoke">Targets come from your body, your goal and the kind of day it is. 30,000+ recipes with step-by-step cooking; meals never repeat within three days.</p>
             <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
-              <input type="checkbox" className="mt-1 w-5 h-5 accent-[var(--volt)] shrink-0" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+              <input type="checkbox" className="tick mt-0.5 shrink-0" checked={ack} onChange={(e) => setAck(e.target.checked)} />
               <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">I understand.</strong> {HEALTH_NOTICE}</span>
             </label>
             <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
-              <input type="checkbox" className="mt-1 w-5 h-5 accent-[var(--volt)] shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <input type="checkbox" className="tick mt-0.5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
               <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">I agree</strong> to the <Link href="/legal/terms" className="underline">Terms of Use</Link> and <Link href="/legal/privacy" className="underline">Privacy Policy</Link>, and I consent to {APP_NAME} using the health information I enter — like my weight, injuries and heart rate — to build my plan.</span>
             </label>
           </>)}

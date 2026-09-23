@@ -367,6 +367,12 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 .check svg { width: 14px; height: 14px; stroke: #06240f; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
 .check[aria-checked="true"] svg { opacity: 1; }
 
+/* A real checkbox, drawn: square, then lime with a dark tick when checked. */
+input.tick { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line-strong); background: var(--carbon) no-repeat center / 14px 14px; cursor: pointer; transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), transform 160ms var(--ease-spring); }
+input.tick:checked { background-color: var(--volt); border-color: var(--volt); transform: scale(1.06);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306240f' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5 10 17l9-10'/%3E%3C/svg%3E"); }
+input.tick:focus-visible { outline: 2px solid var(--volt-deep); outline-offset: 3px; }
+
 /* ── Motion ───────────────────────────────────────────────────── */
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise 500ms var(--ease-out) both; }
