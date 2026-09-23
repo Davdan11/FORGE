@@ -131,6 +131,8 @@ export interface Profile {
   wakeTime: string;       // "07:00"
   trainTime: string;      // "18:00"
   notifications: boolean;
+  /** When the health notice was accepted, at onboarding. */
+  healthNoticeAt?: string;
   /** Functional threshold power, watts. Unset until tested or entered. */
   ftpW?: number;
   /** Threshold running speed, km/h. */

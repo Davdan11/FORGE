@@ -31,7 +31,7 @@ function Browse() {
     <Page>
       <Screen>
         <TopBar back="/food" title={<>{recipeCount().toLocaleString("en-US")} <em>recipes.</em></>} right={<span className="chip chip--live tnum">{res.total.toLocaleString("en-US")} match</span>} />
-        <p className="text-xs text-smoke mb-4">Every recipe carries kcal, protein, carbs, sugar, fat and fibre per portion, exact measures and cook steps.{diets.length ? ` Filtered to your diet: ${diets.join(", ").replace(/_/g, "-")}.` : ""}</p>
+        <p className="text-xs text-smoke mb-4">Every recipe carries kcal, protein, carbs, sugar, fat and fiber per portion, exact measures and cook steps.{diets.length ? ` Filtered to your diet: ${diets.join(", ").replace(/_/g, "-")}.` : ""}</p>
         <input className="input mb-3" placeholder="Search: salmon, tofu curry, oats…" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
         <div className="grid gap-2 mb-4">
           <Seg scroll value={slot} onChange={(v) => { setSlot(v); setPage(1); }} options={[{ v: "", label: "All" }, { v: "breakfast", label: "Breakfast" }, { v: "lunch", label: "Lunch" }, { v: "dinner", label: "Dinner" }, { v: "snack", label: "Snack" }, { v: "pre", label: "Pre" }, { v: "post", label: "Post" }]} />

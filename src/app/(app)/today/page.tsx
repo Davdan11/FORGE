@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_NAME } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -83,7 +84,7 @@ export default function Today() {
           <div className="flex gap-1.5 flex-wrap lg:hidden">
             <span className="chip chip--live backdrop-blur-md tnum">{doneThisWeek}/{weekSessions.length} this week</span>
             <span className="chip chip--live backdrop-blur-md tnum">{stats.streakWeeks} wk streak</span>
-            {nutrition && <span className="chip chip--live backdrop-blur-md tnum">{nutrition.targets.kcal} kcal</span>}
+            {nutrition && <span className="chip chip--live backdrop-blur-md tnum">{nutrition.targets.kcal.toLocaleString("en-US")} kcal</span>}
             {readiness && <span className="chip chip--volt tnum">Readiness {readiness.score}</span>}
           </div>
         </Hero>
@@ -158,7 +159,7 @@ export default function Today() {
                       <p className="on-photo absolute inset-x-0 bottom-0 p-5 display text-2xl leading-[0.95]">Twelve minutes<br />of <em>mobility.</em></p>
                     </div>
                     <div className="card__body p-5 grid gap-3">
-                      <p className="text-sm text-smoke">Six moves, two minutes each, the app counts and buzzes at every switch: 90/90 · couch · thoracic · deep squat · WGS · hamstring floss.</p>
+                      <p className="text-sm text-smoke">Six moves, two minutes each. The app times them and buzzes at every switch: 90/90 hips · couch stretch · upper-back rotation · deep squat · world’s greatest stretch · hamstring floss.</p>
                       <span className="pill pill--sm pill--volt justify-self-start mt-1">Start the flow · +66 XP</span>
                     </div>
                   </button>
@@ -183,7 +184,7 @@ export default function Today() {
 
           <Item>{nutrition && <FoodToday nutrition={nutrition} notifications={profile.notifications} sessionTitle={session?.title} onNotify={async () => {
             const perm = await ensureNotificationPermission();
-            if (perm !== "granted") { say(perm === "denied" ? "Notifications are off for FORGE. Turn them on in your phone's settings." : "Notifications aren’t supported here."); return; }
+            if (perm !== "granted") { say(perm === "denied" ? `Notifications are off for ${APP_NAME}. Turn them on in your phone's settings.` : "Notifications aren’t supported here."); return; }
             await db.profile.update(profile.id, { notifications: true, dirty: 1 });
             await syncReminders();
             say("Reminders on: check-in, sessions and meals.");
@@ -327,7 +328,7 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
           <RatingScale label="Stress" value={stress} onChange={setStress} better="low" words={["Calm", "Low", "Moderate", "High", "Maxed out"]} />
           <RatingScale label="Mood" value={mood} onChange={setMood} better="high" words={["Low", "Flat", "OK", "Good", "Great"]} />
         </div>
-        <button type="button" className="text-left text-xs text-smoke underline" onClick={() => setOpen(!open)}>{open ? "Hide" : "Real-life mode: time, gear, pain, HRV"}</button>
+        <button type="button" className="text-left text-xs text-smoke underline" onClick={() => setOpen(!open)}>{open ? "Hide" : "Adjust today’s workout: time, equipment, pain"}</button>
         <AnimatePresence>{open && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="grid gap-4 overflow-hidden">
             <div className="field"><span className="meta">Minutes I actually have</span><Seg value={minutes ?? 0} onChange={(v) => setMinutes(v || undefined)} options={[{ v: 0, label: "As planned" }, { v: 25, label: "25" }, { v: 40, label: "40" }, { v: 60, label: "60" }]} /></div>
@@ -360,7 +361,7 @@ function FoodToday({ nutrition, notifications, sessionTitle, onNotify }: { nutri
           </Link>
         )}
         <div className="p-4 grid gap-3">
-          <div className="flex items-baseline justify-between text-sm"><span>{nutrition.dayType === "rest" ? "Rest day" : nutrition.dayType === "hard" ? "Hard day" : "Training day"}{sessionTitle ? ` · ${sessionTitle}` : ""}</span><span className="tnum text-xs text-smoke">{nutrition.meals.filter((m) => m.done).length}/{nutrition.meals.length} meals · {nutrition.targets.kcal} kcal</span></div>
+          <div className="flex items-baseline justify-between text-sm"><span>{nutrition.dayType === "rest" ? "Rest day" : nutrition.dayType === "hard" ? "Hard day" : "Training day"}{sessionTitle ? ` · ${sessionTitle}` : ""}</span><span className="tnum text-xs text-smoke">{nutrition.meals.filter((m) => m.done).length}/{nutrition.meals.length} meals · {nutrition.targets.kcal.toLocaleString("en-US")} kcal</span></div>
           <Bar value={nutrition.meals.filter((m) => m.done).length} max={nutrition.meals.length} />
           {/* Spelled out: a single letter next to a number is only legible to
               someone who already knows what the app is telling them. */}

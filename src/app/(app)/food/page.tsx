@@ -108,11 +108,11 @@ export default function FoodPage() {
                   <div className="grid grid-cols-3 gap-3 text-[11px] tnum">
                     <Macro label="Protein" v={t.protein} max={day.targets.protein} /><Macro label="Carbs" v={t.carbs} max={day.targets.carbs} /><Macro label="Fat" v={t.fat} max={day.targets.fat} />
                   </div>
-                  <div className="flex gap-3 text-[11px] tnum"><span className={t.sugar > tg.sugarMax ? "text-danger" : "text-smoke"}>Sugar {Math.round(t.sugar)} / {tg.sugarMax} g max</span><span className={t.fiber >= tg.fiberMin ? "text-volt" : "text-smoke"}>Fibre {Math.round(t.fiber)} / {tg.fiberMin} g</span><span className="text-smoke ml-auto">Water {Math.round(day.waterMl / 100) / 10} L</span></div>
+                  <div className="flex gap-3 text-[11px] tnum"><span className={t.sugar > tg.sugarMax ? "text-danger" : "text-smoke"}>Sugar {Math.round(t.sugar)} / {tg.sugarMax} g max</span><span className={t.fiber >= tg.fiberMin ? "text-volt" : "text-smoke"}>Fiber {Math.round(t.fiber)} / {tg.fiberMin} g</span><span className="text-smoke ml-auto">Water {Math.round(day.waterMl / 100) / 10} L</span></div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 mb-4">
-                <Link href="/food/browse" className="pill pill--sm">Browse {recipeCount().toLocaleString("en-US")}</Link>
+                <Link href="/food/browse" className="pill pill--sm">Browse {recipeCount().toLocaleString("en-US")} recipes</Link>
                 <button type="button" className="pill pill--sm" onClick={rebuildToday}>↻ New menu</button>
               </div>
               </div>

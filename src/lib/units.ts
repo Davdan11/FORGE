@@ -7,6 +7,19 @@ export type DistanceLike = DistanceUnit | UnitPrefs;
 const w = (u: WeightLike): WeightUnit => (typeof u === "string" ? u : u.weight);
 const d = (u: DistanceLike): DistanceUnit => (typeof u === "string" ? u : u.distance);
 
+/**
+ * Units that feel native where the phone is. The US measures in pounds and
+ * miles (so do Liberia and Myanmar); the UK weighs in kilograms and runs in
+ * miles; everywhere else is metric. Only a default: both stay switchable.
+ */
+export function localeUnits(locale?: string): UnitPrefs {
+  const tag = locale ?? (typeof navigator !== "undefined" ? navigator.language : "");
+  const region = (tag.split(/[-_]/)[1] ?? "").toUpperCase();
+  if (region === "US" || region === "LR" || region === "MM") return { weight: "lb", distance: "mi" };
+  if (region === "GB") return { weight: "kg", distance: "mi" };
+  return { weight: "kg", distance: "km" };
+}
+
 export const kgToLb = (kg: number) => kg * 2.2046226218;
 export const lbToKg = (lb: number) => lb / 2.2046226218;
 

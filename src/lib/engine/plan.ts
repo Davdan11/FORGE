@@ -52,12 +52,12 @@ const PHASES: Record<"strength" | "hypertrophy" | "conditioning", [Phase, Phase,
   strength: [
     { name: "Volume", intent: "More sets at moderate weight. Builds the muscle the heavy blocks will use.", reps: [[6, 6], [5, 6], [5, 5]], accReps: [8, 12] },
     { name: "Strength", intent: "Fewer reps, heavier bars. The work moves toward what you are training for.", reps: [[5, 5], [4, 5], [3, 4]], accReps: [8, 10] },
-    { name: "Peak", intent: "The heaviest weeks of the cycle, then a deload that lets it show.", reps: [[4, 4], [3, 3], [2, 3]], accReps: [6, 8] },
+    { name: "Peak", intent: "The heaviest weeks of the cycle, then a lighter recovery week that lets it show.", reps: [[4, 4], [3, 3], [2, 3]], accReps: [6, 8] },
   ],
   hypertrophy: [
-    { name: "Accumulation", intent: "High reps, controlled tempo, lots of total work. The most muscle-building block.", reps: [[10, 12], [8, 10], [8, 10]], accReps: [10, 15] },
-    { name: "Hypertrophy", intent: "Moderate reps and heavier loads. Where most of the size comes from.", reps: [[8, 10], [6, 8], [5, 6]], accReps: [8, 12] },
-    { name: "Intensification", intent: "Heavier and lower reps. The strength built here carries into the next cycle's volume.", reps: [[6, 8], [5, 6], [4, 5]], accReps: [6, 10] },
+    { name: "Volume", intent: "High reps, controlled tempo, lots of total work. The most muscle-building block.", reps: [[10, 12], [8, 10], [8, 10]], accReps: [10, 15] },
+    { name: "Muscle", intent: "Moderate reps and heavier loads. Where most of the size comes from.", reps: [[8, 10], [6, 8], [5, 6]], accReps: [8, 12] },
+    { name: "Heavy", intent: "Heavier and lower reps. The strength built here carries into the next cycle's volume.", reps: [[6, 8], [5, 6], [4, 5]], accReps: [6, 10] },
   ],
   conditioning: [
     { name: "Base", intent: "Aerobic base and clean technique. Easy to recover from, hard to skip.", reps: [[10, 12], [8, 10], [8, 10]], accReps: [10, 15] },

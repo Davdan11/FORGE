@@ -109,7 +109,7 @@ export function adaptationFor(injury: Injury, today: string): InjuryAdaptation {
 
   const guidance: string[] = [];
   if (step.phase === "protect") {
-    guidance.push(`Your ${label} is being protected: nothing that loads it is prescribed right now.`);
+    guidance.push(`Your ${label} is being protected: exercises that load it are left out for now.`);
     guidance.push(KEEP_TRAINING[injury.area]);
     guidance.push("Move it through whatever range is comfortable every day. Complete rest stiffens a joint; it rarely settles it.");
   } else if (step.phase === "reload") {

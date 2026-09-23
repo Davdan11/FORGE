@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_NAME, HEALTH_NOTICE } from "@/lib/brand";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
@@ -90,7 +91,7 @@ export default function SettingsPage() {
     <Page>
       <Screen>
         <Hero image={IMG.dark} height="h-[280px]" back="/progress" eyebrow={`Member since ${profile.createdAt.slice(0, 10)} · ${rankFor(lvl.level)}`} title={<>{profile.name}<br /><em>settings.</em></>}
-          right={<span className="chip chip--live backdrop-blur-md">FORGE v0.6</span>} />
+          right={<span className="chip chip--live backdrop-blur-md">{APP_NAME} v0.6</span>} />
 
         <Stagger className="lg:grid lg:grid-cols-2 lg:gap-x-10 lg:items-start">
           <div className="min-w-0">
@@ -161,7 +162,7 @@ export default function SettingsPage() {
                     <div className="field"><span className="meta">Foods you don’t eat</span><MultiSeg value={profile.avoidFoods ?? []} onChange={(avoidFoods) => food({ avoidFoods })} options={AVOID} /></div>
                   </div>
                   <div className="p-4 grid gap-3">
-                    <div><p className="text-sm font-medium">Units</p><p className="text-xs text-smoke">Body weight and distance are set separately — plenty of places weigh in pounds and run in kilometres.</p></div>
+                    <div><p className="text-sm font-medium">Units</p><p className="text-xs text-smoke">Body weight and distance are set separately — plenty of people weigh in pounds and run in kilometers.</p></div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="field"><span className="meta">Body weight &amp; loads</span><Seg fill value={profile.units.weight} onChange={(weight) => update({ units: { ...profile.units, weight } })} options={[{ v: "kg", label: "kg" }, { v: "lb", label: "lb" }]} /></div>
                       <div className="field"><span className="meta">Distance &amp; pace</span><Seg fill value={profile.units.distance} onChange={(distance) => update({ units: { ...profile.units, distance } })} options={[{ v: "km", label: "km" }, { v: "mi", label: "mi" }]} /></div>
@@ -193,7 +194,7 @@ export default function SettingsPage() {
             <Item>
               <Section title="Backup">
                 <div className="card p-4 grid gap-3">
-                  <p className="text-sm">Everything you log lives on this device. Export a copy you keep — it works with no account and no network, and it is the only way to move your block to a browser that can’t sign in.</p>
+                  <p className="text-sm">Your data lives on this phone. Export a copy to keep it safe — it works with no account and no internet.</p>
                   <div className="flex gap-2 flex-wrap">
                     <Press><button type="button" className="pill pill--sm pill--bone" onClick={async () => { try { say(await downloadBackup()); } catch { say("Export failed."); } }}>Export a copy</button></Press>
                     <Press><button type="button" className="pill pill--sm" onClick={() => fileRef.current?.click()}>Restore from file</button></Press>
@@ -214,7 +215,8 @@ export default function SettingsPage() {
                 <div className="card p-4 flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Reset this device</p><p className="text-xs text-smoke">Deletes profile, block, logs, routes and meals here. Cannot be undone.</p></div><button type="button" className="pill pill--danger pill--sm shrink-0" onClick={async () => { if (confirm("Delete everything on this device?")) { await resetAll(); router.replace("/onboarding"); } }}>Reset</button></div>
               </Section>
             </Item>
-            <Item><p className="text-xs text-smoke">FORGE v0.6 · free, worldwide · offline-first · {stats.xp.toLocaleString("en-US")} XP on this device</p></Item>
+            <Item><p className="text-xs text-smoke leading-relaxed mb-2">{HEALTH_NOTICE}</p></Item>
+            <Item><p className="text-xs text-smoke">{APP_NAME} v0.6 · works offline · {stats.xp.toLocaleString("en-US")} XP on this device</p></Item>
           </div>
         </Stagger>
         <Toast text={toast} />

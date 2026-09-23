@@ -20,12 +20,12 @@ export function dailyQuests(input: { date: string; readiness?: Readiness | null;
     q.push({ id: "session", label: session.title, detail: `${session.minutes} min · ${session.exercises.length} movements`, xp: session.status === "adjusted" ? XP.sessionAdjustedDone : XP.sessionDone, done: session.status === "done", href: `/session?id=${session.id}` });
   } else {
     const min = activitiesToday.reduce((a, b) => a + b.durationSec / 60, 0);
-    q.push({ id: "move", label: "Move 20 minutes", detail: "Any sport, GPS on. Zone 2 is enough.", xp: XP.activityBase, done: min >= 20, progress: [Math.min(20, Math.round(min)), 20], href: "/move" });
+    q.push({ id: "move", label: "Move 20 minutes", detail: "Any sport, GPS on. An easy pace is enough.", xp: XP.activityBase, done: min >= 20, progress: [Math.min(20, Math.round(min)), 20], href: "/move" });
   }
   if (nutrition && nutrition.meals.length) {
     const done = nutrition.meals.filter((m) => m.done).length;
-    q.push({ id: "meals", label: "Log every meal", detail: `${nutrition.targets.kcal} kcal planned · ${nutrition.targets.protein} g protein`, xp: XP.mealLogged * nutrition.meals.length + XP.fullNutritionDay, done: done === nutrition.meals.length, progress: [done, nutrition.meals.length], href: "/food" });
+    q.push({ id: "meals", label: "Log every meal", detail: `${nutrition.targets.kcal.toLocaleString("en-US")} kcal planned · ${nutrition.targets.protein} g protein`, xp: XP.mealLogged * nutrition.meals.length + XP.fullNutritionDay, done: done === nutrition.meals.length, progress: [done, nutrition.meals.length], href: "/food" });
   }
-  q.push({ id: "flow", label: "12-minute mobility flow", detail: "Six moves, two minutes each. Hips, T-spine, ankles.", xp: Math.round(12 * XP.mobilityMinute) + 30, done: flowDoneToday(date), action: "flow" });
+  q.push({ id: "flow", label: "12-minute mobility flow", detail: "Six moves, two minutes each. Hips, upper back, ankles.", xp: Math.round(12 * XP.mobilityMinute) + 30, done: flowDoneToday(date), action: "flow" });
   return q;
 }

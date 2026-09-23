@@ -51,7 +51,7 @@ export const INGREDIENTS: Ingredient[] = [
   I({ id: "pork-tenderloin", name: "Pork tenderloin", cat: "protein", n: [120, 21, 0, 0, 3.5, 0], ok: MEAT, adj: "roasted",
     cook: { roast: "Sear the pork 2 min per side, then roast at 200 °C for 15–18 min until 63 °C inside. Rest 5 min, slice.", pan: "Slice the pork into 2 cm medallions; sear 3 min per side until just blushing (63 °C).", stirfry: "Slice thin; sear 2 min in a hot wok, remove." } }),
   I({ id: "salmon", name: "Salmon fillet", cat: "protein", n: [208, 20, 0, 0, 13, 0], ok: FISH, adj: "roasted",
-    cook: { roast: "Oil and season the salmon; roast skin-side down at 200 °C for 12 min — it should flake and stay pink in the centre. Pull it a minute early.", pan: "Sear the salmon skin-side down 4 min without moving it, flip, 2 min more.", grill: "Grill the salmon skin-side down 5 min, flip for 2." } }),
+    cook: { roast: "Oil and season the salmon; roast skin-side down at 200 °C for 12 min — it should flake and stay pink in the center. Pull it a minute early.", pan: "Sear the salmon skin-side down 4 min without moving it, flip, 2 min more.", grill: "Grill the salmon skin-side down 5 min, flip for 2." } }),
   I({ id: "cod", name: "Cod fillet", cat: "protein", n: [82, 18, 0, 0, 0.7, 0], ok: FISH, adj: "baked",
     cook: { roast: "Bake the cod at 200 °C for 12 min until it flakes.", pan: "Dust the cod with a little flour or not; pan-fry 3 min per side in oil until opaque.", curry: "Cut the cod into chunks; slip them into the simmering sauce for the last 5 min." } }),
   I({ id: "shrimp", name: "Shrimp, peeled", cat: "protein", n: [85, 20, 0, 0, 0.5, 0], ok: FISH, adj: "garlic",

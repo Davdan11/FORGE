@@ -20,7 +20,7 @@ import type { UnitPrefs } from "@/lib/types";
 
    There is no "following", no profiles to open, no way to ask
    where anyone is. The feed shows finished work in a
-   neighbourhood several kilometres wide, and that is the whole
+   neighbourhood several kilometers wide, and that is the whole
    surface area.
    ───────────────────────────────────────────────────────────── */
 
@@ -195,7 +195,7 @@ function Offline() {
     <div className="card p-6 grid gap-2">
       <p className="display text-2xl">The feed needs an account</p>
       <p className="text-sm text-smoke max-w-[52ch]">
-        Everything else in FORGE works offline and always will. Sharing cannot — it needs somewhere for a post to live. Add your Supabase keys and sign in from Settings.
+        Everything else in the app works offline and always will. Sharing cannot — it needs somewhere for a post to live. Add your Supabase keys and sign in from Settings.
       </p>
     </div>
   );

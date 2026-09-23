@@ -23,7 +23,7 @@ function Library() {
   return (
     <Page>
       <Screen>
-        <Hero image={ART.library} color height="h-[260px]" eyebrow={`${EXERCISES.length} movements · cues · faults · swaps`} title={<>The <em>bank.</em></>}>
+        <Hero image={ART.library} color height="h-[260px]" eyebrow={`${EXERCISES.length} exercises · form tips · common mistakes · swaps`} title={<>The <em>library.</em></>}>
           <input className="input mt-4 !bg-[rgba(255,255,255,.92)] !text-ink backdrop-blur-md" placeholder="Search a movement, muscle or pattern" value={q} onChange={(e) => setQ(e.target.value)} />
         </Hero>
         <Rail active={pattern} gutter className="gap-2 pb-3 mb-4 lg:mx-0 lg:px-0 lg:flex-wrap lg:overflow-visible">
@@ -36,7 +36,7 @@ function Library() {
                 <Link href={`/library/${e.slug}`} className="card--photo block aspect-[4/5]">
                   <MoveMedia ex={e} fill />
                   <div className="on-photo absolute inset-x-0 bottom-0 z-10 p-3 grid gap-1 bg-gradient-to-t from-ink via-ink/85 to-transparent">
-                    <span className="flex gap-1"><span className="chip chip--live backdrop-blur-md">{e.level === "new" ? "Beginner" : e.level === "intermediate" ? "Inter." : "Adv."}</span></span>
+                    <span className="flex gap-1"><span className="chip chip--live backdrop-blur-md">{e.level === "new" ? "Beginner" : e.level === "intermediate" ? "Intermediate" : "Advanced"}</span></span>
                     <span className="font-semibold leading-tight">{e.name}</span>
                     <span className="text-[11px] text-bone/70 truncate">{e.primary.join(", ")}</span>
                   </div>

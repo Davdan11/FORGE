@@ -18,7 +18,7 @@ export function ExerciseDetail() {
   const profile = useLiveQuery(() => getProfile(), []);
   const history = useLiveQuery(() => db.sets.where("slug").equals(slug).reverse().sortBy("at"), [slug]) ?? [];
   const upcoming = useLiveQuery(() => db.sessions.filter((x) => x.status !== "done" && x.exercises.some((e) => e.slug === slug)).sortBy("date"), [slug]) ?? [];
-  if (!ex) return <Screen><Empty title="Not found" body="That movement isn’t in the bank yet." cta="Back to library" href="/library" /></Screen>;
+  if (!ex) return <Screen><Empty title="Not found" body="That exercise isn’t in the library yet." cta="Back to library" href="/library" /></Screen>;
   const best = history.reduce((a, s) => Math.max(a, s.loadKg && s.reps ? e1rm(s.loadKg, s.reps) : 0), 0);
 
   return (

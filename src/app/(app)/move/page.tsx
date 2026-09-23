@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_NAME } from "@/lib/brand";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -127,9 +128,9 @@ function Move() {
         return next;
       }),
       (problem) => setErr(problem === "denied"
-        ? (isNativeShell() ? "FORGE can't use your location. Allow it in Settings → Apps → FORGE → Location." : "Location permission denied. Allow it in your browser settings.")
+        ? (isNativeShell() ? `${APP_NAME} can't use your location. Allow it in Settings → Apps → ${APP_NAME} → Location.` : "Location permission denied. Allow it in your browser settings.")
         : problem === "unavailable" ? "No GPS available on this device." : "GPS signal lost — keep moving, it'll pick up."),
-      { title: `FORGE · ${label} recording`, message: "Your route is being recorded. Tap to return to FORGE." },
+      { title: `${APP_NAME} · ${label} recording`, message: `Your route is being recorded. Tap to return to ${APP_NAME}.` },
     ).then((stopFn) => { gps.current = stopFn; }).catch(() => setErr("Couldn't start the GPS. Check that location is on."));
   }
   function pause() { if (rec === "live") { pausedAt.current = Date.now(); setRec("paused"); } else { pausedTotal.current += Date.now() - pausedAt.current; setRec("live"); } }
@@ -246,7 +247,7 @@ function Move() {
                 )}
                 <Press><button type="button" className="pill pill--volt pill--block pill--lg" onClick={() => { setErr(null); setCounting(true); }}>{workout ? "Start guided workout" : `Start ${typeLabel.toLowerCase()}`}</button></Press>
                 <HeartChip heart={heart} maxHr={maxHrFor(profile.age)} />
-                <AnimatePresence>{err && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-danger">{err}{isNativeShell() && err.startsWith("FORGE can't use your location") && <> <button type="button" className="underline" onClick={() => openLocationSettings()}>Open settings</button></>}</motion.p>}</AnimatePresence>
+                <AnimatePresence>{err && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-danger">{err}{isNativeShell() && err.startsWith(`${APP_NAME} can't use your location`) && <> <button type="button" className="underline" onClick={() => openLocationSettings()}>Open settings</button></>}</motion.p>}</AnimatePresence>
                 </div>
                 </div>
               </div>

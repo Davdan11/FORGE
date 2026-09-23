@@ -11,7 +11,7 @@ import { fmtDuration } from "@/lib/units";
 export function WorkoutDetail() {
   const { id } = useParams<{ id: string }>();
   const w = WORKOUT_MAP[id];
-  if (!w) return <Screen><Empty title="Not found" body="That workout isn't in the bank." cta="Back to Move" href="/move" /></Screen>;
+  if (!w) return <Screen><Empty title="Not found" body="That workout isn't in the library." cta="Back to Move" href="/move" /></Screen>;
   const segs = expandSegments(w);
   const byZone = [1, 2, 3, 4, 5].map((z) => ({ z, sec: segs.filter((s) => s.zone === z).reduce((a, s) => a + s.seconds, 0) })).filter((x) => x.sec > 0);
   const total = segs.reduce((a, s) => a + s.seconds, 0);

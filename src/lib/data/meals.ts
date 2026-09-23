@@ -79,7 +79,7 @@ export const MEALS: Meal[] = [
   M({ name: "Beef and broccoli stir-fry", slot: ["lunch", "dinner"], kcal: 620, protein: 46, carbs: 62, sugar: 6, fat: 18, fiber: 9, minutes: 20, tags: ["lactose_free"], image: P("1540189549336-e6e99c3679fe"), cuisine: "Chinese",
     ingredients: [{ item: "Lean beef strips", qty: "180 g" }, { item: "Broccoli", qty: "250 g" }, { item: "Rice noodles or rice", qty: "80 g dry" }, { item: "Soy sauce", qty: "2 tbsp" }, { item: "Garlic, ginger", qty: "1 tsp each" }, { item: "Cornflour", qty: "1 tsp" }, { item: "Neutral oil", qty: "1 tbsp" }],
     steps: ["Toss the beef with cornflour and 1 tbsp soy. Cook the noodles.", "Get a wok or wide pan smoking hot. Sear the beef 90 s, in one layer, then remove.", "Add broccoli with a splash of water; cover 2 min to steam.", "Add garlic, ginger, the rest of the soy; return the beef for 1 min.", "Toss with the noodles."],
-    tip: "The pan must be hotter than feels reasonable. Crowding it steams the beef grey." }),
+    tip: "The pan must be hotter than feels reasonable. Crowding it steams the beef gray." }),
   M({ name: "Mediterranean grain bowl", slot: ["lunch"], kcal: 540, protein: 26, carbs: 66, sugar: 10, fat: 20, fiber: 14, minutes: 15, tags: ["vegetarian", "lactose_free"], image: P("1547592180-85f173990554"), cuisine: "Mediterranean",
     ingredients: [{ item: "Cooked farro or bulgur", qty: "200 g" }, { item: "Chickpeas", qty: "½ can" }, { item: "Roasted red pepper, olives, cucumber", qty: "" }, { item: "Hummus", qty: "2 tbsp" }, { item: "Lemon, olive oil, oregano", qty: "" }],
     steps: ["Warm the grains 1 min if pre-cooked.", "Chop the vegetables; toss everything with lemon, oil, oregano and salt.", "Spoon hummus on the side."] }),
@@ -96,7 +96,7 @@ export const MEALS: Meal[] = [
   /* ───────────── Dinner ───────────── */
   M({ name: "Salmon, potatoes and greens", slot: ["dinner"], kcal: 660, protein: 44, carbs: 52, sugar: 5, fat: 28, fiber: 8, minutes: 25, tags: ["pescatarian", "gluten_free", "lactose_free"], image: P("1519708227418-c8fd9a32b7a2"), cuisine: "Classic",
     ingredients: [{ item: "Salmon fillet", qty: "180 g" }, { item: "Baby potatoes", qty: "300 g" }, { item: "Green beans or broccoli", qty: "200 g" }, { item: "Olive oil", qty: "1 tbsp" }, { item: "Lemon, dill", qty: "" }],
-    steps: ["Boil the potatoes in salted water 15 min until a knife slides in.", "Oven to 200 °C. Oil and season the salmon; roast skin-side down 12 min (it should flake, still pink in the centre).", "Steam the greens 4 min.", "Crush the potatoes lightly with oil and salt. Plate with lemon and dill."],
+    steps: ["Boil the potatoes in salted water 15 min until a knife slides in.", "Oven to 200 °C. Oil and season the salmon; roast skin-side down 12 min (it should flake, still pink in the center).", "Steam the greens 4 min.", "Crush the potatoes lightly with oil and salt. Plate with lemon and dill."],
     tip: "Salmon keeps cooking after it leaves the oven. Pull it a minute early." }),
   M({ name: "Chicken thigh tray bake", slot: ["dinner"], kcal: 690, protein: 48, carbs: 58, sugar: 6, fat: 28, fiber: 9, minutes: 40, tags: ["gluten_free", "lactose_free", "batch"], image: P("1555939594-58d7cb561ad1"), cuisine: "Classic",
     ingredients: [{ item: "Boneless chicken thighs", qty: "250 g" }, { item: "Sweet potato", qty: "250 g" }, { item: "Courgette, red onion", qty: "1 each" }, { item: "Olive oil", qty: "1 tbsp" }, { item: "Rosemary, garlic, lemon", qty: "" }],
@@ -139,7 +139,7 @@ export const MEALS: Meal[] = [
     steps: ["Bring 600 ml water to a simmer with sliced ginger and mushrooms, 5 min.", "Add noodles and cook to packet time; add bok choy for the last 2 min.", "Lower the heat, whisk in the miso (never boil miso — it goes bitter).", "Sear the salmon 3 min per side; flake it into the bowl. Sesame oil and spring onion."] }),
   M({ name: "Rainbow buddha bowl", slot: ["lunch", "dinner"], kcal: 580, protein: 24, carbs: 72, sugar: 11, fat: 24, fiber: 15, minutes: 25, tags: ["vegan", "vegetarian", "gluten_free", "lactose_free", "batch"], image: P("1512621776951-a57141f2eefd"), cuisine: "Plant-based",
     ingredients: [{ item: "Roasted sweet potato", qty: "150 g" }, { item: "Chickpeas", qty: "½ can" }, { item: "Quinoa (dry)", qty: "60 g" }, { item: "Red cabbage, carrot, avocado", qty: "" }, { item: "Tahini, lemon, maple", qty: "dressing" }],
-    steps: ["Roast sweet potato cubes 20 min at 220 °C; roast the chickpeas on the same tray with paprika.", "Cook the quinoa.", "Dressing: 1 tbsp tahini, lemon juice, ½ tsp maple, water to loosen.", "Arrange everything in a bowl by colour. Dress just before eating."] }),
+    steps: ["Roast sweet potato cubes 20 min at 220 °C; roast the chickpeas on the same tray with paprika.", "Cook the quinoa.", "Dressing: 1 tbsp tahini, lemon juice, ½ tsp maple, water to loosen.", "Arrange everything in a bowl by color. Dress just before eating."] }),
 
   /* ───────────── Snacks · pre · post ───────────── */
   M({ name: "Banana and yogurt", slot: ["pre", "snack"], kcal: 260, protein: 18, carbs: 42, sugar: 19, fat: 2, fiber: 5, minutes: 1, tags: ["vegetarian", "quick", "gluten_free"], image: P("1490474418585-ba9bad8fd0ea"), cuisine: "Pre-session",
@@ -157,7 +157,7 @@ export const MEALS: Meal[] = [
   M({ name: "Edamame and almonds", slot: ["snack"], kcal: 290, protein: 20, carbs: 18, sugar: 4, fat: 16, fiber: 5, minutes: 3, tags: ["vegan", "vegetarian", "quick", "gluten_free", "lactose_free"], image: P("1515543237350-b3eea1ec8082"), cuisine: "Snack",
     ingredients: [{ item: "Frozen edamame", qty: "150 g" }, { item: "Almonds", qty: "20 g" }, { item: "Flaky salt, chili", qty: "" }], steps: ["Microwave the edamame 2 min; salt.", "Add the almonds."] }),
   M({ name: "Skyr and berries", slot: ["snack", "post"], kcal: 220, protein: 26, carbs: 24, sugar: 11, fat: 1, fiber: 4, minutes: 1, tags: ["vegetarian", "quick", "gluten_free"], image: P("1488477181946-6428a0291777"), cuisine: "Snack",
-    ingredients: [{ item: "Skyr", qty: "250 g" }, { item: "Mixed berries", qty: "100 g" }], steps: ["Mix. Highest protein-per-calorie snack in the bank."] }),
+    ingredients: [{ item: "Skyr", qty: "250 g" }, { item: "Mixed berries", qty: "100 g" }], steps: ["Mix. Highest protein-per-calorie snack on the menu."] }),
   M({ name: "Strawberry protein smoothie", slot: ["snack", "post", "breakfast"], kcal: 340, protein: 32, carbs: 42, sugar: 19, fat: 6, fiber: 5, minutes: 3, tags: ["vegetarian", "quick", "gluten_free"], image: P("1502741224143-90386d7f8c82"), cuisine: "Snack",
     ingredients: [{ item: "Frozen strawberries", qty: "150 g" }, { item: "Whey", qty: "1 scoop" }, { item: "Milk", qty: "250 ml" }, { item: "Oats", qty: "20 g" }], steps: ["Blend 45 s. Drink."] }),
 

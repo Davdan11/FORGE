@@ -65,7 +65,7 @@ describe("the programme never runs out", () => {
 
 describe("every block is different", () => {
   it("names the three phases by goal", () => {
-    expect(generatePlan(make({ goal: "build" }), START).plan.blocks.map((b) => b.name)).toEqual(["Accumulation", "Hypertrophy", "Intensification"]);
+    expect(generatePlan(make({ goal: "build" }), START).plan.blocks.map((b) => b.name)).toEqual(["Volume", "Muscle", "Heavy"]);
     expect(generatePlan(make({ goal: "strength" }), START).plan.blocks.map((b) => b.name)).toEqual(["Volume", "Strength", "Peak"]);
     expect(generatePlan(make({ goal: "endurance" }), START).plan.blocks.map((b) => b.name)).toEqual(["Base", "Build", "Sharpen"]);
   });

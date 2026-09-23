@@ -109,7 +109,7 @@ function Sheet({ activity, handle, busy, onHandle, onPost, onClose }: {
 
             <ul className="grid gap-1.5 text-xs text-smoke">
               <li>· The first and last {TRIM_M} m are cut off, so the line does not start where you do.</li>
-              <li>· Filed under an area several kilometres wide{cell ? "" : " from your last recorded activity"} — never a coordinate.</li>
+              <li>· Filed under an area several kilometers wide{cell ? "" : " from your last recorded activity"} — never a coordinate.</li>
               <li>· Posted as <strong className="text-ink">@{handle}</strong>, with your distance, time and climb. No timestamps, altitude or heart rate.</li>
               <li>· You can take it down at any time, and it is gone for everyone.</li>
             </ul>

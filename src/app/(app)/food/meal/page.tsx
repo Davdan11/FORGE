@@ -45,7 +45,7 @@ function Recipe() {
     return () => clearInterval(t);
   }, [running]);
 
-  if (!meal) return <Screen><Empty title="Recipe not found" body="This meal isn’t in the bank." cta="Back to food" href="/food" /></Screen>;
+  if (!meal) return <Screen><Empty title="Recipe not found" body="This recipe isn’t in the collection." cta="Back to food" href="/food" /></Screen>;
   const minutesIn = (s: string) => { const m = s.match(/(\d+(?:\.\d+)?)\s*min/); return m ? Math.round(Number(m[1]) * 60) : (s.match(/(\d+)\s*s\b/) ? Number(s.match(/(\d+)\s*s\b/)![1]) : null); };
 
   async function logIt() {
@@ -95,7 +95,7 @@ function Recipe() {
                   <ul className="grid gap-2 text-sm">
                     <li className="flex gap-3"><span className="w-1.5 h-1.5 rounded-full bg-volt mt-2 shrink-0" /><span><strong className="tnum">{Math.round(protein)} g protein</strong> — {Math.round((protein / t.protein) * 100)}% of today’s {t.protein} g. {goalWhy}</span></li>
                     <li className="flex gap-3"><span className="w-1.5 h-1.5 rounded-full bg-volt mt-2 shrink-0" /><span><strong className="tnum">{Math.round(kcal)} kcal</strong> — {Math.round((kcal / t.kcal) * 100)}% of your {t.kcal} kcal, sized ×{scale} for this slot.</span></li>
-                    <li className="flex gap-3"><span className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${sugar <= sugarShare ? "bg-volt" : "bg-danger"}`} /><span><strong className="tnum">{Math.round(sugar)} g sugar</strong> — {sugar <= sugarShare ? "inside" : "over"} your per-meal share of {sugarShare} g ({t.sugarMax} g a day max).{meal.fiber ? ` ${Math.round(meal.fiber * scale)} g fibre.` : ""}</span></li>
+                    <li className="flex gap-3"><span className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${sugar <= sugarShare ? "bg-volt" : "bg-danger"}`} /><span><strong className="tnum">{Math.round(sugar)} g sugar</strong> — {sugar <= sugarShare ? "inside" : "over"} your per-meal share of {sugarShare} g ({t.sugarMax} g a day max).{meal.fiber ? ` ${Math.round(meal.fiber * scale)} g fiber.` : ""}</span></li>
                   </ul>
                   {meal.tip && <p className="text-sm text-smoke border-t border-line pt-3">{meal.tip}</p>}
                 </div>
