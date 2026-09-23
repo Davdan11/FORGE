@@ -47,7 +47,7 @@ export function LevelUpCard({ level, onClose }: { level: number; onClose: () => 
       role="dialog" aria-modal="true" aria-label={`Level ${level} reached`}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
       className="fixed inset-0 z-[60] grid place-items-center px-6 text-bone"
-      style={{ background: "radial-gradient(120% 90% at 50% 40%, rgba(31,199,111,.22), rgba(8,9,10,.97) 62%), #08090a" }}
+      style={{ background: "#08090a" }}
       onClick={onClose}
     >
       <div className="relative grid justify-items-center text-center" onClick={(e) => e.stopPropagation()}>

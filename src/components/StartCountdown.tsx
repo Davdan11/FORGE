@@ -34,7 +34,7 @@ export function StartCountdown({ label, onDone }: { label: string; onDone: () =>
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
       className="fixed inset-0 z-[60] grid place-items-center text-bone"
-      style={{ background: "radial-gradient(110% 80% at 50% 45%, rgba(31,199,111,.26), rgba(8,9,10,.97) 60%), #08090a" }}
+      style={{ background: "#08090a" }}
       role="status" aria-live="assertive" aria-label={n > 0 ? `Starting in ${n}` : `Go — ${label} started`}
     >
       <div className="grid justify-items-center text-center">

@@ -47,7 +47,7 @@ export function MobilityFlow({ onClose }: { onClose: (xp: number | null) => void
       <AnimatePresence mode="wait">
         {done == null ? (
           <motion.div key={i} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="flex-1 grid content-center justify-items-center gap-4 px-6 text-center">
-            <div className="bg-[radial-gradient(60%_60%_at_50%_45%,rgba(31,199,111,.1),transparent_70%)] rounded-full"><MoveMedia ex={ex} size={260} label={false} /></div>
+            <div className="rounded-full"><MoveMedia ex={ex} size={260} label={false} /></div>
             <p className="meta">{ex.primary.join(" · ")}{ex.unilateral ? " · switch sides at 1:00" : ""}</p>
             <h2 className="display text-4xl">{ex.name}</h2>
             <p className="text-sm text-smoke max-w-[36ch]">{ex.cues[0]}</p>
