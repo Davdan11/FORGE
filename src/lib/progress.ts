@@ -177,6 +177,26 @@ export async function awardIndoor(a: Activity, credit: number) {
   return { xp, earned };
 }
 
+/** XP for finishing a FORGE Ride route for the first time: 100, plus 4 per km. */
+export const routeBadgeXp = (km: number) => 100 + 4 * Math.max(0, Math.round(km));
+
+/**
+ * The first finish of each FORGE Ride route pays a bonus, once (its key goes into
+ * `stats.routesDone`). Paid like the ride itself: in proportion to how well the
+ * effort was measured, and nothing for effort typed on a slider.
+ */
+export async function awardRouteBadge(route: string, km: number, credit: number) {
+  const stats = await getStats();
+  const done = stats.routesDone ?? [];
+  if (!route || credit <= 0 || done.includes(route)) return { xp: 0, first: false };
+  const xp = Math.round(routeBadgeXp(km) * credit);
+  stats.xp += xp;
+  stats.routesDone = [...done, route];
+  await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
+  await finalize();
+  return { xp, first: true };
+}
+
 /**
  * Pay for any sport challenge an activity has just completed. Reads the saved
  * activities, so call it after the activity is written. Each challenge is paid

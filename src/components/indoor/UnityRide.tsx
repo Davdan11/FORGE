@@ -12,7 +12,7 @@ import { boardMessage, postSegment, segmentBoard, type Category } from "@/lib/le
 import { emptyStreams, pushSample } from "@/lib/tcx";
 import { supabase } from "@/lib/supabase/client";
 import { activityKcal, hrSummary } from "@/lib/heart";
-import { awardChallenges, awardIndoor } from "@/lib/progress";
+import { awardChallenges, awardIndoor, awardRouteBadge } from "@/lib/progress";
 import { db, getStats, uid } from "@/lib/db";
 import type { Activity, Profile } from "@/lib/types";
 
@@ -222,16 +222,21 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     const { xp } = await awardIndoor(activity, credit);
     await db.activities.put({ ...activity, xp, dirty: 1, updatedAt: new Date().toISOString() } as Activity);
     if (credit > 0) await awardChallenges("ride", profile.units.distance);
+    // First time this route is finished (the rider may have carried on past the line): a one-off bonus.
+    if (s.completed) await awardRouteBadge(s.route, routeKm(s.route), credit);
     // What the account actually gained — the session, the week's streak bonus and any challenge —
     // so the game shows exactly the XP and level the rest of the app shows.
     send(rewardMessage((await getStats()).xp - before, before));
     exitRef.current?.();
   }
   const routeNames = useRef<Record<string, string>>({});
+  const routeLengths = useRef<Record<string, number>>({});
+  // Catalog routes come with the game's "ready"; a generated route's key carries its km ("g2-40-1-123456").
+  const routeKm = (key: string) => routeLengths.current[key] ?? (Number(/^g\d+-(\d+)-/.exec(key)?.[1]) || 0);
   useEffect(() => {
     const onReady = (e: Event) => {
       const m = (e as CustomEvent).detail as UnityMessage;
-      if (m?.type === "ready") for (const r of m.routes) routeNames.current[r.key] = titleCase(r.name);
+      if (m?.type === "ready") for (const r of m.routes) { routeNames.current[r.key] = titleCase(r.name); routeLengths.current[r.key] = r.lengthKm; }
     };
     window.addEventListener("forge-unity", onReady);
     return () => window.removeEventListener("forge-unity", onReady);
@@ -285,7 +290,10 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
             });
           }
           break;
-        case "finish": case "end": saveRide(m); break;
+        // The line is not the end any more: the rider may keep riding on the open road. The ride is saved on "end"
+        // (the game sends it when the rider stops, switches route or restarts), with "completed" if the line was crossed.
+        case "finish": break;
+        case "end": saveRide(m); break;
         case "profileUpdate":
           db.profile.update(profile.id, { weightKg: m.weightKg, ftpW: m.ftp, dirty: 1, updatedAt: new Date().toISOString() });
           break;
