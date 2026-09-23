@@ -41,7 +41,7 @@ export interface UnitySummary {
 }
 
 export type UnityMessage =
-  | { type: "ready"; routeId: number; route: string; routes: { id: number; key: string; name: string; country: string; lengthKm: number; ascent: number }[] }
+  | { type: "ready"; lang?: "fr" | "en"; routeId: number; route: string; routes: { id: number; key: string; name: string; country: string; lengthKm: number; ascent: number }[] }
   | { type: "grade"; grade: number }
   | { type: "ergTarget"; watts: number | null }
   | { type: "position"; routeId: number; route: string; distance: number; speedKph: number; elapsed: number; draft: number; altitude: number; category: string; paused: boolean }

@@ -5,7 +5,7 @@ import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal } from "luc
 import { powerFromHr, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
 import { shouldSendGrade, RESULT_TEXT } from "@/lib/indoor/ftms";
-import { powerFromCurve, trainerLabel, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
+import { powerFromCurve, trainerLabel, PROTOCOL_LABEL, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
 import { joinRoom, prune, type Room } from "@/lib/indoor/live";
 import { addSplits, profileMessage, rewardMessage, ridersMessage, unityRoom, type UnityMessage, type UnitySummary } from "@/lib/indoor/unity";
 import { boardMessage, postSegment, segmentBoard, type Category } from "@/lib/leaderboard";
@@ -54,6 +54,12 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   const [progress, setProgress] = useState(0);
   const [failed, setFailed] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  // The overlay speaks the game's language (the game follows the device, or the rider's choice in its menu).
+  const [en, setEn] = useState(() => typeof navigator !== "undefined" && !navigator.language.toLowerCase().startsWith("fr"));
+  const enRef = useRef(en);
+  useEffect(() => { enRef.current = en; }, [en]);
+  const t = (fr: string, english: string) => (en ? english : fr);
+  const tr = (fr: string, english: string) => (enRef.current ? english : fr);
 
   const fusion = useRef(new SensorFusion());
   const [sensors, setSensors] = useState<Sensor[]>([]);
@@ -94,7 +100,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     let cancelled = false;
     const script = document.createElement("script");
     script.src = `${BUILD}.loader.js`;
-    script.onerror = () => setFailed("Le jeu n'est pas installé dans cette version de l'appli (public/unity manquant).");
+    script.onerror = () => setFailed(tr("Le jeu n'est pas installé dans cette version de l'appli (public/unity manquant).", "The game is not installed in this build of the app (public/unity missing)."));
     script.onload = () => {
       if (cancelled || !canvas.current || !window.createUnityInstance) return;
       window.createUnityInstance(canvas.current, {
@@ -134,7 +140,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     }, (from) => send({ type: "kudos", from }));
     if (roomKey.current !== key) { r?.leave(); return; }
     room.current = r;
-    if (!r) sayRef.current("Connecte-toi à ton compte pour rouler avec les autres.");
+    if (!r) sayRef.current(tr("Connecte-toi à ton compte pour rouler avec les autres.", "Sign in to ride with other people."));
   }
   useEffect(() => () => { room.current?.leave(); room.current = null; }, []);
 
@@ -148,7 +154,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       const c = controller.current;
       if (!c) return;
       busy = true;
-      command(c).then((r) => { if (!r.ok && r.result) sayRef.current(`Trainer : ${RESULT_TEXT[r.result] ?? "commande refusée"}.`); }).finally(() => { busy = false; });
+      command(c).then((r) => { if (!r.ok && r.result) sayRef.current(`Trainer: ${RESULT_TEXT[r.result] ?? tr("commande refusée", "command refused")}.`); }).finally(() => { busy = false; });
     };
     const timer = setInterval(() => {
       const now = Date.now(), g = game.current, L = live.current, a = acc.current;
@@ -239,8 +245,9 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       switch (m.type) {
         case "ready":
           setReady(true);
+          if (m.lang === "en" || m.lang === "fr") setEn(m.lang === "en");
           g.route = m.route;
-          getStats().then((s) => send(profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW }, s.xp)));
+          getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW }, s.xp), lang: navigator.language }));
           if (profile.indoorGame?.look) send({ type: "look", look: profile.indoorGame.look });
           if (profile.indoorGame?.palmares) send({ type: "palmares", data: JSON.parse(profile.indoorGame.palmares) });
           enterRoom(unityRoom(g.route, g.event));
@@ -299,16 +306,16 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   async function connect(kind: SensorKind) {
     setConnecting(kind);
     try {
-      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(`${SENSOR_LABEL[kind]} déconnecté.`), { riderKg: profile.weightKg });
+      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(tr(`${SENSOR_LABEL[kind]} déconnecté.`, `${SENSOR_LABEL[kind]} disconnected.`)), { riderKg: profile.weightKg });
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
-      say(s.trainer ? `Trainer détecté : ${frLabel(s)}` : `${s.name} connecté.`);
+      say(s.trainer ? tr(`Trainer détecté : ${sensorLabel(s, false)}`, `Trainer found: ${sensorLabel(s, true)}`) : tr(`${s.name} connecté.`, `${s.name} connected.`));
       const commands = s.trainer?.commands;
       if (commands) {
         // FTMS: request control then start, exactly as before. Wahoo: unlock
         // and simulation init. FE-C: rider weight.
         controller.current = commands; setControl("asking");
         const r = await commands.start();
-        if (!r.ok) { setControl(r.result ? RESULT_TEXT[r.result] ?? "refusé" : "pas de réponse"); return; }
+        if (!r.ok) { setControl(r.result ? RESULT_TEXT[r.result] ?? tr("refusé", "refused") : tr("pas de réponse", "no answer")); return; }
         controlOk.current = true; setControl("ok");
       }
     } catch (e) {
@@ -323,7 +330,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       exitRef.current = null;
       if (controlOk.current) controller.current?.stop().catch(() => {});
       controlOk.current = false;
-      onExit(acc.current.saved ? "Sortie enregistrée." : undefined);
+      onExit(acc.current.saved ? tr("Sortie enregistrée.", "Ride saved.") : undefined);
     };
     if (!unity.current || acc.current.saved || game.current.elapsed < 1) { done(); return; }
     exitRef.current = done;
@@ -346,7 +353,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           <div className="grid gap-3 w-[min(80vw,360px)] text-center">
             <p className="display text-2xl">FORGE Ride</p>
             <div className="h-2 rounded-full bg-white/15 overflow-hidden"><div className="h-full bg-volt transition-all" style={{ width: `${Math.round(progress * 100)}%` }} /></div>
-            <p className="text-xs text-bone/70 tnum">Chargement du monde… {Math.round(progress * 100)} %</p>
+            <p className="text-xs text-bone/70 tnum">{t("Chargement du monde…", "Loading the world…")} {Math.round(progress * 100)} %</p>
           </div>
         </div>
       )}
@@ -354,7 +361,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
         <div className="absolute inset-0 grid place-items-center p-6 text-bone text-center">
           <div className="grid gap-4 max-w-[420px]">
             <p className="text-sm">{failed}</p>
-            <button type="button" className="pill pill--volt" onClick={() => onExit()}>Retour</button>
+            <button type="button" className="pill pill--volt" onClick={() => onExit()}>{t("Retour", "Back")}</button>
           </div>
         </div>
       )}
@@ -371,27 +378,27 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
                     <button key={k} type="button" onClick={() => !on && connect(k)} disabled={connecting !== null || on}
                       className={`h-9 px-3 rounded-full border text-xs flex items-center gap-1.5 ${on || connecting === k ? "border-volt text-volt-deep" : "border-line-strong text-ink"} ${connecting !== null && connecting !== k ? "opacity-40" : ""}`}>
                       {on ? <Check className="w-3.5 h-3.5" strokeWidth={2.4} /> : <Bluetooth className="w-3.5 h-3.5" strokeWidth={2} />}
-                      {on ? frLabel(sensors.find((s) => s.kind === k)) ?? SENSOR_LABEL[k] : SENSOR_LABEL[k]}
+                      {on ? sensorLabel(sensors.find((s) => s.kind === k), en) ?? SENSOR_LABEL[k] : SENSOR_LABEL[k]}
                     </button>
                   );
                 })}
               </div>
             ) : <p className="text-xs text-smoke flex gap-2"><BluetoothOff className="w-4 h-4 shrink-0" strokeWidth={2} />{availability.reason}</p>)}
-            {trainer && <p className="text-xs text-ink">Trainer détecté : {trainerLabel(trainer.deviceName, trainer.protocol, PROTOCOL_FR)}{trainer.canControl ? "" : " · lecture seule, pas de contrôle de la résistance"}</p>}
+            {trainer && <p className="text-xs text-ink">{t("Trainer détecté : ", "Trainer found: ")}{trainerLabel(trainer.deviceName, trainer.protocol, en ? PROTOCOL_LABEL : PROTOCOL_FR)}{trainer.canControl ? "" : t(" · lecture seule, pas de contrôle de la résistance", " · read-only, no resistance control")}</p>}
             {speedOnly && (
               <label className="flex items-center gap-2 text-xs">
-                <span className="meta">Courbe vitesse → puissance (estimée)</span>
+                <span className="meta">{t("Courbe vitesse → puissance (estimée)", "Speed → power curve (estimated)")}</span>
                 <select value={curve} onChange={(e) => setCurve(e.target.value as SpeedCurveId)} className="h-8 rounded-lg border border-line-strong px-2 bg-transparent">
                   {SPEED_CURVES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
             )}
-            {control === "asking" && <p className="text-xs text-smoke">Le trainer demande l’accès…</p>}
-            {control === "ok" && <p className="text-xs text-volt-deep">Trainer contrôlé : la résistance suit la route (ou ta séance).</p>}
-            {control !== "none" && control !== "asking" && control !== "ok" && <p className="text-xs text-smoke">Lecture seule : le trainer a refusé le contrôle ({control}). Ferme les autres applis qui l’utilisent.</p>}
+            {control === "asking" && <p className="text-xs text-smoke">{t("Le trainer demande l’accès…", "Asking the trainer for control…")}</p>}
+            {control === "ok" && <p className="text-xs text-volt-deep">{t("Trainer contrôlé : la résistance suit la route (ou ta séance).", "Trainer in control: resistance follows the road (or your workout).")}</p>}
+            {control !== "none" && control !== "asking" && control !== "ok" && <p className="text-xs text-smoke">{t(`Lecture seule : le trainer a refusé le contrôle (${control}). Ferme les autres applis qui l’utilisent.`, `Read-only: the trainer refused control (${control}). Close any other app using it.`)}</p>}
             {!sensors.length && (
               <label className="grid gap-1">
-                <span className="meta">Effort sans capteur · {manual} W · ne compte pas pour l’XP</span>
+                <span className="meta">{t(`Effort sans capteur · ${manual} W · ne compte pas pour l’XP`, `Effort without a sensor · ${manual} W · earns no XP`)}</span>
                 <input type="range" min={0} max={400} step={10} value={manual} onChange={(e) => setManual(+e.target.value)} style={{ ["--fill" as string]: `${(manual / 400) * 100}%` }} />
               </label>
             )}
@@ -399,19 +406,19 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
         )}
         <div className="flex gap-2 pointer-events-auto">
           <button type="button" onClick={() => setPanel((v) => !v)} className="chip chip--live backdrop-blur-md h-9">
-            <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={2.2} />Capteurs{sensors.length ? ` · ${sensors.length}` : ""}
+            <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={2.2} />{t("Capteurs", "Sensors")}{sensors.length ? ` · ${sensors.length}` : ""}
           </button>
-          {people > 0 && <span className="chip chip--live backdrop-blur-md h-9 tnum"><Users className="w-3.5 h-3.5" strokeWidth={2.2} />{people} en ligne</span>}
-          <button type="button" onClick={quit} className="chip chip--live backdrop-blur-md h-9"><X className="w-3.5 h-3.5" strokeWidth={2.2} />Quitter</button>
+          {people > 0 && <span className="chip chip--live backdrop-blur-md h-9 tnum"><Users className="w-3.5 h-3.5" strokeWidth={2.2} />{people} {t("en ligne", "online")}</span>}
+          <button type="button" onClick={quit} className="chip chip--live backdrop-blur-md h-9"><X className="w-3.5 h-3.5" strokeWidth={2.2} />{t("Quitter", "Quit")}</button>
         </div>
       </div>
     </div>
   );
 }
 
-/** A trainer's label with the protocol in French; any other sensor's name. */
-const frLabel = (s: Sensor | undefined) =>
-  s?.trainer ? trainerLabel(s.trainer.deviceName, s.trainer.protocol, PROTOCOL_FR) : s?.name;
+/** A trainer's label with its protocol in the overlay's language; any other sensor's name. */
+const sensorLabel = (s: Sensor | undefined, en: boolean) =>
+  s?.trainer ? trainerLabel(s.trainer.deviceName, s.trainer.protocol, en ? PROTOCOL_LABEL : PROTOCOL_FR) : s?.name;
 
 const freshRide = () => ({ streams: emptyStreams(), moving: 0, creditSec: 0, hr: [] as [number, number][], nextHrAt: 0, splits: [] as { km: number; sec: number }[], lastSplit: 0, maxPeople: 0, startedIso: new Date().toISOString(), saved: false });
 const titleCase = (s: string) => s.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());
