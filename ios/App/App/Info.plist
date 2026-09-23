@@ -68,6 +68,8 @@
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>FORGE connects to your heart-rate strap, power meter or smart trainer so an indoor ride moves at the speed your effort earns.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Only if you turn voice on in the indoor game: the riders near you hear you. Nothing is recorded.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>FORGE uses motion data to count steps and detect when a recorded activity has paused.</string>
 	<!-- Google / Apple sign-in returns here from the system browser (src/lib/auth.ts). -->

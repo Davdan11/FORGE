@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal } from "lucide-react";
+import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal, Mic, MicOff, Volume2, VolumeX, Flag } from "lucide-react";
 import { powerFromHr, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
 import { shouldSendGrade, RESULT_TEXT } from "@/lib/indoor/ftms";
 import { powerFromCurve, trainerLabel, PROTOCOL_LABEL, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
-import { joinRoom, prune, type Room } from "@/lib/indoor/live";
+import { extrapolate, joinRoom, prune, type Room } from "@/lib/indoor/live";
+import { DROP_AT, VoiceChat, reportVoice, voiceSignal, type ReportReason } from "@/lib/indoor/voice";
+import { RadioCards, RadioField } from "@/components/ui";
 import { addSplits, profileMessage, rewardMessage, ridersMessage, unityRoom, type UnityMessage, type UnitySummary } from "@/lib/indoor/unity";
 import { boardMessage, postSegment, segmentBoard, type Category } from "@/lib/leaderboard";
 import { emptyStreams, pushSample } from "@/lib/tcx";
@@ -87,6 +89,20 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   useEffect(() => { sayRef.current = say; }, [say]);
   const exitRef = useRef<(() => void) | null>(null);
 
+  /* Proximity voice: off until the rider turns it on (see lib/indoor/voice.ts). */
+  const voice = useRef<VoiceChat | null>(null);
+  const voiceLive = useRef(false);
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [inRoom, setInRoom] = useState(true);
+  const [voiceMic, setVoiceMic] = useState(true);
+  const [voicePanel, setVoicePanel] = useState(false);
+  const [openMic, setOpenMic] = useState(() => readPref("forge.voice.open") === "1");
+  const [held, setHeld] = useState(false);
+  const [talking, setTalking] = useState(false);
+  const [heard, setHeard] = useState<Heard[]>([]);
+  const [muted, setMuted] = useState<Set<string>>(() => new Set(parseIds(readPref("forge.voice.muted"))));
+  const [reporting, setReporting] = useState<{ id: string; name: string; reason: ReportReason } | null>(null);
+
   const send = (msg: object) => unity.current?.SendMessage("ForgeBridge", "Receive", JSON.stringify(msg));
 
   useEffect(() => {
@@ -133,16 +149,21 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     if (key === roomKey.current) return;
     roomKey.current = key;
     room.current?.leave(); room.current = null; setPeople(0);
+    voice.current?.setRoom("", null);
     const r = await joinRoom(key, "ride", profile.name, () => {
       const n = room.current?.peers.size ?? 0;
       setPeople(n);
       acc.current.maxPeople = Math.max(acc.current.maxPeople, n);
-    }, (from) => send({ type: "kudos", from }));
+    }, (from) => send({ type: "kudos", from }), (from, data) => {
+      const sig = voiceSignal(data);
+      if (sig) void voice.current?.receive(from, sig);
+    });
     if (roomKey.current !== key) { r?.leave(); return; }
-    room.current = r;
+    room.current = r; setInRoom(!!r);
+    voice.current?.setRoom(r?.me ?? "", r ? (to, sig) => r.signal(to, sig) : null);
     if (!r) sayRef.current(tr("Connecte-toi à ton compte pour rouler avec les autres.", "Sign in to ride with other people."));
   }
-  useEffect(() => () => { room.current?.leave(); room.current = null; }, []);
+  useEffect(() => () => { voice.current?.stop(); voice.current = null; room.current?.leave(); room.current = null; }, []);
 
   /* ── the loop: effort into the game, the room into the game, the game into the trainer ── */
   useEffect(() => {
@@ -186,7 +207,16 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       if (r) {
         prune(r.peers, now);
         send(ridersMessage(r.peers.values(), now));
-        if (now - lastBeat >= 1000) { lastBeat = now; r.send(g.distance, g.speedKph / 3.6, { look: look.current, quality: g.quality === "measured" ? "m" : g.quality === "estimated" ? "e" : "d", category: g.category }); }
+        if (now - lastBeat >= 1000) { lastBeat = now; r.send(g.distance, g.speedKph / 3.6, { look: look.current, quality: g.quality === "measured" ? "m" : g.quality === "estimated" ? "e" : "d", category: g.category, voice: voiceLive.current }); }
+        const v = voice.current;
+        if (v && voiceLive.current) {
+          const list = [...r.peers.values()].map((p) => ({ id: p.id, name: p.name, distance: extrapolate(p, now), voice: !!p.voice }));
+          const st = v.update(g.distance, list);
+          setTalking(st.talking);
+          setHeard(list.filter((p) => p.voice && Math.abs(p.distance - g.distance) <= DROP_AT)
+            .map((p) => ({ id: p.id, name: p.name, gap: Math.round(Math.abs(p.distance - g.distance)), gain: st.linked.get(p.id) ?? 0, linked: st.linked.has(p.id), speaking: st.speaking.has(p.id) }))
+            .sort((a, b) => a.gap - b.gap));
+        }
       }
     }, 250);
     return () => clearInterval(timer);
@@ -342,6 +372,51 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     } finally { setConnecting(null); }
   }
 
+  /* ── voice ── */
+  async function voiceStart() {
+    const v = voice.current ?? (voice.current = new VoiceChat());
+    const { mic } = await v.start();
+    v.setOpenMic(openMic);
+    for (const id of muted) v.setMuted(id, true);
+    const r = room.current;
+    v.setRoom(r?.me ?? "", r ? (to, sig) => r.signal(to, sig) : null);
+    voiceLive.current = true; setVoiceOn(true); setVoiceMic(mic);
+    if (!mic) say(tr("Micro refusé : tu entends les autres, mais eux ne t'entendent pas.", "Microphone blocked: you hear the others, they don't hear you."));
+  }
+  function voiceStop() {
+    voice.current?.stop(); voice.current = null;
+    voiceLive.current = false; setVoiceOn(false); setHeard([]); setTalking(false); setHeld(false);
+  }
+  function chooseOpenMic(open: boolean) {
+    setOpenMic(open); writePref("forge.voice.open", open ? "1" : "0");
+    voice.current?.setOpenMic(open);
+  }
+  function toggleMute(id: string) {
+    const next = new Set(muted);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setMuted(next); writePref("forge.voice.muted", JSON.stringify([...next].slice(-200)));
+    voice.current?.setMuted(id, next.has(id));
+  }
+  async function sendReport() {
+    if (!reporting) return;
+    const { id, name, reason } = reporting;
+    setReporting(null);
+    if (!muted.has(id)) toggleMute(id);
+    const ok = await reportVoice(id, name, roomKey.current, reason);
+    say(ok ? tr(`${name} est signalé et coupé pour toi.`, `${name} is reported and muted for you.`) : tr(`${name} est coupé pour toi. Le signalement n'a pas pu partir.`, `${name} is muted for you. The report could not be sent.`));
+  }
+  // Push to talk: hold B (V and T are the game's) or the on-screen button.
+  useEffect(() => { voice.current?.setHeld(held); }, [held]);
+  useEffect(() => {
+    if (!voiceOn || openMic) return;
+    const typing = (e: KeyboardEvent) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+    const down = (e: KeyboardEvent) => { if (e.code === "KeyB" && !e.repeat && !typing(e)) setHeld(true); };
+    const up = (e: KeyboardEvent) => { if (e.code === "KeyB") setHeld(false); };
+    const blur = () => setHeld(false);
+    window.addEventListener("keydown", down); window.addEventListener("keyup", up); window.addEventListener("blur", blur);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener("blur", blur); setHeld(false); };
+  }, [voiceOn, openMic]);
+
   /** Leave: a ride in progress is ended (and saved) by the game first. */
   function quit() {
     const done = () => {
@@ -386,6 +461,58 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
 
       {/* The app's own controls: small, at the bottom centre where the game's HUD leaves room. */}
       <div className="absolute inset-x-0 bottom-0 pb-[calc(var(--safe-bottom)+8px)] flex flex-col items-center gap-2 pointer-events-none">
+        {voiceOn && (heard.some((h) => h.speaking) || talking) && (
+          <div className="flex gap-1.5 flex-wrap justify-center" aria-live="polite">
+            {talking && <span className="chip chip--volt h-8"><Mic className="w-3.5 h-3.5" strokeWidth={2.4} />{t("Tu parles", "You're talking")}</span>}
+            {heard.filter((h) => h.speaking).map((h) => <span key={h.id} className="chip chip--live backdrop-blur-md h-8 !text-ink"><Mic className="w-3.5 h-3.5 text-volt-deep" strokeWidth={2.4} />{h.name}</span>)}
+          </div>
+        )}
+        {voicePanel && (
+          <div className="card p-3 grid gap-3 w-[min(94vw,520px)] max-h-[60vh] overflow-y-auto backdrop-blur-xl !bg-[rgba(255,255,255,.94)] pointer-events-auto">
+            {!voiceOn ? (
+              <>
+                <p className="text-sm">{t("Parle aux coureurs proches de toi : fort à moins de 20 m, de moins en moins jusqu'à 100 m, puis plus rien. Rien n'est enregistré.", "Talk to the riders around you: clear within 20 m, fading out by 100 m. Nothing is recorded.")}</p>
+                {!inRoom && <p className="text-xs text-smoke">{t("Connecte-toi à ton compte pour parler aux autres.", "Sign in to talk to other riders.")}</p>}
+                <button type="button" className="pill pill--volt pill--sm" onClick={() => void voiceStart()}><Mic className="w-4 h-4" strokeWidth={2.2} />{t("Activer la voix", "Turn voice on")}</button>
+              </>
+            ) : (
+              <>
+                <RadioField label={t("Micro", "Microphone")} value={openMic ? "open" : "ptt"} onChange={(v) => chooseOpenMic(v === "open")}
+                  options={[{ v: "ptt", label: t("Appuyer pour parler (B)", "Push to talk (B)") }, { v: "open", label: t("Toujours ouvert", "Always on") }]} />
+                {!voiceMic && <p className="text-xs text-smoke">{t("Micro refusé par le navigateur : tu entends les autres, mais eux ne t'entendent pas.", "The browser blocked the microphone: you hear the others, they don't hear you.")}</p>}
+                <div className="grid gap-1">
+                  <span className="meta">{t("À portée de voix", "Within earshot")}</span>
+                  {heard.length === 0 && <p className="text-xs text-smoke">{t("Personne en vocal près de toi pour l'instant.", "Nobody in voice near you right now.")}</p>}
+                  {heard.map((h) => (
+                    <div key={h.id} className="flex items-center gap-2 min-h-11">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${h.speaking ? "bg-volt-deep" : "bg-line-strong"}`} aria-hidden="true" />
+                      <span className="flex-1 min-w-0 truncate text-sm">{h.name}<span className="text-xs text-smoke tnum"> · {h.gap} m{h.gain === 0 && !muted.has(h.id) ? t(" · trop loin", " · too far") : ""}</span></span>
+                      <button type="button" className="h-9 w-9 grid place-items-center rounded-full border border-line-strong" onClick={() => toggleMute(h.id)} aria-pressed={muted.has(h.id)} aria-label={muted.has(h.id) ? t(`Réactiver ${h.name}`, `Unmute ${h.name}`) : t(`Couper ${h.name}`, `Mute ${h.name}`)}>
+                        {muted.has(h.id) ? <VolumeX className="w-4 h-4 text-danger" strokeWidth={2.2} /> : <Volume2 className="w-4 h-4" strokeWidth={2.2} />}
+                      </button>
+                      <button type="button" className="h-9 w-9 grid place-items-center rounded-full border border-line-strong" onClick={() => setReporting({ id: h.id, name: h.name, reason: "abuse" })} aria-label={t(`Signaler ${h.name}`, `Report ${h.name}`)}>
+                        <Flag className="w-4 h-4" strokeWidth={2.2} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {reporting && (
+                  <div className="card p-3 grid gap-2 !border-danger">
+                    <span className="meta">{t(`Signaler ${reporting.name}`, `Report ${reporting.name}`)}</span>
+                    <RadioCards label={t("Raison", "Reason")} value={reporting.reason} onChange={(reason) => setReporting({ ...reporting, reason })}
+                      options={[{ v: "abuse", label: t("Insultes", "Abuse") }, { v: "harassment", label: t("Harcèlement", "Harassment") }, { v: "hate", label: t("Haine", "Hate") }, { v: "sexual", label: t("Sexuel", "Sexual") }, { v: "spam", label: t("Spam, bruit", "Spam, noise") }, { v: "other", label: t("Autre", "Other") }]} />
+                    <p className="text-xs text-smoke">{t("Il sera aussi coupé pour toi. Aucun son n'est envoyé : seulement qui, où et pourquoi.", "They will be muted for you too. No audio is sent: only who, where and why.")}</p>
+                    <div className="flex gap-2">
+                      <button type="button" className="pill pill--sm" onClick={() => setReporting(null)}>{t("Annuler", "Cancel")}</button>
+                      <button type="button" className="pill pill--sm pill--volt" onClick={() => void sendReport()}>{t("Envoyer", "Send")}</button>
+                    </div>
+                  </div>
+                )}
+                <button type="button" className="pill pill--sm" onClick={voiceStop}><MicOff className="w-4 h-4" strokeWidth={2.2} />{t("Couper la voix", "Turn voice off")}</button>
+              </>
+            )}
+          </div>
+        )}
         {panel && (
           <div className="card p-3 grid gap-3 w-[min(94vw,520px)] backdrop-blur-xl !bg-[rgba(255,255,255,.94)] pointer-events-auto">
             {availability && (availability.ok ? (
@@ -423,7 +550,17 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           </div>
         )}
         <div className="flex gap-2 pointer-events-auto">
-          <button type="button" onClick={() => setPanel((v) => !v)} className="chip chip--live backdrop-blur-md h-9">
+          {voiceOn && !openMic && voiceMic && (
+            <button type="button" className={`chip backdrop-blur-md h-9 select-none touch-none ${held ? "chip--volt" : "chip--live"}`}
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setHeld(true); }} onPointerUp={() => setHeld(false)} onPointerCancel={() => setHeld(false)} onLostPointerCapture={() => setHeld(false)}
+              onContextMenu={(e) => e.preventDefault()} aria-pressed={held}>
+              <Mic className="w-3.5 h-3.5" strokeWidth={2.2} />{t("Maintenir pour parler", "Hold to talk")}
+            </button>
+          )}
+          <button type="button" onClick={() => { setVoicePanel((v) => !v); setPanel(false); }} className="chip chip--live backdrop-blur-md h-9" aria-expanded={voicePanel}>
+            {voiceOn ? <Mic className="w-3.5 h-3.5 text-volt-deep" strokeWidth={2.2} /> : <MicOff className="w-3.5 h-3.5" strokeWidth={2.2} />}{t("Voix", "Voice")}{voiceOn && heard.length ? ` · ${heard.length}` : ""}
+          </button>
+          <button type="button" onClick={() => { setPanel((v) => !v); setVoicePanel(false); }} className="chip chip--live backdrop-blur-md h-9">
             <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={2.2} />{t("Capteurs", "Sensors")}{sensors.length ? ` · ${sensors.length}` : ""}
           </button>
           {people > 0 && <span className="chip chip--live backdrop-blur-md h-9 tnum"><Users className="w-3.5 h-3.5" strokeWidth={2.2} />{people} {t("en ligne", "online")}</span>}
@@ -437,6 +574,12 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
 /** A trainer's label with its protocol in the overlay's language; any other sensor's name. */
 const sensorLabel = (s: Sensor | undefined, en: boolean) =>
   s?.trainer ? trainerLabel(s.trainer.deviceName, s.trainer.protocol, en ? PROTOCOL_LABEL : PROTOCOL_FR) : s?.name;
+
+interface Heard { id: string; name: string; gap: number; gain: number; linked: boolean; speaking: boolean }
+/* Per-device conveniences (mic mode, who is muted): storage may be blocked, and that is fine. */
+function readPref(key: string): string | null { try { return typeof localStorage === "undefined" ? null : localStorage.getItem(key); } catch { return null; } }
+function writePref(key: string, value: string) { try { localStorage.setItem(key, value); } catch { /* private mode */ } }
+function parseIds(v: string | null): string[] { try { const a = JSON.parse(v ?? "[]"); return Array.isArray(a) ? a.filter((x): x is string => typeof x === "string") : []; } catch { return []; } }
 
 const freshRide = () => ({ streams: emptyStreams(), moving: 0, creditSec: 0, hr: [] as [number, number][], nextHrAt: 0, splits: [] as { km: number; sec: number }[], lastSplit: 0, maxPeople: 0, startedIso: new Date().toISOString(), saved: false });
 const titleCase = (s: string) => s.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());

@@ -32,6 +32,8 @@ export interface Peer {
   quality?: "m" | "e" | "d";
   /** Race category from their FTP per kilo (Unity game). */
   category?: string;
+  /** In proximity voice (they can be called). */
+  voice?: boolean;
   /** Metres along the course at `at`. */
   distanceM: number;
   speedMs: number;
@@ -72,12 +74,16 @@ export function peekRoom(courseId: string, sport: "ride" | "run", onCount: (n: n
 }
 
 export interface Room {
+  /** My id in the room. */
+  me: string;
   /** Who is in the room right now, other than me. */
   peers: Map<string, Peer>;
   /** How many people presence reports, me included. */
   count: () => number;
   /** `extra` rides along for the Unity game: outfit code and tag colour. */
-  send: (distanceM: number, speedMs: number, extra?: { look?: string; color?: string; quality?: "m" | "e" | "d"; category?: string }) => void;
+  send: (distanceM: number, speedMs: number, extra?: { look?: string; color?: string; quality?: "m" | "e" | "d"; category?: string; voice?: boolean }) => void;
+  /** A voice handshake message to one person in the room (see voice.ts). */
+  signal: (toId: string, data: unknown) => void;
   /** Send a "bravo" to one person in the room. */
   kudos: (toId: string) => void;
   leave: () => void;
@@ -88,7 +94,7 @@ export interface Room {
  * anonymous rider would be a name nobody can report, so riding with others
  * needs a sign-in. Riding alone never does.
  */
-export async function joinRoom(courseId: string, sport: "ride" | "run", name: string, onChange: () => void, onKudos?: (fromName: string) => void): Promise<Room | null> {
+export async function joinRoom(courseId: string, sport: "ride" | "run", name: string, onChange: () => void, onKudos?: (fromName: string) => void, onSignal?: (fromId: string, data: unknown) => void): Promise<Room | null> {
   if (!supabase) return null;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -103,12 +109,12 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
 
   channel
     .on("broadcast", { event: "pos" }, ({ payload }) => {
-      const p = payload as { id?: string; n?: string; d?: number; v?: number; lk?: unknown; c?: unknown; q?: unknown; cat?: unknown };
+      const p = payload as { id?: string; n?: string; d?: number; v?: number; lk?: unknown; c?: unknown; q?: unknown; cat?: unknown; vo?: unknown };
       if (!p?.id || p.id === me || typeof p.d !== "number" || typeof p.v !== "number") return;
       // Bounds, because this is another client's word: nobody rides 30 m/s.
       if (!Number.isFinite(p.d) || p.d < 0 || p.v < 0 || p.v > 30) return;
       const had = peers.has(p.id);
-      peers.set(p.id, { id: p.id, name: (p.n ?? "Rider").slice(0, 24), distanceM: p.d, speedMs: p.v, at: Date.now(), look: lookCode(p.lk), color: hexColor(p.c), quality: p.q === "m" || p.q === "e" || p.q === "d" ? p.q : undefined, category: typeof p.cat === "string" && /^[ABCD]$/.test(p.cat) ? p.cat : undefined });
+      peers.set(p.id, { id: p.id, name: (p.n ?? "Rider").slice(0, 24), distanceM: p.d, speedMs: p.v, at: Date.now(), look: lookCode(p.lk), color: hexColor(p.c), quality: p.q === "m" || p.q === "e" || p.q === "d" ? p.q : undefined, category: typeof p.cat === "string" && /^[ABCD]$/.test(p.cat) ? p.cat : undefined, voice: p.vo === 1 });
       if (!had) onChange();
     })
     .on("broadcast", { event: "kudos" }, ({ payload }) => {
@@ -116,6 +122,12 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
       // Only the one it is for, and only from someone actually in the room.
       if (k?.to !== me || !k.from || !peers.has(k.from)) return;
       onKudos?.((k.n ?? "Rider").slice(0, 24));
+    })
+    .on("broadcast", { event: "rtc" }, ({ payload }) => {
+      const m = payload as { to?: string; from?: string; s?: unknown };
+      // Only for me, and only from someone riding in the room.
+      if (m?.to !== me || !m.from || !peers.has(m.from)) return;
+      onSignal?.(m.from, m.s);
     })
     .on("presence", { event: "sync" }, () => {
       const state = channel.presenceState();
@@ -136,9 +148,11 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
 
   const firstName = name.trim().split(/\s+/)[0]?.slice(0, 24) || "Rider";
   return {
+    me,
     peers,
     count: () => present,
-    send: (d, v, extra) => { channel.send({ type: "broadcast", event: "pos", payload: { id: me, n: firstName, d: Math.round(d * 10) / 10, v: Math.round(v * 100) / 100, lk: extra?.look, c: extra?.color, q: extra?.quality, cat: extra?.category } }); },
+    send: (d, v, extra) => { channel.send({ type: "broadcast", event: "pos", payload: { id: me, n: firstName, d: Math.round(d * 10) / 10, v: Math.round(v * 100) / 100, lk: extra?.look, c: extra?.color, q: extra?.quality, cat: extra?.category, vo: extra?.voice ? 1 : undefined } }); },
+    signal: (to, data) => { if (peers.has(to)) channel.send({ type: "broadcast", event: "rtc", payload: { to, from: me, s: data } }); },
     kudos: (to) => { if (peers.has(to)) channel.send({ type: "broadcast", event: "kudos", payload: { to, from: me, n: firstName } }); },
     leave: () => { channel.untrack().catch(() => {}); supabase?.removeChannel(channel); },
   };
