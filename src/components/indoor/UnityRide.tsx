@@ -223,7 +223,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     await db.activities.put({ ...activity, xp, dirty: 1, updatedAt: new Date().toISOString() } as Activity);
     if (credit > 0) await awardChallenges("ride", profile.units.distance);
     // First time this route is finished (the rider may have carried on past the line): a one-off bonus.
-    if (s.completed) await awardRouteBadge(s.route, routeKm(s.route), credit);
+    if (s.completed) await awardRouteBadge(s.route.replace(/x\d+$/, ""), routeKm(s.route), credit);
     // What the account actually gained — the session, the week's streak bonus and any challenge —
     // so the game shows exactly the XP and level the rest of the app shows.
     send(rewardMessage((await getStats()).xp - before, before));
@@ -232,7 +232,11 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   const routeNames = useRef<Record<string, string>>({});
   const routeLengths = useRef<Record<string, number>>({});
   // Catalog routes come with the game's "ready"; a generated route's key carries its km ("g2-40-1-123456").
-  const routeKm = (key: string) => routeLengths.current[key] ?? (Number(/^g\d+-(\d+)-/.exec(key)?.[1]) || 0);
+  const routeKm = (key: string) => {
+    const laps = /^(c\d+)x(\d+)$/.exec(key);
+    if (laps) return (routeLengths.current[laps[1]] ?? 0) * Number(laps[2]);
+    return routeLengths.current[key] ?? (Number(/^g\d+-(\d+)-/.exec(key)?.[1]) || 0);
+  };
   useEffect(() => {
     const onReady = (e: Event) => {
       const m = (e as CustomEvent).detail as UnityMessage;
@@ -241,7 +245,11 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     window.addEventListener("forge-unity", onReady);
     return () => window.removeEventListener("forge-unity", onReady);
   }, []);
-  const routeTitle = (key: string) => routeNames.current[key] ?? "FORGE Ride";
+  const routeTitle = (key: string) => {
+    const laps = /^(c\d+)x(\d+)$/.exec(key);
+    if (laps && routeNames.current[laps[1]]) return `${routeNames.current[laps[1]]} · ${laps[2]} ${tr("tours", "laps")}`;
+    return routeNames.current[key] ?? "FORGE Ride";
+  };
 
   /* ── messages from the game ── */
   useEffect(() => {

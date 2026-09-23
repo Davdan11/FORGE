@@ -20,10 +20,12 @@ export interface GameRoute {
   accent: string;
   image: string;
   challenge?: boolean;
+  /** A circuit: `km` is one lap, ridden as many times as the rider chooses. */
+  loop?: boolean;
 }
 
-const r = (id: number, name: [string, string], country: [string, string], level: [string, string], about: [string, string], km: number, gainM: number, accent: string, image: string, challenge = false): GameRoute =>
-  ({ id, key: `c${id}`, name: { fr: name[0], en: name[1] }, country: { fr: country[0], en: country[1] }, level: { fr: level[0], en: level[1] }, about: { fr: about[0], en: about[1] }, km, gainM, accent, image: `/indoor/${image}.jpg`, challenge });
+const r = (id: number, name: [string, string], country: [string, string], level: [string, string], about: [string, string], km: number, gainM: number, accent: string, image: string, challenge = false, loop = false): GameRoute =>
+  ({ id, key: `c${id}`, name: { fr: name[0], en: name[1] }, country: { fr: country[0], en: country[1] }, level: { fr: level[0], en: level[1] }, about: { fr: about[0], en: about[1] }, km, gainM, accent, image: `/indoor/${image}.jpg`, challenge, loop });
 
 /** The game's catalog, in its order. Gains are the game's own figures. */
 export const GAME_ROUTES: GameRoute[] = [
@@ -36,6 +38,10 @@ export const GAME_ROUTES: GameRoute[] = [
   r(6, ["Mur de Montalcino", "Montalcino Wall"], ["Italie", "Italy"], ["Défi · montée", "Challenge · climb"], ["8 km : la route se cabre jusqu'au sommet", "8 km: the road rears up to the summit"], 8, 336, "#FF4D5E", "montalcino", true),
   r(7, ["Critérium des Polders", "Polders Criterium"], ["Pays-Bas", "Netherlands"], ["Défi · sprint", "Challenge · sprint"], ["12 km tout plat, deux sprints chronométrés", "12 km dead flat, two timed sprints"], 12, 3, "#74EB8A", "criterium", true),
   r(8, ["Col du Géant", "Giant's Pass"], ["Suisse", "Switzerland"], ["Défi · hors catégorie", "Challenge · HC"], ["25 km, 1 400 m de montée à 7 %", "25 km, 1,400 m of climbing at 7%"], 25, 1424, "#FF2E78", "giant", true),
+  // Circuits: km and gain are per lap.
+  r(9, ["Circuit des Moulins", "Windmill Circuit"], ["Pays-Bas", "Netherlands"], ["Circuit · plat", "Circuit · flat"], ["Boucle de 10 km au ras des canaux, tours au choix", "10 km loop along the canals, as many laps as you like"], 10, 4, "#FFC733", "polders", false, true),
+  r(10, ["Boucle du Luberon", "Luberon Loop"], ["France", "France"], ["Circuit · vallonné", "Circuit · rolling"], ["Boucle de 15 km qui ondule entre les lavandes", "15 km loop rolling through the lavender"], 15, 174, "#CC8CFF", "provence", false, true),
+  r(11, ["Anello del Chianti", "Chianti Ring"], ["Italie", "Italy"], ["Circuit · course", "Circuit · race"], ["Boucle de 12 km et son mur à chaque tour", "12 km loop with its steep wall every lap"], 12, 128, "#FF6B4D", "tuscan", false, true),
 ];
 
 export interface GameEvent { id: string; race: boolean; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
