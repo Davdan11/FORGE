@@ -2,11 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal } from "lucide-react";
-import { powerFromHr, powerFromSpeed, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
+import { powerFromHr, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
-import { cmdRequestControl, cmdStart, cmdStop, cmdSimulation, cmdTargetPower, shouldSendGrade, RESULT_TEXT } from "@/lib/indoor/ftms";
+import { shouldSendGrade, RESULT_TEXT } from "@/lib/indoor/ftms";
+import { powerFromCurve, trainerLabel, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
 import { joinRoom, prune, type Room } from "@/lib/indoor/live";
 import { addSplits, profileMessage, rewardMessage, ridersMessage, unityRoom, type UnityMessage, type UnitySummary } from "@/lib/indoor/unity";
+import { boardMessage, postSegment, segmentBoard, type Category } from "@/lib/leaderboard";
+import { emptyStreams, pushSample } from "@/lib/tcx";
+import { supabase } from "@/lib/supabase/client";
 import { activityKcal, hrSummary } from "@/lib/heart";
 import { awardChallenges, awardIndoor } from "@/lib/progress";
 import { db, getStats, uid } from "@/lib/db";
@@ -21,7 +25,17 @@ declare global {
   interface Window { createUnityInstance?: (canvas: HTMLCanvasElement, config: Record<string, unknown>, progress: (p: number) => void) => Promise<UnityInstance> }
 }
 
-const SENSORS: SensorKind[] = ["fitness_machine", "heart_rate", "cycling_power", "csc"];
+/* "trainer" finds any brand: FTMS, Tacx FE-C, Wahoo legacy, or a trainer that
+   only reports power or speed (see lib/indoor/trainer.ts). */
+const SENSORS: SensorKind[] = ["trainer", "heart_rate", "cycling_power", "csc"];
+
+const PROTOCOL_FR: Record<TrainerProtocol, string> = {
+  ftms: "FTMS",
+  "tacx-fec": "FE-C",
+  "wahoo-legacy": "Wahoo",
+  "power-only": "puissance seule",
+  "speed-only": "vitesse seule",
+};
 
 /**
  * The indoor ride drawn by the Unity game. This component is the app's half of
@@ -47,17 +61,18 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [panel, setPanel] = useState(false);
   const [manual, setManual] = useState(0);
+  const [curve, setCurve] = useState<SpeedCurveId>("generic");
   const [people, setPeople] = useState(0);
   const maxHr = useMemo(() => maxHrFor(profile.age), [profile.age]);
 
-  const controller = useRef<Sensor | null>(null);
+  const controller = useRef<TrainerControl | null>(null);
   const controlOk = useRef(false);
   const [control, setControl] = useState<"none" | "asking" | "ok" | string>("none");
 
   // What the game last told us, read by the timers.
-  const game = useRef({ route: "", event: null as string | null, distance: 0, speedKph: 0, elapsed: 0, grade: 0, erg: null as number | null });
-  const live = useRef({ manual: 0, hasSensor: false });
-  useEffect(() => { live.current = { manual, hasSensor: sensors.length > 0 }; }, [manual, sensors]);
+  const game = useRef({ category: "D" as Category, quality: "declared" as string, watts: 0, hr: null as number | null, cadence: null as number | null, eventRoom: null as string | null, route: "", event: null as string | null, distance: 0, speedKph: 0, elapsed: 0, grade: 0, erg: null as number | null });
+  const live = useRef({ manual: 0, hasSensor: false, curve: "generic" as SpeedCurveId });
+  useEffect(() => { live.current = { manual, hasSensor: sensors.length > 0, curve }; }, [manual, sensors, curve]);
   const acc = useRef(freshRide());
   const room = useRef<Room | null>(null);
   const roomKey = useRef("");
@@ -116,7 +131,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       const n = room.current?.peers.size ?? 0;
       setPeople(n);
       acc.current.maxPeople = Math.max(acc.current.maxPeople, n);
-    });
+    }, (from) => send({ type: "kudos", from }));
     if (roomKey.current !== key) { r?.leave(); return; }
     room.current = r;
     if (!r) sayRef.current("Connecte-toi à ton compte pour rouler avec les autres.");
@@ -129,11 +144,11 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     const sent = { grade: null as number | null, gradeAt: 0, erg: -1, ergAt: 0 };
     let busy = false;
     let lastBeat = 0;
-    const control = (bytes: Uint8Array) => {
+    const control = (command: (c: TrainerControl) => Promise<ControlResult>) => {
       const c = controller.current;
-      if (!c?.control) return;
+      if (!c) return;
       busy = true;
-      c.control(bytes).then((r) => { if (!r.ok && r.result) sayRef.current(`Trainer : ${RESULT_TEXT[r.result] ?? "commande refusée"}.`); }).finally(() => { busy = false; });
+      command(c).then((r) => { if (!r.ok && r.result) sayRef.current(`Trainer : ${RESULT_TEXT[r.result] ?? "commande refusée"}.`); }).finally(() => { busy = false; });
     };
     const timer = setInterval(() => {
       const now = Date.now(), g = game.current, L = live.current, a = acc.current;
@@ -141,11 +156,12 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       const power = f.get("power"), machineSpeed = f.get("speedMs"), hr = f.get("hr"), cadence = f.get("cadence");
       let effort: Effort;
       if (power != null) effort = { watts: power, quality: "measured" };
-      else if (machineSpeed != null) effort = powerFromSpeed(machineSpeed);
+      else if (machineSpeed != null) effort = powerFromCurve(machineSpeed, L.curve);
       else if (hr != null) effort = powerFromHr(hr, 55, maxHr, ftpW);
       else if (L.hasSensor) effort = { watts: 0, quality: "measured" };
       else effort = declaredPower(L.manual);
       send({ type: "sample", watts: effort.watts, cadence: cadence ?? -1, heartRate: hr ?? -1, speedKph: -1, quality: effort.quality });
+      g.quality = effort.quality; g.watts = effort.watts; g.hr = hr ?? null; g.cadence = cadence ?? null;
 
       // Credit is counted here, where the quality of every second is known.
       if (g.speedKph > 1.8) { a.moving += 0.25; a.creditSec += XP_CREDIT[effort.quality] * 0.25; }
@@ -154,9 +170,9 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       // The trainer: ERG while the game's workout holds a target, the road's grade otherwise.
       if (controlOk.current && !busy) {
         if (g.erg != null) {
-          if (Math.abs(g.erg - sent.erg) >= 5 || now - sent.ergAt > 10000) { sent.erg = g.erg; sent.ergAt = now; control(cmdTargetPower(g.erg)); }
+          if (Math.abs(g.erg - sent.erg) >= 5 || now - sent.ergAt > 10000) { sent.erg = g.erg; sent.ergAt = now; const w = g.erg; control((c) => c.setTargetPower(w)); }
         } else if (shouldSendGrade(sent.grade, g.grade, sent.gradeAt, now)) {
-          sent.grade = g.grade; sent.gradeAt = now; sent.erg = -1; control(cmdSimulation(g.grade));
+          sent.grade = g.grade; sent.gradeAt = now; sent.erg = -1; const pct = g.grade; control((c) => c.setGrade(pct));
         }
       }
 
@@ -164,7 +180,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       if (r) {
         prune(r.peers, now);
         send(ridersMessage(r.peers.values(), now));
-        if (now - lastBeat >= 1000) { lastBeat = now; r.send(g.distance, g.speedKph / 3.6, { look: look.current }); }
+        if (now - lastBeat >= 1000) { lastBeat = now; r.send(g.distance, g.speedKph / 3.6, { look: look.current, quality: g.quality === "measured" ? "m" : g.quality === "estimated" ? "e" : "d", category: g.category }); }
       }
     }, 250);
     return () => clearInterval(timer);
@@ -194,7 +210,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       elevGainM: Math.round(s.ascent), points: [], splits: a.splits,
       title: `${routeName} · indoor ride`, shared: false, xp: 0,
       meta: { discipline: "indoor", indoor: { course: routeName, quality, avgW, with: a.maxPeople || undefined } },
-      hrSeries: a.hr.length ? a.hr : undefined, avgHr: hrs?.avg, maxHr: hrs?.max, kcal, kcalSource: k.source,
+      hrSeries: a.hr.length ? a.hr : undefined, streams: a.streams.t.length ? a.streams : undefined, avgHr: hrs?.avg, maxHr: hrs?.max, kcal, kcalSource: k.source,
     };
     const before = (await getStats()).xp;
     const { xp } = await awardIndoor(activity, credit);
@@ -233,14 +249,32 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           // Another route, or the same one restarted: a new ride to count and save.
           if (m.route !== g.route || m.elapsed + 1 < g.elapsed) { g.route = m.route; acc.current = freshRide(); }
           g.distance = m.distance; g.speedKph = m.speedKph; g.elapsed = m.elapsed;
+          if (m.category === "A" || m.category === "B" || m.category === "C" || m.category === "D") g.category = m.category;
+          if (!m.paused) pushSample(acc.current.streams, { t: m.elapsed, d: m.distance, alt: m.altitude, w: g.watts, hr: g.hr, cad: g.cadence });
           acc.current.lastSplit = addSplits(acc.current.splits, m.distance, m.elapsed, acc.current.lastSplit);
-          enterRoom(unityRoom(g.route, g.event));
+          enterRoom(unityRoom(g.route, g.event, g.eventRoom));
           break;
         case "grade": g.grade = m.grade; break;
         case "ergTarget": g.erg = m.watts; break;
         case "event":
           g.event = m.action === "leave" ? null : m.id;
-          enterRoom(unityRoom(g.route, g.event));
+          g.eventRoom = m.action !== "leave" && m.kind === "race" ? m.category : null;
+          enterRoom(unityRoom(g.route, g.event, g.eventRoom));
+          break;
+        case "kudos":
+          room.current?.kudos(m.to.replace(/^p-/, ""));
+          break;
+        case "segment":
+          // Measured efforts go on the world board; the game shows where they rank.
+          if (g.quality === "measured") {
+            const cat = g.category;
+            postSegment({ segment: m.key, lengthM: m.length, seconds: m.seconds, category: cat, name: profile.name, quality: g.quality }).then(async (posted) => {
+              if (!posted || !supabase) return;
+              const { data: { user } } = await supabase.auth.getUser();
+              const rows = await segmentBoard(m.key, cat);
+              if (user && rows.length) send(boardMessage(rows, user.id, m.key, m.name, cat));
+            });
+          }
           break;
         case "finish": case "end": saveRide(m); break;
         case "profileUpdate":
@@ -265,14 +299,17 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   async function connect(kind: SensorKind) {
     setConnecting(kind);
     try {
-      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(`${SENSOR_LABEL[kind]} déconnecté.`));
+      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(`${SENSOR_LABEL[kind]} déconnecté.`), { riderKg: profile.weightKg });
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
-      say(`${s.name} connecté.`);
-      if (s.control) {
-        controller.current = s; setControl("asking");
-        const r = await s.control(cmdRequestControl());
+      say(s.trainer ? `Trainer détecté : ${frLabel(s)}` : `${s.name} connecté.`);
+      const commands = s.trainer?.commands;
+      if (commands) {
+        // FTMS: request control then start, exactly as before. Wahoo: unlock
+        // and simulation init. FE-C: rider weight.
+        controller.current = commands; setControl("asking");
+        const r = await commands.start();
         if (!r.ok) { setControl(r.result ? RESULT_TEXT[r.result] ?? "refusé" : "pas de réponse"); return; }
-        await s.control(cmdStart()); controlOk.current = true; setControl("ok");
+        controlOk.current = true; setControl("ok");
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -284,7 +321,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   function quit() {
     const done = () => {
       exitRef.current = null;
-      if (controlOk.current) controller.current?.control?.(cmdStop()).catch(() => {});
+      if (controlOk.current) controller.current?.stop().catch(() => {});
       controlOk.current = false;
       onExit(acc.current.saved ? "Sortie enregistrée." : undefined);
     };
@@ -295,6 +332,10 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   }
 
   const connected = new Set(sensors.map((s) => s.kind));
+  const trainer = sensors.find((s) => s.trainer)?.trainer;
+  // A curve only matters when watts come from wheel speed.
+  const speedOnly = !sensors.some((s) => s.kind === "cycling_power" || (s.trainer && s.trainer.protocol !== "speed-only"))
+    && (connected.has("csc") || trainer?.protocol === "speed-only");
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
@@ -330,12 +371,21 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
                     <button key={k} type="button" onClick={() => !on && connect(k)} disabled={connecting !== null || on}
                       className={`h-9 px-3 rounded-full border text-xs flex items-center gap-1.5 ${on || connecting === k ? "border-volt text-volt-deep" : "border-line-strong text-ink"} ${connecting !== null && connecting !== k ? "opacity-40" : ""}`}>
                       {on ? <Check className="w-3.5 h-3.5" strokeWidth={2.4} /> : <Bluetooth className="w-3.5 h-3.5" strokeWidth={2} />}
-                      {on ? sensors.find((s) => s.kind === k)?.name ?? SENSOR_LABEL[k] : SENSOR_LABEL[k]}
+                      {on ? frLabel(sensors.find((s) => s.kind === k)) ?? SENSOR_LABEL[k] : SENSOR_LABEL[k]}
                     </button>
                   );
                 })}
               </div>
             ) : <p className="text-xs text-smoke flex gap-2"><BluetoothOff className="w-4 h-4 shrink-0" strokeWidth={2} />{availability.reason}</p>)}
+            {trainer && <p className="text-xs text-ink">Trainer détecté : {trainerLabel(trainer.deviceName, trainer.protocol, PROTOCOL_FR)}{trainer.canControl ? "" : " · lecture seule, pas de contrôle de la résistance"}</p>}
+            {speedOnly && (
+              <label className="flex items-center gap-2 text-xs">
+                <span className="meta">Courbe vitesse → puissance (estimée)</span>
+                <select value={curve} onChange={(e) => setCurve(e.target.value as SpeedCurveId)} className="h-8 rounded-lg border border-line-strong px-2 bg-transparent">
+                  {SPEED_CURVES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+            )}
             {control === "asking" && <p className="text-xs text-smoke">Le trainer demande l’accès…</p>}
             {control === "ok" && <p className="text-xs text-volt-deep">Trainer contrôlé : la résistance suit la route (ou ta séance).</p>}
             {control !== "none" && control !== "asking" && control !== "ok" && <p className="text-xs text-smoke">Lecture seule : le trainer a refusé le contrôle ({control}). Ferme les autres applis qui l’utilisent.</p>}
@@ -359,5 +409,9 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   );
 }
 
-const freshRide = () => ({ moving: 0, creditSec: 0, hr: [] as [number, number][], nextHrAt: 0, splits: [] as { km: number; sec: number }[], lastSplit: 0, maxPeople: 0, startedIso: new Date().toISOString(), saved: false });
+/** A trainer's label with the protocol in French; any other sensor's name. */
+const frLabel = (s: Sensor | undefined) =>
+  s?.trainer ? trainerLabel(s.trainer.deviceName, s.trainer.protocol, PROTOCOL_FR) : s?.name;
+
+const freshRide = () => ({ streams: emptyStreams(), moving: 0, creditSec: 0, hr: [] as [number, number][], nextHrAt: 0, splits: [] as { km: number; sec: number }[], lastSplit: 0, maxPeople: 0, startedIso: new Date().toISOString(), saved: false });
 const titleCase = (s: string) => s.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());

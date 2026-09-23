@@ -44,14 +44,15 @@ export type UnityMessage =
   | { type: "ready"; routeId: number; route: string; routes: { id: number; key: string; name: string; country: string; lengthKm: number; ascent: number }[] }
   | { type: "grade"; grade: number }
   | { type: "ergTarget"; watts: number | null }
-  | { type: "position"; routeId: number; route: string; distance: number; speedKph: number; elapsed: number; draft: number; paused: boolean }
+  | { type: "position"; routeId: number; route: string; distance: number; speedKph: number; elapsed: number; draft: number; altitude: number; category: string; paused: boolean }
   | { type: "checkpoint"; number: number; distance: number }
-  | { type: "segment"; name: string; kind: string; seconds: number; medal: string }
+  | { type: "segment"; key: string; length: number; name: string; kind: string; seconds: number; medal: string }
+  | { type: "kudos"; to: string }
   | UnitySummary
   | { type: "profileUpdate"; weightKg: number; ftp: number }
   | { type: "look"; look: string }
   | { type: "palmares"; data: unknown }
-  | { type: "event"; action: "join" | "leave" | "start"; id: string; route: string; start: number }
+  | { type: "event"; action: "join" | "leave" | "start"; id: string; route: string; start: number; kind: "group" | "race"; category: string }
   | { type: "challenge"; action: string; code: string; route?: string; routeName?: string; seconds?: number; won?: boolean };
 
 /**
@@ -59,8 +60,9 @@ export type UnityMessage =
  * Three.js world see different roads, so they never share a room; riders in
  * the same event share one room whatever else is happening on that route.
  */
-export function unityRoom(route: string, event?: string | null): string {
-  return event ? `unity-event:${event}` : `unity:${route}`;
+export function unityRoom(route: string, event?: string | null, raceCategory?: string | null): string {
+  // A race is run per category (A/B/C/D), so each category gets its own room.
+  return event ? `unity-event:${event}${raceCategory ? `:${raceCategory}` : ""}` : `unity:${route}`;
 }
 
 const TAGS = ["#FF6F9C", "#5C9EFF", "#FFA23F", "#74EB8A", "#B07CFF", "#2EF0DE", "#FFD23F", "#FF5A5A"];
@@ -83,6 +85,9 @@ export function ridersMessage(peers: Iterable<Peer>, now: number) {
       speedKph: Math.round(p.speedMs * 3.6 * 10) / 10,
       color: p.color ?? colorFor(p.id),
       look: p.look ?? "",
+      // Only an effort their app measured counts in results; the game shows a check mark.
+      verified: p.quality === "m",
+      category: p.category ?? "",
     });
   }
   return { type: "riders", riders };

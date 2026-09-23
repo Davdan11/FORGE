@@ -315,6 +315,8 @@ export interface Activity {
   };
   /** [seconds since start, bpm] from a Bluetooth strap or watch, every ~5 s. */
   hrSeries?: [number, number][];
+  /** Indoor rides: one sample a second (distance, altitude, power, HR, cadence) for the TCX export. */
+  streams?: import("./tcx").RideStreams;
   avgHr?: number;
   maxHr?: number;
   kcal?: number;

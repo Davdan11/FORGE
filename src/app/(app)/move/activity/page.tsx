@@ -8,6 +8,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile } from "@/lib/db";
 import { elevationProfile } from "@/lib/geo";
 import { shareCard } from "@/lib/share";
+import { downloadTcx, toTcx } from "@/lib/tcx";
 import { PostToFeed } from "@/components/PostToFeed";
 import { WORKOUT_MAP, ZONE_LABEL } from "@/lib/data/workouts";
 import { fmtDist, fmtDuration } from "@/lib/units";
@@ -70,6 +71,7 @@ function ActivityDetail() {
               <div className="flex gap-3 mb-5">
                 <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" onClick={async () => { const r = await shareCard(a, u, profile.name); say(r === "shared" ? "Shared." : "Card downloaded."); }}>Share card</button></Press>
                 {!indoor && <PostToFeed activity={a} say={say} />}
+                {a.streams && <Press className="flex-1"><button type="button" className="pill pill--block" onClick={async () => { const r = await downloadTcx(a.title, toTcx(a, a.streams!)); say(r === "shared" ? "Shared." : "TCX saved: upload it to Strava or Garmin Connect."); }}>Export for Strava (TCX)</button></Press>}
               </div>
             </Item>
             <Item>

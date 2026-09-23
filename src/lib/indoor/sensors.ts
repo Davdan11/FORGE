@@ -1,9 +1,9 @@
 "use client";
 
 import type { Reading } from "./ble-parse";
-import { transport, type Availability, type Sensor, type SensorKind } from "./transport";
+import { transport, type Availability, type ConnectOptions, type Sensor, type SensorKind } from "./transport";
 
-export { SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "./transport";
+export { SENSOR_LABEL, type Availability, type ConnectOptions, type Sensor, type SensorKind } from "./transport";
 
 /* ─────────────────────────────────────────────────────────────
    What the ride reads from.
@@ -30,9 +30,11 @@ export async function connectSensor(
   kind: SensorKind,
   onReading: (r: Reading) => void,
   onDisconnect?: () => void,
+  /** For kind "trainer": the rider's mass, for trainers that simulate slope themselves. */
+  opts?: ConnectOptions,
 ): Promise<Sensor> {
   return Promise.race([
-    transport().connect(kind, onReading, onDisconnect),
+    transport().connect(kind, onReading, onDisconnect, opts),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("No answer from Bluetooth. Check it is on, the sensor is awake, and no other app is holding it.")), CONNECT_TIMEOUT_MS),
     ),

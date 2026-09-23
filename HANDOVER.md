@@ -274,3 +274,39 @@ In practice that has meant saying plainly what was verified and what was not,
 in commit messages and in conversation — including the wrong turns. Several
 commits here record theories that turned out to be false, so nobody spends an
 afternoon re-testing them.
+
+---
+
+## Unity game online (branch `unity-online`, 2026-09-23)
+
+The Unity indoor game (repo FORGE-Unity) runs inside this app through Unity
+Web: Indoor → "FORGE Ride · 3D world, online" → `components/indoor/UnityRide.tsx`.
+The Unity Web build goes in `public/unity/` (ignored by git, ~40 MB). The app
+keeps sensors, trainer control, XP, saving and the Realtime rooms
+(`unity:<route key>`, `unity-event:<id>[:<race category>]`); pure logic and
+tests in `lib/indoor/unity.ts`. The message contract is at the top of
+ForgeBridge.cs in the Unity repo.
+
+- **Race categories** A ≥ 4.0, B ≥ 3.2, C ≥ 2.5, D (FTP W/kg). Each rider's
+  position broadcast carries their effort quality; only "measured" riders get
+  the check mark in the game. **"Bravo"**: a `kudos` broadcast to one peer.
+- **World segment boards**: **run `supabase/segments.sql` once** (table
+  `segment_efforts` + `segment_board()`; measured only, own rows only,
+  physically possible, 60/hour). Until then posting simply fails silently.
+- **TCX export** (`lib/tcx.ts`): indoor rides keep one sample a second in
+  `activity.streams`; the activity page offers "Export for Strava (TCX)".
+  Automatic Strava upload needs a Strava API app + a server for OAuth (next).
+- **Not verified**: two real accounts riding together, any real trainer.
+
+### Indoor: any-brand trainer detection (2026-09-23)
+One "Trainer" button (SensorKind "trainer") scans for FTMS 0x1826, Tacx FE-C
+6e40fec1…, Cycling Power 0x1818, CSC 0x1816, then picks from the services
+found: ftms > tacx-fec > wahoo-legacy (0x1818 + a026e005…) > power-only >
+speed-only. Name → brand is display only. Callers use TrainerControl
+(start/stop/setGrade/setTargetPower) from lib/indoor/trainer.ts; FTMS bytes
+are unchanged. FE-C (fec.ts) is spec-tested only; Wahoo legacy (wahoo.ts)
+comes from reverse-engineering notes — both UNVERIFIED on hardware. First
+hardware tests: an old-firmware Tacx (FE-C) and a pre-FTMS KICKR (unlock/ERG/
+grade). Speed-only trainers can pick a curve (Kinetic Road Machine is the only
+published one; the generic fluid/magnetic curves are approximations).
+UnityRide uses this; Ride.tsx still uses the FTMS-only path.
