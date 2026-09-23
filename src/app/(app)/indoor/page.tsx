@@ -193,7 +193,7 @@ export default function IndoorPage() {
                   <p className="mt-1 text-2xl font-black italic uppercase tracking-tight leading-none">{r.name[lang]}</p>
                   <p className="mt-2 text-xs text-bone/60 line-clamp-1">{r.about[lang]}</p>
                   <div className="mt-4 flex items-end justify-between">
-                    <span className="font-black italic text-3xl tabular-nums leading-none">{r.km}<span className="text-sm not-italic font-semibold text-bone/60 ml-1">{r.loop ? t("km / tour", "km / lap") : "km"}</span></span>
+                    <span className="font-black italic text-3xl tabular-nums leading-none">{r.free ? "∞" : r.km}<span className="text-sm not-italic font-semibold text-bone/60 ml-1">{r.free ? t("sans fin", "endless") : r.loop ? t("km / tour", "km / lap") : "km"}</span></span>
                     <span className="text-right">
                       <span className="block text-sm font-bold tabular-nums"><Mountain className="w-3.5 h-3.5 inline -mt-0.5 mr-1" />{r.gainM.toLocaleString(locale)} m</span>
                       <span className="block text-[11px] text-bone/55">{r.level[lang]}</span>

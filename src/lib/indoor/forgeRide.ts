@@ -22,6 +22,8 @@ export interface GameRoute {
   challenge?: boolean;
   /** A circuit: `km` is one lap, ridden as many times as the rider chooses. */
   loop?: boolean;
+  /** Free ride: no length, a junction every 6 km where the rider picks the next country. */
+  free?: boolean;
 }
 
 const r = (id: number, name: [string, string], country: [string, string], level: [string, string], about: [string, string], km: number, gainM: number, accent: string, image: string, challenge = false, loop = false): GameRoute =>
@@ -44,7 +46,9 @@ export const GAME_ROUTES: GameRoute[] = [
   r(11, ["Anello del Chianti", "Chianti Ring"], ["Italie", "Italy"], ["Circuit · course", "Circuit · race"], ["Boucle de 12 km et son mur à chaque tour", "12 km loop with its steep wall every lap"], 12, 128, "#FF6B4D", "tuscan", false, true),
   // A long route through four countries.
   r(12, ["Grand Tour d'Europe", "Grand Tour of Europe"], ["Europe", "Europe"], ["Grand Tour · 4 pays", "Grand Tour · 4 countries"], ["Pays-Bas, France, Italie puis la Suisse", "Netherlands, France, Italy, then Switzerland"], 100, 1388, "#59D9FF", "alpine"),
+  r(13, ["Balade libre", "Free ride"], ["Europe", "Europe"], ["Sans fin · carrefours", "Endless · junctions"], ["Sans fin : à chaque carrefour, choisis ta route et ton pays", "Endless: at every junction, pick your road and your country"], 0, 0, "#8CFF8C", "polders"),
 ];
+GAME_ROUTES[13].free = true;
 
 export interface GameEvent { id: string; race: boolean; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 

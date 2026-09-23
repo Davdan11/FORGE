@@ -14,7 +14,7 @@ describe("FORGE Ride, as the Indoor page shows it", () => {
   });
 
   it("lists the game's nine routes in its order, with stable keys", () => {
-    expect(GAME_ROUTES.map((r) => r.key)).toEqual(["c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "c10", "c11", "c12"]);
+    expect(GAME_ROUTES.map((r) => r.key)).toEqual(["c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "c10", "c11", "c12", "c13"]);
   });
 
   it("puts riders in the game's race categories", () => {
