@@ -43,7 +43,7 @@ export function MoveMedia({ ex, size = 160, className = "", label = false, speed
     // edges fade into it — several source loops have torn, noisy borders, and
     // a studio vignette is what the eye expects there anyway.
     return (
-      <div className={`${fill ? "" : "relative"} overflow-hidden bg-[radial-gradient(120%_90%_at_50%_40%,#EFE7DD_0%,#E3D8CB_100%)] ${box} ${className}`} style={style} role="img" aria-label={`${ex.name} demonstration`}>
+      <div className={`${fill ? "" : "relative"} overflow-hidden bg-[#e8ece6] ${box} ${className}`} style={style} role="img" aria-label={`${ex.name} demonstration`}>
         <img src={src} alt="" loading="lazy" decoding="async" className={`relative w-full h-full ${thumb ? "object-cover object-top" : "object-contain"}`} style={thumb ? undefined : EDGE_FADE} />
       </div>
     );

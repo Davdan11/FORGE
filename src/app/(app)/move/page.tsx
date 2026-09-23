@@ -199,7 +199,7 @@ function Move() {
           {rec === "idle" && points.length === 0 ? (
             <>
               <MapView points={[]} locate locateKey={locateKey} onLocate={setLoc} />
-              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(180deg,rgba(245,244,239,.55)_0%,transparent_22%,transparent_62%,rgba(245,244,239,.85)_100%)]" />
+              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(180deg,rgba(243,246,242,.55)_0%,transparent_22%,transparent_62%,rgba(243,246,242,.85)_100%)]" />
               <div className="absolute inset-x-0 top-[calc(var(--safe-top)+12px)] lg:top-7 pointer-events-none">
                 <div className="screen flex justify-between items-start gap-3">
                 <div className="flex gap-2 pointer-events-auto"><span className="chip chip--live backdrop-blur-md"><i className="live-dot" /> {loc === "ok" ? "Located" : loc === "denied" ? "Location blocked" : loc === "unavailable" ? "No GPS" : "GPS · ready"}</span><button type="button" className="chip chip--live backdrop-blur-md" onClick={() => setLocateKey((k) => k + 1)} aria-label="Locate me"><LocateFixed className="w-4 h-4" strokeWidth={2} /> Locate me</button></div>
