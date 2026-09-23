@@ -31,6 +31,15 @@ declare global {
    only reports power or speed (see lib/indoor/trainer.ts). */
 const SENSORS: SensorKind[] = ["trainer", "heart_rate", "cycling_power", "csc"];
 
+/* Sensors outlive one ride. Web Bluetooth can only pair from a tap on the device list, so quitting the game
+   and coming back must not drop the trainer: the links live here, and their readings go to whichever ride is
+   open (none while the rider is elsewhere in the app). */
+const kept = {
+  sensors: [] as Sensor[],
+  sink: null as ((r: Parameters<SensorFusion["accept"]>[0]) => void) | null,
+  lost: null as ((kind: SensorKind) => void) | null,
+};
+
 const PROTOCOL_FR: Record<TrainerProtocol, string> = {
   ftms: "FTMS",
   "tacx-fec": "FE-C",
@@ -64,13 +73,16 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   const tr = (fr: string, english: string) => (enRef.current ? english : fr);
 
   const fusion = useRef(new SensorFusion());
-  const [sensors, setSensors] = useState<Sensor[]>([]);
+  const [sensors, setSensorList] = useState<Sensor[]>(() => kept.sensors);
+  const setSensors = (next: (cur: Sensor[]) => Sensor[]) => setSensorList((cur) => (kept.sensors = next(cur)));
   const [connecting, setConnecting] = useState<SensorKind | null>(null);
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [panel, setPanel] = useState(false);
   const [manual, setManual] = useState(0);
   const [curve, setCurve] = useState<SpeedCurveId>("generic");
   const [people, setPeople] = useState(0);
+  // What the sensors actually send, shown in the panel (so a trainer that never reports cadence is plain to see).
+  const [readout, setReadout] = useState<{ w?: number; rpm?: number; kph?: number } | null>(null);
   const maxHr = useMemo(() => maxHrFor(profile.age), [profile.age]);
 
   const controller = useRef<TrainerControl | null>(null);
@@ -170,7 +182,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     if (!ready) return;
     const sent = { grade: null as number | null, gradeAt: 0, erg: -1, ergAt: 0 };
     let busy = false;
-    let lastBeat = 0;
+    let lastBeat = 0, lastReadout = 0;
     const control = (command: (c: TrainerControl) => Promise<ControlResult>) => {
       const c = controller.current;
       if (!c) return;
@@ -188,6 +200,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       else if (L.hasSensor) effort = { watts: 0, quality: "measured" };
       else effort = declaredPower(L.manual);
       send({ type: "sample", watts: effort.watts, cadence: cadence ?? -1, heartRate: hr ?? -1, speedKph: -1, quality: effort.quality });
+      if (now - lastReadout >= 1000) { lastReadout = now; setReadout(L.hasSensor ? { w: power, rpm: cadence, kph: machineSpeed != null ? machineSpeed * 3.6 : undefined } : null); }
       g.quality = effort.quality; g.watts = effort.watts; g.hr = hr ?? null; g.cadence = cadence ?? null;
 
       // Credit is counted here, where the quality of every second is known.
@@ -222,7 +235,26 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     return () => clearInterval(timer);
   }, [ready, maxHr, ftpW]);
 
-  useEffect(() => () => { for (const s of sensors) s.disconnect(); }, [sensors]);
+  // This ride takes the readings of the sensors already paired (and gives them back when it closes).
+  useEffect(() => {
+    kept.sink = (r) => fusion.current.accept(r);
+    kept.lost = (kind) => {
+      setSensorList((cur) => (kept.sensors = cur.filter((x) => x.kind !== kind)));
+      if (kind === "trainer") { controller.current = null; controlOk.current = false; setControl("none"); }
+      sayRef.current(tr(`${SENSOR_LABEL[kind]} déconnecté.`, `${SENSOR_LABEL[kind]} disconnected.`));
+    };
+    return () => { kept.sink = null; kept.lost = null; };
+  }, []);
+  // A trainer paired during an earlier ride: take control of it again for this one.
+  useEffect(() => {
+    const commands = kept.sensors.find((x) => x.trainer?.commands)?.trainer?.commands;
+    if (!ready || !commands || controller.current) return;
+    controller.current = commands; setControl("asking");
+    commands.start().then((r) => {
+      if (!r.ok) { setControl(r.result ? RESULT_TEXT[r.result] ?? tr("refusé", "refused") : tr("pas de réponse", "no answer")); return; }
+      controlOk.current = true; setControl("ok");
+    }).catch(() => setControl(tr("pas de réponse", "no answer")));
+  }, [ready]);
 
   /* ── the end: save the ride, count the XP, tell the game ── */
   async function saveRide(s: UnitySummary) {
@@ -354,8 +386,10 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   async function connect(kind: SensorKind) {
     setConnecting(kind);
     try {
-      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(tr(`${SENSOR_LABEL[kind]} déconnecté.`, `${SENSOR_LABEL[kind]} disconnected.`)), { riderKg: profile.weightKg });
+      const s = await connectSensor(kind, (r) => kept.sink?.(r), () => { kept.sensors = kept.sensors.filter((x) => x.kind !== kind); kept.lost?.(kind); }, { riderKg: profile.weightKg });
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
+      // Paired: the panel gets out of the way (it opens again from "Capteurs").
+      if (!s.trainer?.commands) window.setTimeout(() => setPanel(false), 1200);
       say(s.trainer ? tr(`Trainer détecté : ${sensorLabel(s, false)}`, `Trainer found: ${sensorLabel(s, true)}`) : tr(`${s.name} connecté.`, `${s.name} connected.`));
       const commands = s.trainer?.commands;
       if (commands) {
@@ -365,6 +399,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
         const r = await commands.start();
         if (!r.ok) { setControl(r.result ? RESULT_TEXT[r.result] ?? tr("refusé", "refused") : tr("pas de réponse", "no answer")); return; }
         controlOk.current = true; setControl("ok");
+        window.setTimeout(() => setPanel(false), 1500);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -529,6 +564,14 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
                 })}
               </div>
             ) : <p className="text-xs text-smoke flex gap-2"><BluetoothOff className="w-4 h-4 shrink-0" strokeWidth={2} />{availability.reason}</p>)}
+            {readout && (
+              <p className="text-xs text-ink tnum">
+                {t("Reçu", "Receiving")} : {readout.w != null ? `${Math.round(readout.w)} W` : "— W"} · {readout.rpm != null ? `${Math.round(readout.rpm)} rpm` : "— rpm"}{readout.kph != null ? ` · ${readout.kph.toFixed(1)} km/h` : ""}
+              </p>
+            )}
+            {readout && readout.rpm == null && (readout.w ?? 0) > 20 && !connected.has("csc") && (
+              <p className="text-xs text-smoke">{t("Ton trainer n'envoie pas la cadence (beaucoup n'en ont pas). Un capteur de cadence (bouton ci-dessus) l'ajoute.", "Your trainer doesn't report cadence (many don't). A cadence sensor (button above) adds it.")}</p>
+            )}
             {trainer && <p className="text-xs text-ink">{t("Trainer détecté : ", "Trainer found: ")}{trainerLabel(trainer.deviceName, trainer.protocol, en ? PROTOCOL_LABEL : PROTOCOL_FR)}{trainer.canControl ? "" : t(" · lecture seule, pas de contrôle de la résistance", " · read-only, no resistance control")}</p>}
             {speedOnly && (
               <label className="flex items-center gap-2 text-xs">
