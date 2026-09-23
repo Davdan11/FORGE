@@ -196,13 +196,15 @@ export default function IndoorPage() {
         </Section>
 
         {course && isConfigured && (
-          <p className="mt-6 text-sm flex items-center gap-2">
-            <Users className="w-4 h-4" strokeWidth={2} />
-            {liveCount > 0
-              ? <span><strong className="tnum">{liveCount}</strong> {liveCount === 1 ? "person is" : "people are"} {sport === "ride" ? "riding" : "running"} {course.name} right now{signedIn ? " — you'll join them." : "."}</span>
-              : <span className="text-smoke">Nobody on {course.name} right now. Start, and anyone who joins will appear on the road.</span>}
-            {!signedIn && <span className="text-smoke"> Sign in to appear to others.</span>}
-          </p>
+          <div className="card mt-6 p-4 flex items-start gap-3 text-sm">
+            <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${liveCount > 0 ? "bg-volt text-ink" : "bg-graphite text-smoke"}`}><Users className="w-4 h-4" strokeWidth={2} /></span>
+            <span className="min-w-0">
+              {liveCount > 0
+                ? <><strong className="tnum">{liveCount}</strong> {liveCount === 1 ? "person is" : "people are"} {sport === "ride" ? "riding" : "running"} {course.name} right now{signedIn ? " — you'll join them." : "."}</>
+                : <span className="text-smoke">Nobody on {course.name} right now. Start, and anyone who joins will appear on the road.</span>}
+              {!signedIn && <span className="block text-xs text-smoke mt-1">Sign in to appear to others.</span>}
+            </span>
+          </div>
         )}
 
         <Press className="mt-4 block">

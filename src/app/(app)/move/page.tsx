@@ -18,7 +18,7 @@ import { sportSpec } from "@/lib/data/sports";
 import { ART } from "@/lib/data/images";
 import { WORKOUTS, WORKOUT_MAP, ZONE_LABEL, expandSegments } from "@/lib/data/workouts";
 import { fmtDist, fmtDuration, fmtPace } from "@/lib/units";
-import { Screen, Section, Toast, Photo, ScreenSkeleton, Seg, Toggle, Rail } from "@/components/ui";
+import { Screen, Section, Toast, Photo, ScreenSkeleton, Seg, Toggle, Rail, StatRow } from "@/components/ui";
 import { Page, Stagger, Item, Press, CountUp, Ring, motion, AnimatePresence } from "@/components/motion";
 import { Bars } from "@/components/charts";
 import { TYPES, SegmentBar, MiniRoute, ActivityRow, rateFor, sportIcon } from "@/components/move-bits";
@@ -297,11 +297,11 @@ function Move() {
                         <div className="flex gap-2"><button type="button" className="pill pill--sm pill--volt" onClick={() => recover(draft)}>Save it</button><button type="button" className="pill pill--sm" onClick={() => { clearDraft(); setDraft(null); }}>Discard</button></div>
                       </div>
                     )}
-                    <div className="grid grid-cols-3 gap-2 lg:gap-3 tnum">
-                      <div className="card p-3 lg:p-4 grid"><span className="meta whitespace-nowrap">This week</span><strong className="display text-[17px] lg:text-2xl tnum whitespace-nowrap">{fmtDist(weekly[weekly.length - 1]?.raw ?? 0, units)}</strong></div>
-                      <div className="card p-3 grid"><span className="meta">Activities</span><strong className="display text-lg lg:text-2xl tnum"><CountUp value={activities.length} /></strong></div>
-                      <div className="card p-3 grid"><span className="meta">Climbed</span><strong className="display text-[17px] lg:text-2xl tnum whitespace-nowrap">{Math.round(activities.reduce((a, b) => a + b.elevGainM, 0))} m</strong></div>
-                    </div>
+                    <StatRow items={[
+                      { label: "This week", value: fmtDist(weekly[weekly.length - 1]?.raw ?? 0, units) },
+                      { label: "Activities", value: <CountUp value={activities.length} /> },
+                      { label: "Climbed", value: <CountUp value={Math.round(activities.reduce((a, b) => a + b.elevGainM, 0))} />, unit: "m" },
+                    ]} />
                     <SportChallenges sport={type} units={units.distance} />
                     <button type="button" className="text-xs text-smoke underline justify-self-start" onClick={() => setTab("workouts")}>Prefer structure? {WORKOUTS.length} guided workouts →</button>
                   </motion.div>

@@ -97,9 +97,9 @@ export default function ProgressPage() {
                     <div className="relative h-40 lg:h-48"><Photo src={sessionImage("full")} veil className="absolute inset-0" /><div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5"><span className="meta text-bone/80">Block {meso}{blockName ? ` · ${blockName}` : ""} · {week % 4 === 0 ? "recovery week" : `recovery week in ${4 - (week % 4)}`}</span><p className="display text-3xl lg:text-4xl">Week {week - firstWeekOf(meso) + 1} <em>of 4.</em></p></div></div>
                     <div className="grid grid-cols-4 gap-1 p-4 pb-3">{Array.from({ length: 4 }, (_, i) => { const n = firstWeekOf(meso) + i; return <span key={n} className={`h-1.5 rounded-full ${n < week ? "bg-volt" : n === week ? "bg-[var(--green)]" : "bg-line-strong"} ${i === 3 ? "opacity-60" : ""}`} />; })}</div>
                     <div className="grid grid-cols-3 divide-x divide-line border-t border-line text-center tnum">
-                      <span className="py-3 grid"><strong className="display text-2xl"><CountUp value={doneSessions} /></strong><span className="meta">sessions done</span></span>
-                      <span className="py-3 grid"><strong className="display text-2xl">{units.weight === "lb" ? <CountUp value={Math.round(kgToLb(stats.totals.volumeKg))} suffix=" lb" /> : <CountUp value={Math.round(stats.totals.volumeKg / 1000 * 10) / 10} decimals={1} suffix=" t" />}</strong><span className="meta">lifted</span></span>
-                      <span className="py-3 grid"><strong className="display text-2xl"><CountUp value={activeDays} /></strong><span className="meta">active days</span></span>
+                      <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none"><CountUp value={doneSessions} /></strong><span className="meta">sessions done</span></span>
+                      <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none">{units.weight === "lb" ? <CountUp value={Math.round(kgToLb(stats.totals.volumeKg))} suffix=" lb" /> : <CountUp value={Math.round(stats.totals.volumeKg / 1000 * 10) / 10} decimals={1} suffix=" t" />}</strong><span className="meta">lifted</span></span>
+                      <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none"><CountUp value={activeDays} /></strong><span className="meta">active days</span></span>
                     </div>
                   </div>
                 </Section>
@@ -155,8 +155,8 @@ export default function ProgressPage() {
               <Item>
                 <Section title="Outside" aside={<Link href="/move" className="text-xs text-smoke underline">Move</Link>}>
                   <div className="card grid grid-cols-2 divide-x divide-line text-center tnum">
-                    <span className="py-4 grid"><strong className="display text-2xl">{fmtDist(stats.totals.distanceM, units)}</strong><span className="meta">{activities.length} activit{activities.length === 1 ? "y" : "ies"}</span></span>
-                    <span className="py-4 grid"><strong className="display text-2xl"><CountUp value={Math.round(stats.totals.elevGainM ?? 0)} suffix=" m" /></strong><span className="meta">climbed · {Math.round(((stats.totals.elevGainM ?? 0) / 8849) * 100)}% of Everest</span></span>
+                    <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none">{fmtDist(stats.totals.distanceM, units)}</strong><span className="meta">{activities.length} activit{activities.length === 1 ? "y" : "ies"}</span></span>
+                    <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none"><CountUp value={Math.round(stats.totals.elevGainM ?? 0)} suffix=" m" /></strong><span className="meta">climbed · {Math.round(((stats.totals.elevGainM ?? 0) / 8849) * 100)}% of Everest</span></span>
                   </div>
                 </Section>
               </Item>

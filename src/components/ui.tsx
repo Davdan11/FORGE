@@ -155,11 +155,33 @@ export function Section({ title, aside, children, className = "", space = "base"
 
 export function Stat({ label, value, sub, accent, count, decimals = 0, suffix = "" }: { label: string; value?: ReactNode; sub?: string; accent?: boolean; count?: number; decimals?: number; suffix?: string }) {
   return (
-    <div className="card p-4 grid gap-1">
-      <span className="meta">{label}</span>
-      <strong className={`display text-3xl tnum ${accent ? "text-volt" : ""}`}>{count != null ? <CountUp value={count} decimals={decimals} suffix={suffix} /> : value}</strong>
+    <div className="card p-4 grid gap-1.5 content-start">
+      <strong className={`numeral !text-[2rem] leading-none tnum ${accent ? "text-volt" : ""}`}>{count != null ? <CountUp value={count} decimals={decimals} suffix={suffix} /> : value}</strong>
+      <span className="meta !text-[.62rem]">{label}</span>
       {sub && <span className="text-xs text-smoke">{sub}</span>}
     </div>
+  );
+}
+
+/**
+ * A row of key numbers, as on the company's sites: a big number, its unit
+ * small beside it, and a mono label underneath. One card, hairline dividers.
+ * A string value like "19.77 km" is split so the unit sits small.
+ */
+export function StatRow({ items }: { items: { label: string; value: ReactNode; unit?: string }[] }) {
+  return (
+    <dl className="card grid divide-x divide-line tnum" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+      {items.map((it) => {
+        let v = it.value, u = it.unit;
+        if (typeof v === "string" && u == null) { const m = v.match(/^([\d.,:]+)\s*(\S.*)?$/); if (m) { v = m[1]; u = m[2]; } }
+        return (
+          <div key={it.label} className="px-3 py-4 grid gap-1.5 min-w-0">
+            <dd className="flex items-baseline gap-1 min-w-0"><strong className="numeral !text-[clamp(1.3rem,6.2vw,2rem)] leading-none whitespace-nowrap">{v}</strong>{u && <span className="text-xs font-semibold text-smoke">{u}</span>}</dd>
+            <dt className="meta !text-[.6rem] truncate">{it.label}</dt>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
 
