@@ -48,7 +48,7 @@ export default function FoodPage() {
   async function toggleDone(m: DayPlanMeal) {
     const meals = day!.meals.map((x) => (x === m ? { ...x, done: !x.done } : x));
     await db.nutrition.update(day!.id, { meals, dirty: 1 });
-    if (!m.done) { const full = meals.every((x) => x.done); const xp = await awardMeal(full); setToast(`${getMeal(m.mealId)?.name} logged. +${xp} XP${full ? " — full day, bonus!" : ""}`); setTimeout(() => setToast(null), 3000); }
+    if (!m.done) { const full = meals.every((x) => x.done); const xp = await awardMeal(full, day!.meals.indexOf(m), day!.date); setToast(`${getMeal(m.mealId)?.name} logged.${xp ? ` +${xp} XP` : ""}${full && xp > 15 ? " — full day, bonus!" : ""}`); setTimeout(() => setToast(null), 3000); }
   }
   function openSwap(m: DayPlanMeal) { setSwapFor(m); setSwaps(swapOptions(profile!, day!, m)); }
   async function doSwap(to: string) {

@@ -378,6 +378,9 @@ export interface Stats {
   badges: string[];         // badge ids
   /** Sport challenges already paid for (see lib/challenges.ts), newest last. */
   challengesDone?: string[];
+  /** Daily rewards already paid today (check-in, each meal, full day), so
+   *  undoing and redoing an action cannot pay twice. */
+  paidDay?: { date: string; keys: string[] };
   totals: { sessions: number; volumeKg: number; distanceM: number; mobilityMin: number; mealsLogged: number; activities?: number; shared?: number; elevGainM?: number };
 }
 export interface Badge {

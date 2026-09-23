@@ -375,6 +375,17 @@ button.chip:active, a.chip:active { transform: scale(.96); }
 /* A flame that breathes: the streak is alive while it is alive. */
 @keyframes flicker { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.12) rotate(3deg); } }
 .flicker { display: inline-block; transform-origin: 50% 90%; animation: flicker 1.5s ease-in-out infinite; }
+/* Scroll reveal for every card and section head, driven by the scroll itself
+   (no JavaScript): each one rises into place as it enters the screen. Browsers
+   without scroll timelines simply show them. */
+@keyframes scroll-in { from { opacity: 0; transform: translateY(26px) scale(.985); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  main .card, main .section-head, main .card--photo {
+    animation: scroll-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 42%;
+  }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
 
 /* ── Photos: colour, lightly graded ────────────────────────────── */

@@ -10,7 +10,7 @@ function announceLevelUp(level: number) {
   window.dispatchEvent(new CustomEvent<number>(LEVEL_UP_EVENT, { detail: level }));
 }
 import { e1rm } from "./units";
-import type { Activity, ActivityType, DistanceUnit, SessionLog } from "./types";
+import type { Activity, ActivityType, DistanceUnit, SessionLog, Stats } from "./types";
 
 /* ─────────────────────────────────────────────────────────────
    Progress: XP, levels, streaks, badges, personal records.
@@ -227,18 +227,35 @@ export async function awardMobility(minutes: number) {
   return xp;
 }
 
-export async function awardReadiness() {
+/**
+ * Mark a daily reward as paid. Returns false when it was already paid today,
+ * which is what stops "Redo, check in again" or unticking and re-ticking a
+ * meal from paying every time. Pure, so it is tested without a database.
+ */
+export function payOnce(stats: Pick<Stats, "paidDay">, date: string, key: string): boolean {
+  const day = stats.paidDay?.date === date ? stats.paidDay : { date, keys: [] };
+  if (day.keys.includes(key)) return false;
+  stats.paidDay = { date, keys: [...day.keys, key] };
+  return true;
+}
+
+export async function awardReadiness(date = todayISO()) {
   const stats = await getStats();
+  if (!payOnce(stats, date, "readiness")) return 0;
   stats.xp += XP.readinessCheckIn;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   return XP.readinessCheckIn;
 }
 
-export async function awardMeal(fullDay: boolean) {
+/** XP for logging one meal of the day (`slot` is its place in the day's plan),
+ *  plus the full-day bonus once. Each is paid at most once per day. */
+export async function awardMeal(fullDay: boolean, slot: number, date = todayISO()) {
   const stats = await getStats();
-  const xp = XP.mealLogged + (fullDay ? XP.fullNutritionDay : 0);
+  let xp = 0;
+  if (payOnce(stats, date, `meal:${slot}`)) { xp += XP.mealLogged; stats.totals.mealsLogged += 1; }
+  if (fullDay && payOnce(stats, date, "fullday")) xp += XP.fullNutritionDay;
+  if (!xp) return 0;
   stats.xp += xp;
-  stats.totals.mealsLogged += 1;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   await finalize();
   return xp;

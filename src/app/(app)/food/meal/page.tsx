@@ -53,8 +53,8 @@ function Recipe() {
     if (!planned.done) {
       const meals = day.meals.map((m) => (m === planned ? { ...m, done: true } : m));
       await db.nutrition.update(day.id, { meals, dirty: 1 });
-      const xp = await awardMeal(meals.every((m) => m.done));
-      setToast(`Logged. +${xp} XP.`);
+      const xp = await awardMeal(meals.every((m) => m.done), day.meals.indexOf(planned), day.date);
+      setToast(xp ? `Logged. +${xp} XP.` : "Logged.");
       setTimeout(() => router.push("/food"), 1200);
     } else router.push("/food");
   }

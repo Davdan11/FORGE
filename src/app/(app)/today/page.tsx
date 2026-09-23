@@ -125,7 +125,8 @@ export default function Today() {
                 {quests.map((qst) => {
                   const inner = (
                     <>
-                      <span className={`w-7 h-7 rounded-full grid place-items-center border-2 shrink-0 ${qst.done ? "border-transparent text-[#06240f] shadow-[0_4px_12px_-2px_rgba(40,205,120,.55)]" : "border-line-strong text-transparent"}`} style={qst.done ? { background: "var(--grad)" } : undefined}><Check className="w-4 h-4" strokeWidth={3} /></span>
+                      <motion.span key={qst.done ? "done" : "todo"} initial={qst.done ? { scale: 0.3, rotate: -40 } : false} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 520, damping: 16 }}
+                        className={`w-7 h-7 rounded-full grid place-items-center border-2 shrink-0 ${qst.done ? "border-transparent text-[#06240f]" : "border-line-strong text-transparent"}`} style={qst.done ? { background: "var(--grad)" } : undefined}><Check className="w-4 h-4" strokeWidth={3} /></motion.span>
                       <span className="min-w-0 flex-1"><span className={`block text-sm font-medium truncate ${qst.done ? "line-through text-smoke" : ""}`}>{qst.label}</span><span className="block text-xs text-smoke truncate">{qst.progress && !qst.done ? `${qst.progress[0]} / ${qst.progress[1]} · ` : ""}{qst.detail}</span></span>
                       <span className={`chip tnum ${qst.done ? "chip--volt" : ""}`}>+{qst.xp} XP</span>
                       {!qst.done && <ChevronRight className="w-4 h-4 text-smoke shrink-0" />}
@@ -143,7 +144,7 @@ export default function Today() {
             <AnimatePresence mode="wait">
               {!readiness ? (
                 <motion.div key="check" id="readiness" exit={{ opacity: 0, y: -10 }}>
-                  <ReadinessCheck session={session ?? null} onDone={async (r) => { const xp = await awardReadiness(); say(`Checked in. +${xp} XP. ${r.score >= 65 ? "Green light — train as planned." : r.score >= 40 ? "Amber — session adjusted." : "Red — session rewritten, easier day."}`); }} />
+                  <ReadinessCheck session={session ?? null} onDone={async (r) => { const xp = await awardReadiness(today); say(`Checked in.${xp ? ` +${xp} XP.` : ""} ${r.score >= 65 ? "Green light — train as planned." : r.score >= 40 ? "Amber — session adjusted." : "Red — session rewritten, easier day."}`); }} />
                 </motion.div>
               ) : (
                 <motion.div key="score" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>

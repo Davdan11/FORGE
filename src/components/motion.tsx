@@ -24,9 +24,13 @@ export function Stagger({ children, className = "", delay = 0.06 }: { children: 
     </motion.div>
   );
 }
+/** One block of a page. It rises into place when it scrolls into view, so a
+ *  long screen keeps moving as you read it instead of animating once, off screen. */
 export function Item({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const reduce = useReducedMotion();
   return (
-    <motion.div className={className} variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}>
+    <motion.div className={className} inherit={false} initial={reduce ? false : "hidden"} whileInView="show" viewport={{ once: true, margin: "0px 0px -8% 0px" }}
+      variants={{ hidden: { opacity: 0, y: 28, scale: 0.985 }, show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: EASE } } }}>
       {children}
     </motion.div>
   );
