@@ -240,8 +240,14 @@ the belt by itself — test it standing on the side rails first.
 ## Open work
 
 1. **Android build** — the project is generated and untested.
-2. **Reward claiming** — `reward_claims` table with a shipping address and RLS.
-   Ranks and badges are plumbed; the back end is not.
+2. **Reward claiming** — built 2026-09-23. The owner creates gift campaigns
+   at `/admin` (photo, rule, dates, stock, daily cap); athletes see them on
+   the ranks page and claim with an address; each claim carries a training
+   report with anti-cheat flags (`src/lib/rewards.ts`). The limits live in
+   the database (`supabase/rewards.sql`: RLS, one claim each, stock and daily
+   cap in a trigger), not in the app. **Run `supabase/rewards.sql` once**,
+   after signing in with the owner's email, or `/admin` says "Admins only".
+   Not yet exercised end to end with a real claim.
 3. **Multiplayer presence** — built (`src/lib/indoor/live.ts`): one Realtime
    channel per course and sport, presence for who is there, a position
    broadcast once a second, extrapolated between messages. Signed-in only.

@@ -60,6 +60,10 @@ export default function PrivacyPolicy() {
         <p>If you turn on reminders, they are scheduled on your phone. No reminder content is sent to us.</p>
       </Sec>
 
+      <Sec title="Claiming a reward">
+        <p>If you claim a physical gift, you give us a shipping name, address, country and, optionally, a phone number for the courier. With the claim, the app sends a summary of your training so we can check it is genuine: account age, level and XP, the number of sessions, sets and activities, how your indoor time was measured, your streak, badge count, weight change since you started, and a list of your last dozen sessions and activities (date and title). No GPS track is sent. Only you and our team can see a claim. We use the address only to ship that gift, and share it only with the carrier that delivers it. Addresses are erased 120 days after a claim is shipped or refused; the training summary stays with the claim record so we can answer questions about it.</p>
+      </Sec>
+
       <Sec title="How long we keep it">
         <p>Data on your phone stays until you delete it (Settings → Reset this device) or remove the app. Data in your account stays until you delete it or delete your account. When you delete your account, it is removed from our database immediately; copies in our provider&rsquo;s encrypted backups expire on their normal schedule.</p>
       </Sec>

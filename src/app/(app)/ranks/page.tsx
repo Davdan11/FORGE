@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { RewardsSection } from "@/components/RewardsSection";
+import type { Campaign } from "@/lib/rewards";
 import { Gift, Lock } from "lucide-react";
 import { getStats, getProfile } from "@/lib/db";
 import { LEVELS_PER_TIER, SUB_RANKS, TIERS, levelFromXp, nextRewardFor, subRankFor, tierForLevel, xpToReach } from "@/lib/gamification";
@@ -16,6 +19,8 @@ const PER_SUB = LEVELS_PER_TIER / SUB_RANKS.length;
 export default function RanksPage() {
   const stats = useLiveQuery(() => getStats(), []);
   const profile = useLiveQuery(() => getProfile(), []);
+  // The owner's campaigns, once loaded: they replace the built-in tier gifts.
+  const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   if (!stats || !profile) return <ScreenSkeleton />;
 
   const lvl = levelFromXp(stats.xp);
@@ -37,6 +42,7 @@ export default function RanksPage() {
 
         <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
           <div className="min-w-0">
+            <Item><RewardsSection onCampaigns={setCampaigns} /></Item>
             <Item>
               <Section title="The ladder" aside={<span className="text-xs text-smoke">seven tiers · seventy levels</span>}>
                 <ul className="grid gap-3">
@@ -56,7 +62,17 @@ export default function RanksPage() {
                           <p className="text-xs text-smoke tnum mt-0.5">
                             Levels {t.from}–{last} · {xpToReach(t.from).toLocaleString("en-US")} XP to enter
                           </p>
-                          {t.reward && (
+                          {(() => {
+                            const c = campaigns?.find((x) => x.rule_type === "rank" && x.rule_value.split(":")[0] === t.key);
+                            if (!c) return null;
+                            return (
+                              <p className="text-sm mt-2 flex items-center gap-3">
+                                {c.image_url ? <img src={c.image_url} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" /> : <Gift className="w-5 h-5 text-volt shrink-0" />}
+                                <span><span className="font-medium">{c.title}</span><span className="block text-xs text-smoke">{reached ? "Unlocked — claim it above." : "The reward for reaching this rank."}</span></span>
+                              </p>
+                            );
+                          })()}
+                          {t.reward && !campaigns?.length && (
                             <p className="text-sm mt-2 flex items-start gap-2">
                               {reached ? <Gift className="w-4 h-4 mt-0.5 text-volt shrink-0" strokeWidth={2} /> : <Lock className="w-4 h-4 mt-0.5 text-smoke shrink-0" strokeWidth={2} />}
                               <span><span className="font-medium">{t.reward.item}</span><span className="block text-xs text-smoke">{t.reward.note}</span></span>

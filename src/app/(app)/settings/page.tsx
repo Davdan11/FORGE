@@ -15,6 +15,7 @@ import { RankEmblem } from "@/components/RankEmblem";
 import { supabase, isConfigured } from "@/lib/supabase/client";
 import { accountLabel, deleteAccount, restoreAccount, signOut } from "@/lib/auth";
 import { AccountPanel } from "@/components/AccountPanel";
+import { amAdmin } from "@/lib/rewards";
 import { syncNow } from "@/lib/sync";
 import { readSyncStatus } from "@/lib/autosync";
 import { downloadBackup, restoreBackup } from "@/lib/backup";
@@ -228,6 +229,7 @@ export default function SettingsPage() {
               </Section>
             </Item>
             <Item><p className="text-xs text-smoke leading-relaxed mb-2">{HEALTH_NOTICE}</p></Item>
+            <AdminLink />
             <Item><p className="text-xs mb-2"><Link href="/legal/privacy" className="underline">Privacy Policy</Link> · <Link href="/legal/terms" className="underline">Terms of Use</Link></p></Item>
             <Item><p className="text-xs text-smoke">{APP_NAME} v0.6 · works offline · {stats.xp.toLocaleString("en-US")} XP on this device</p></Item>
           </div>
@@ -250,4 +252,16 @@ function SyncLine() {
   return status.ok
     ? <p className="text-xs text-smoke"><span className="inline-block w-1.5 h-1.5 rounded-full bg-volt mr-1.5 align-middle" />Saved {when} · automatic</p>
     : <p className="text-xs text-danger">Last save failed ({when}): {status.message}. It retries on its own.</p>;
+}
+
+/** Shown only to admins (the database decides who that is). */
+function AdminLink() {
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    amAdmin().then((v) => { if (alive) setOk(v); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  if (!ok) return null;
+  return <Item><Link href="/admin" className="pill pill--volt pill--block mb-4">Rewards desk (admin)</Link></Item>;
 }

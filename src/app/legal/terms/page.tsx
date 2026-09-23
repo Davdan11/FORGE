@@ -40,6 +40,7 @@ export default function Terms() {
 
       <Sec title="Rewards">
         <p>XP, levels, ranks, badges and unlockable items have no cash value, cannot be sold or transferred, and may change as the app develops.</p>
+        <p>From time to time we may offer physical gifts to athletes who reach a goal we announce in the app. Each offer states what it takes, its dates and how many are available; it ends when its stock runs out, and a daily limit may apply. A claim is a request, not a guarantee: every claim is reviewed by hand, and we may refuse or cancel one where the activity behind it looks inaccurate, automated or manipulated, or where shipping to the address given is not possible or not lawful. One claim per person per offer. Gifts have no cash value and cannot be exchanged. We ship worldwide where carriers allow; delivery times vary, and any customs duties charged by your country are yours. No purchase is necessary.</p>
       </Sec>
 
       <Sec title="The app itself">
