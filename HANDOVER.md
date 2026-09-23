@@ -135,6 +135,16 @@ version of the indoor mode, 30–80 MB of app size, and a second build pipeline.
 One codebase for three platforms was the requirement. If Three.js hits a
 ceiling later, Unity is still available; the reverse is not true.
 
+**Update 2026-09-22 — the indoor game moves to Unity.** The owner is building
+the indoor world in Unity (`C:\Users\danjo\My project`, private repo
+`github.com/Davdan11/FORGE-Unity.`; its `CLAUDE.md` has the plan). Decision:
+Unity **native** inside this app on iPhone, iPad and Android (Unity as a
+Library, opened by a Capacitor plugin) and **Unity Web** for a browser link;
+one message protocol for both bridges. This app keeps Bluetooth, FTMS control,
+accounts, XP, saving and multiplayer; Unity renders and runs the ride. XP is
+never computed in Unity. The Three.js world stays as the fallback. Integration
+waits until the owner says the game is ready.
+
 **Stylised, not photoreal.** An approximation of a photoreal world looks cheap
 beside the games people already play. Low-poly with flat colours reads as a
 decision.
