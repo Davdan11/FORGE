@@ -42,6 +42,8 @@ export const GAME_ROUTES: GameRoute[] = [
   r(9, ["Circuit des Moulins", "Windmill Circuit"], ["Pays-Bas", "Netherlands"], ["Circuit · plat", "Circuit · flat"], ["Boucle de 10 km au ras des canaux, tours au choix", "10 km loop along the canals, as many laps as you like"], 10, 4, "#FFC733", "polders", false, true),
   r(10, ["Boucle du Luberon", "Luberon Loop"], ["France", "France"], ["Circuit · vallonné", "Circuit · rolling"], ["Boucle de 15 km qui ondule entre les lavandes", "15 km loop rolling through the lavender"], 15, 174, "#CC8CFF", "provence", false, true),
   r(11, ["Anello del Chianti", "Chianti Ring"], ["Italie", "Italy"], ["Circuit · course", "Circuit · race"], ["Boucle de 12 km et son mur à chaque tour", "12 km loop with its steep wall every lap"], 12, 128, "#FF6B4D", "tuscan", false, true),
+  // A long route through four countries.
+  r(12, ["Grand Tour d'Europe", "Grand Tour of Europe"], ["Europe", "Europe"], ["Grand Tour · 4 pays", "Grand Tour · 4 countries"], ["Pays-Bas, France, Italie puis la Suisse", "Netherlands, France, Italy, then Switzerland"], 100, 1388, "#59D9FF", "alpine"),
 ];
 
 export interface GameEvent { id: string; race: boolean; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
