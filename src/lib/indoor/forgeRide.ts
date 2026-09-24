@@ -66,6 +66,12 @@ GAME_ROUTES.push(
 );
 // Home: the Tour de l'Île de Montréal 2026, 50 km route, street by street (the city's official track).
 GAME_ROUTES.push({ ...r(22, ["Tour de l'Île", "Tour de l'Île"], ["Montréal", "Montréal"], ["Parcours officiel 2026 · 50 km", "Official 2026 route · 50 km"], ["Le vrai parcours, rue par rue : parc Jarry, canal Lachine, Vieux-Montréal, Plateau", "The real route, street by street: Parc Jarry, Lachine canal, Old Montréal, the Plateau"], 49, 216, "#4A8CFF", "montreal"), real: true });
+// The 2026 UCI Road World Championships in Montréal, from the city's official tracks.
+GAME_ROUTES.push(
+  { ...r(23, ["Mondiaux · mont Royal", "Worlds · Mount Royal"], ["Montréal", "Montréal"], ["Circuit officiel UCI 2026 · 13,4 km", "Official UCI 2026 circuit · 13.4 km"], ["Camillien-Houde, la Polytechnique, l'avenue du Parc : le tour des pros", "Camillien-Houde, Polytechnique, avenue du Parc: the pros' lap"], 13.4, 263, "#F2334D", "mondiaux-mont-royal"), real: true },
+  { ...r(24, ["Mondiaux · contre-la-montre", "Worlds · time trial"], ["Montréal", "Montréal"], ["CLM officiel UCI 2026 · 39 km", "Official UCI 2026 TT · 39 km"], ["Vieux-Montréal, circuit Gilles-Villeneuve, parc Jean-Drapeau", "Old Montréal, Gilles-Villeneuve circuit, Parc Jean-Drapeau"], 39, 151, "#A875FF", "mondiaux-clm"), real: true },
+  { ...r(25, ["Mondiaux · course élite", "Worlds · elite race"], ["Montréal", "Montréal"], ["Course officielle UCI 2026 · 277 km", "Official UCI 2026 race · 277 km"], ["La Montérégie, le pont Champlain, puis 12 tours du mont Royal", "The Montérégie, the Champlain bridge, then 12 laps of Mount Royal"], 277, 3654, "#FFD133", "mondiaux-elite"), real: true },
+);
 
 export interface GameEvent { id: string; race: boolean; kind: "group" | "race" | "tt"; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 
