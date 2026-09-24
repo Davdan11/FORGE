@@ -252,7 +252,7 @@ const RIDE_BADGES: Badge[] = [
   once("ride", "col_madeleine", "endurance", ["Madeleine", "Col de la Madeleine from La Chambre, finished."], ["Madeleine", "Le col de la Madeleine depuis La Chambre, terminé."], routeDone("c19")),
   once("ride", "stage_alps", "endurance", ["Queen stage", "The 112 km queen stage of the Alps, finished."], ["Étape reine", "L’étape reine des Alpes, 112 km, terminée."], routeDone("c20")),
   once("ride", "stage_tourmalet", "endurance", ["Lourdes to the Tourmalet", "The 49 km Tourmalet stage, finished."], ["De Lourdes au Tourmalet", "L’étape du Tourmalet, 49 km, terminée."], routeDone("c21")),
-  once("ride", "tour_montreal", "endurance", ["Tour of Montréal", "Old Port to the Olympic Stadium over Mount Royal, finished."], ["Tour de Montréal", "Du Vieux-Port au Stade olympique par le mont Royal, terminé."], routeDone("c22")),
+  once("ride", "tour_montreal", "endurance", ["Tour de l'Île", "The 50 km Tour de l'Île de Montréal route, street by street, finished."], ["Tour de l'Île", "Le parcours de 50 km du Tour de l'Île de Montréal, rue par rue, terminé."], routeDone("c22")),
   count("ride", "real_all", "endurance", routesOf(REAL_ROUTES), REAL_ROUTES.length, ["Real France", "Every real climb and stage finished."], ["La vraie France", "Tous les cols et étapes réels terminés."]),
   count("ride", "worlds_all", "endurance", routesOf(WORLD_ROUTES), WORLD_ROUTES.length, ["World tour", "Every FORGE Ride world, circuit and challenge finished."], ["Tour du monde", "Tous les mondes, circuits et défis de FORGE Ride terminés."]),
   count("ride", "medal_gold", "endurance", medals("gold"), 1, ["Top step", "First gold medal on a segment."], ["Plus haute marche", "Première médaille d’or sur un segment."]),
