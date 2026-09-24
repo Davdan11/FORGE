@@ -8,10 +8,10 @@
    ForgeBridge.cs in the FORGE-Unity repo):
 
      app → game   sample, profile, riders, reward, palmares, look,
-                  unlocks, events, challenge, command
+                  unlocks, wallet, bought, events, challenge, command
      game → app   ready, grade, ergTarget, position, checkpoint,
                   segment, finish, end, profileUpdate, look,
-                  palmares, event, challenge
+                  palmares, event, challenge, buy
 
    Everything here is pure, so it is tested without a browser.
    ───────────────────────────────────────────────────────────── */
@@ -57,7 +57,8 @@ export type UnityMessage =
   | { type: "look"; look: string }
   | { type: "palmares"; data: unknown }
   | { type: "event"; action: "join" | "leave" | "start"; id: string; route: string; start: number; kind: "group" | "race"; category: string }
-  | { type: "challenge"; action: string; code: string; route?: string; routeName?: string; seconds?: number; won?: boolean };
+  | { type: "challenge"; action: string; code: string; route?: string; routeName?: string; seconds?: number; won?: boolean }
+  | { type: "buy"; item: string };
 
 /**
  * The room a Unity rider shares. Riders of the Unity world and of the

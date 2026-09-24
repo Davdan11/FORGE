@@ -2,6 +2,7 @@ import { addDays, db, getStats, getProfile, isoWeek, todayISO } from "./db";
 import { challengesFor, unpaid } from "./challenges";
 import { XP, levelFromXp, evaluateBadges } from "./gamification";
 import { verifyActivity, type Verification } from "./verify";
+import { badgeContext } from "./badgeFacts";
 
 export const LEVEL_UP_EVENT = "forge:levelup";
 export const BADGES_EVENT = "forge:badges";
@@ -47,30 +48,31 @@ async function touchStreak() {
   return stats;
 }
 
-async function finalize(newBadgesExtra: { activityDistanceM?: number } = {}) {
-  const stats = await getStats();
+/**
+ * Everything the badges look at, from the saved rows (see lib/badgeFacts.ts).
+ * `pending` is an activity being awarded before it is written: the indoor
+ * ride is paid first and saved after, and its own badges must not wait for
+ * the next award to notice it.
+ */
+export async function loadBadgeContext(pending?: Activity) {
   const profile = await getProfile();
-  const best = await bestE1rmBySlug();
-  const acts = await db.activities.toArray();
-  const best5k = acts.filter((a) => a.type === "run" && a.distanceM >= 5000).map((a) => (a.durationSec * 5000) / a.distanceM).sort((a, b) => a - b)[0];
-  const zone2Min = (await db.logs.toArray()).length * 0; // filled by cardio sessions below
-  // Body change since day one: the profile's start weight, or the first weigh-in.
-  const weighIns = await db.weights.orderBy("date").toArray();
-  const start = profile?.startWeightKg ?? weighIns[0]?.kg;
-  const latest = weighIns.length ? weighIns[weighIns.length - 1].kg : profile?.weightKg;
-  // Weeks where every planned session was done (at least two planned).
-  const sessions = await db.sessions.toArray();
-  const byWeek = new Map<string, { planned: number; done: number }>();
-  for (const s of sessions) {
-    if (s.kind === "rest") continue;
-    const k = `${s.planId}:${s.week}`;
-    const w = byWeek.get(k) ?? { planned: 0, done: 0 };
-    w.planned++; if (s.status === "done") w.done++;
-    byWeek.set(k, w);
-  }
-  const fullWeeks = [...byWeek.values()].filter((w) => w.planned >= 2 && w.done === w.planned).length;
-  const ctx = { bestE1rm: best, bodyweightKg: profile?.weightKg ?? 80, best5kSec: best5k, zone2Min: zone2Min + acts.reduce((a, b) => a + b.durationSec / 60, 0),
-    weightChangeKg: start != null && latest != null ? latest - start : undefined, goal: profile?.goal, fullWeeks };
+  const saved = await db.activities.toArray();
+  const activities = pending && !saved.some((a) => a.id === pending.id) ? [...saved, pending] : saved;
+  const readinessDays = new Set((await db.readiness.toArray()).map((r) => r.date)).size;
+  return badgeContext({
+    best: await bestE1rmBySlug(),
+    profile: profile ?? undefined,
+    activities,
+    weighIns: await db.weights.orderBy("date").toArray(),
+    sessions: await db.sessions.toArray(),
+    readinessCount: readinessDays,
+    nutrition: await db.nutrition.toArray(),
+  });
+}
+
+async function finalize(opts: { pending?: Activity } = {}) {
+  const stats = await getStats();
+  const ctx = await loadBadgeContext(opts.pending);
   const earned = evaluateBadges(stats, ctx);
   if (earned.length) announceBadges(earned);
   stats.badges.push(...earned);
@@ -80,7 +82,6 @@ async function finalize(newBadgesExtra: { activityDistanceM?: number } = {}) {
   stats.level = levelFromXp(stats.xp).level;
   if (stats.level > levelBefore) announceLevelUp(stats.level);
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
-  void newBadgesExtra;
   return { stats, earned };
 }
 
@@ -95,6 +96,8 @@ export async function awardSession(log: SessionLog, opts: { adjusted: boolean; s
   stats.totals.sessions += 1;
   stats.totals.volumeKg += log.volumeKg ?? 0;
   stats.totals.mobilityMin += opts.mobilityMin;
+  if (prs.length) stats.totals.prs = (stats.totals.prs ?? 0) + prs.length;
+  if (opts.adjusted) stats.totals.adjustedSessions = (stats.totals.adjustedSessions ?? 0) + 1;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   await touchStreak();
   const { earned } = await finalize();
@@ -139,7 +142,7 @@ export async function awardActivity(a: Activity) {
   if (a.shared) stats.totals.shared = (stats.totals.shared ?? 0) + 1;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   await touchStreak();
-  const { earned } = await finalize();
+  const { earned } = await finalize({ pending: a });
   return { xp, earned, verification };
 }
 
@@ -174,7 +177,7 @@ export async function awardIndoor(a: Activity, credit: number) {
   stats.totals.elevGainM = (stats.totals.elevGainM ?? 0) + Math.round(a.elevGainM * credit);
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   if (credit > 0) await touchStreak();
-  const { earned } = await finalize();
+  const { earned } = await finalize({ pending: a });
   return { xp, earned };
 }
 
@@ -258,6 +261,7 @@ export async function logWeighIn(kg: number, date: string) {
   // Once a day: re-entering the weight is a correction, not another reward.
   const xp = payOnce(stats, date, "weighin") ? XP.weighIn : 0;
   stats.xp += xp;
+  if (xp) stats.totals.weighIns = (stats.totals.weighIns ?? 0) + 1;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   await finalize();   // weight badges are checked on every weigh-in
   return xp;
@@ -291,7 +295,9 @@ export async function awardReadiness(date = todayISO()) {
   const stats = await getStats();
   if (!payOnce(stats, date, "readiness")) return 0;
   stats.xp += XP.readinessCheckIn;
+  stats.totals.checkIns = (stats.totals.checkIns ?? 0) + 1;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
+  await finalize();   // check-in badges
   return XP.readinessCheckIn;
 }
 
@@ -301,7 +307,7 @@ export async function awardMeal(fullDay: boolean, slot: number, date = todayISO(
   const stats = await getStats();
   let xp = 0;
   if (payOnce(stats, date, `meal:${slot}`)) { xp += XP.mealLogged; stats.totals.mealsLogged += 1; }
-  if (fullDay && payOnce(stats, date, "fullday")) xp += XP.fullNutritionDay;
+  if (fullDay && payOnce(stats, date, "fullday")) { xp += XP.fullNutritionDay; stats.totals.fullDays = (stats.totals.fullDays ?? 0) + 1; }
   if (!xp) return 0;
   stats.xp += xp;
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });

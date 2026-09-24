@@ -15,7 +15,8 @@ import { useT } from "@/lib/i18n";
    progress ring so the athlete can see how close they are.
    ───────────────────────────────────────────────────────────── */
 
-export type BadgePillar = Pillar | "all";
+/** A pillar, "all", or "ride" for the FORGE Ride badges (see badgeEmblem in lib/gamification). */
+export type BadgePillar = Pillar | "all" | "ride";
 
 const METAL: Record<BadgePillar, { rim: string; face: string; shine: string }> = {
   strength:  { rim: "#7a3a14", face: "#c2702f", shine: "#f0b477" },
@@ -23,6 +24,7 @@ const METAL: Record<BadgePillar, { rim: string; face: string; shine: string }> =
   mobility:  { rim: "#4a3570", face: "#8a6fc4", shine: "#d2c0f5" },
   nutrition: { rim: "#2b6134", face: "#57a866", shine: "#aee7b8" },
   recovery:  { rim: "#6b5a12", face: "#c0a52c", shine: "#f3e08a" },
+  ride:      { rim: "#6e1a2c", face: "#c23b55", shine: "#f5a6b6" },
   all:       { rim: "#3a3d42", face: "#7b8086", shine: "#c6cbd1" },
 };
 
@@ -33,6 +35,7 @@ const GLYPH: Record<BadgePillar, React.ReactNode> = {
   mobility:  <path d="M8 4.5c4 1.6 4 6.4 0 8s-4 6.4 0 8M16 4.5c-4 1.6-4 6.4 0 8s4 6.4 0 8" />,
   nutrition: <path d="M12 21c-3.6 0-6-2.9-6-7 0-3.4 2-6 4.4-6 1 0 1.6.5 1.6.5s.6-.5 1.6-.5C16 8 18 10.6 18 14c0 4.1-2.4 7-6 7zM12 8V4.2M12 4.2c2 0 3.4-1 3.6-2.2-2 0-3.4 1-3.6 2.2z" />,
   recovery:  <path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.7-7 9-7 9z" />,
+  ride:      <path d="M6 13.4a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6zM18 13.4a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6zM6 16.7l3.4-6.7h6.2L18 16.7M9.4 10l3 6.7H6M15.6 10l-.9-2.6h-2.3" />,
   all:       <path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.4l6-.8z" />,
 };
 

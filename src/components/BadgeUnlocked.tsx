@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BADGES, badgeDesc, badgeName } from "@/lib/gamification";
+import { BADGES, badgeDesc, badgeEmblem, badgeName } from "@/lib/gamification";
 import { useLang, useT } from "@/lib/i18n";
 import { BADGES_EVENT } from "@/lib/progress";
 import { BadgeEmblem } from "./BadgeEmblem";
@@ -44,7 +44,7 @@ export function BadgeUnlocked() {
             initial={{ y: -90, opacity: 0, scale: 0.92 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -60, opacity: 0 }}
             transition={{ type: "spring", stiffness: 420, damping: 26 }}>
             <motion.span initial={{ rotate: -25, scale: 0.4 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 12, delay: 0.15 }}>
-              <BadgeEmblem id={badge.id} pillar={badge.pillar} earned size={56} />
+              <BadgeEmblem id={badge.id} pillar={badgeEmblem(badge)} earned size={56} />
             </motion.span>
             <span className="min-w-0 grid">
               <span className="meta text-volt font-bold">{t("Badge débloqué", "Badge unlocked")}</span>

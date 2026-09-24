@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase/client";
 import { activityKcal, hrSummary } from "@/lib/heart";
 import { awardChallenges, awardIndoor, awardRouteBadge } from "@/lib/progress";
 import { db, getStats, uid } from "@/lib/db";
+import { buy, keepWorn, wallet } from "@/lib/wallet";
 import type { Activity, Profile } from "@/lib/types";
 import { getLang } from "@/lib/i18n";
 
@@ -112,6 +113,8 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   const [reporting, setReporting] = useState<{ id: string; name: string; reason: ReportReason } | null>(null);
 
   const send = (msg: object) => unity.current?.SendMessage("ForgeBridge", "Receive", JSON.stringify(msg));
+  /** The garage balance and what is owned (the game shows prices, locks and the buy button from it). */
+  const sendWallet = () => wallet().then((w) => { send({ type: "wallet", sparks: w.sparks }); send({ type: "unlocks", items: w.owned }); });
 
   useEffect(() => {
     let alive = true;
@@ -286,6 +289,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     // What the account actually gained — the session, the week's streak bonus and any challenge —
     // so the game shows exactly the XP and level the rest of the app shows.
     send(rewardMessage((await getStats()).xp - before, before));
+    sendWallet();
     exitRef.current?.();
   }
   const routeNames = useRef<Record<string, string>>({});
@@ -324,6 +328,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           g.route = m.route;
           getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW }, s.xp), lang: navigator.language }));
           if (profile.indoorGame?.look) send({ type: "look", look: profile.indoorGame.look });
+          keepWorn(profile.indoorGame?.look).then(sendWallet);
           if (profile.indoorGame?.palmares) send({ type: "palmares", data: JSON.parse(profile.indoorGame.palmares) });
           enterRoom(unityRoom(g.route, g.event));
           break;
@@ -369,6 +374,13 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
         case "look":
           look.current = m.look;
           db.profile.update(profile.id, { indoorGame: { ...profile.indoorGame, look: m.look }, dirty: 1, updatedAt: new Date().toISOString() });
+          break;
+        case "buy":
+          buy(m.item).then((r) => {
+            send({ type: "bought", item: m.item, ok: r.ok, reason: r.ok ? "" : r.reason, need: r.ok ? 0 : r.need ?? 0 });
+            if (r.ok) sayRef.current(tr(`Acheté : ${r.item.fr} · −${r.price} étincelles`, `Bought: ${r.item.en} · −${r.price} sparks`));
+            sendWallet();
+          });
           break;
         case "palmares":
           db.profile.update(profile.id, { indoorGame: { ...profile.indoorGame, look: look.current, palmares: JSON.stringify(m.data) }, dirty: 1, updatedAt: new Date().toISOString() });

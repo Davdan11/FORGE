@@ -1,5 +1,6 @@
 "use client";
 
+import { sparks } from "@/lib/shop";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Bluetooth, ChevronRight, Flag, Medal, Mountain, Play, Shirt, Timer, Users, Wind, Zap } from "lucide-react";
@@ -168,12 +169,14 @@ export default function IndoorPage() {
 
         <div className="max-w-[1400px] mx-auto px-5 md:px-12">
           {/* ── YOUR NUMBERS ─────────────────────────────────────── */}
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-3 -mt-2 mb-16">
+          <section className="grid grid-cols-2 md:grid-cols-5 gap-3 -mt-2 mb-16">
             <Stat label={t("Sorties", "Rides")} value={String(rides.length)} />
             <Stat label={t("Kilomètres", "Kilometres")} value={km.toLocaleString(locale, { maximumFractionDigits: 0 })} />
             <Stat label={t("Heures en selle", "Hours in the saddle")} value={hours.toLocaleString(locale, { maximumFractionDigits: 1 })} />
             <Stat label={t("XP gagnée", "XP earned")} value={xp.toLocaleString(locale)} accent
               note={rides.length > 0 && xp === 0 ? t("Sans capteur, une sortie ne donne pas d'XP : branche un trainer, un capteur de puissance ou un cardio.", "Without a sensor a ride earns no XP: connect a trainer, a power meter or a heart-rate strap.") : undefined} />
+            <div className="col-span-2 md:col-span-1"><Stat label={t("Étincelles", "Sparks")} value={(stats ? sparks(stats) : 0).toLocaleString(locale)} accent
+              note={t("1 par XP gagnée dans l'app, +100 par badge. Dépense-les au garage du jeu.", "1 per XP earned in the app, +100 per badge. Spend them in the game's garage.")} /></div>
           </section>
 
           {/* ── WORLDS ───────────────────────────────────────────── */}

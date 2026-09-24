@@ -4,11 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, getStats, todayISO } from "@/lib/db";
-import { BADGES, TIERS, badgeDesc, badgeName, levelFromXp, rankFor, subRankFor, tierForLevel, tierName } from "@/lib/gamification";
+import { BADGES, BADGE_GROUPS, TIERS, badgeDesc, badgeEmblem, badgeGroup, badgeGroupName, badgeName, levelFromXp, rankFor, subRankFor, tierForLevel, tierName } from "@/lib/gamification";
 import { loc as savedText, useLang, useT } from "@/lib/i18n";
 import { RankEmblem } from "@/components/RankEmblem";
 import { BadgeEmblem } from "@/components/BadgeEmblem";
 import { bestE1rmBySlug, logWeighIn } from "@/lib/progress";
+import { badgeContext } from "@/lib/badgeFacts";
 import { blockOfWeek, firstWeekOf, weekOf } from "@/lib/engine/progression";
 import { getExercise } from "@/lib/data/exercises";
 import { ART, exerciseImage, sessionImage, IMG } from "@/lib/data/images";
@@ -41,7 +42,8 @@ export default function ProgressPage() {
   const lvl = levelFromXp(stats.xp);
   const rankIdx = Math.min(TIERS.length - 1, Math.floor((lvl.level - 1) / 10));
   const units = profile.units;
-  const ctx = { bestE1rm: best, bodyweightKg: profile.weightKg, best5kSec: activities.filter((a) => a.type === "run" && a.distanceM >= 5000).map((a) => (a.durationSec * 5000) / a.distanceM).sort((x, y) => x - y)[0], zone2Min: activities.reduce((s, a) => s + a.durationSec / 60, 0) };
+  // The same context the award path builds, so a progress bar and its unlock agree.
+  const ctx = badgeContext({ best, profile, activities, weighIns: weights, sessions, readinessCount: new Set(readiness.map((r) => r.date)).size, nutrition });
 
   /* ── derived ── */
   const cells: Record<string, number> = {};
@@ -170,7 +172,7 @@ export default function ProgressPage() {
               {earned.length > 0 && (
                 <Item>
                   <Section title={t("Derniers badges", "Latest badges")} aside={<button type="button" className="text-xs text-smoke underline" onClick={() => setTab("badges")}>{t("Tous", "All")}</button>}>
-                    <div className="flex gap-3 flex-wrap">{earned.slice(-6).map((b) => <span key={b.id} className="grid justify-items-center gap-1.5 w-[84px]"><BadgeEmblem id={b.id} pillar={b.pillar} earned size={56} /><span className="text-[11px] leading-tight text-center">{badgeName(b, lang)}</span></span>)}</div>
+                    <div className="flex gap-3 flex-wrap">{earned.slice(-6).map((b) => <span key={b.id} className="grid justify-items-center gap-1.5 w-[84px]"><BadgeEmblem id={b.id} pillar={badgeEmblem(b)} earned size={56} /><span className="text-[11px] leading-tight text-center">{badgeName(b, lang)}</span></span>)}</div>
                   </Section>
                 </Item>
               )}
@@ -210,24 +212,33 @@ export default function ProgressPage() {
                 `${earned.length} of ${BADGES.length} earned. Locked badges show how far along you are — most of them come from simply continuing.`,
               )}
             </p>
-            <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {BADGES.map((b, i) => {
-                const on = stats.badges.includes(b.id);
-                const p = b.progress?.(stats, ctx);
-                return (
-                  <Reveal key={b.id} delay={i * 0.02}>
-                    <li className={`card h-full p-4 grid justify-items-center text-center gap-2 ${on ? "border-line-strong" : ""}`}>
-                      <BadgeEmblem id={b.id} pillar={b.pillar} earned={on} progress={p} size={76} />
-                      <span className="text-sm font-medium leading-tight">{badgeName(b, lang)}</span>
-                      <span className="text-xs text-smoke leading-tight">{badgeDesc(b, lang)}</span>
-                      {on
-                        ? <span className="chip chip--volt mt-1">{t("Obtenu", "Earned")}</span>
-                        : p && <span className="text-[11px] text-smoke tnum mt-1">{Math.round(p[0]).toLocaleString(loc)} / {p[1].toLocaleString(loc)}</span>}
-                    </li>
-                  </Reveal>
-                );
-              })}
-            </ul>
+            {BADGE_GROUPS.map((g) => {
+              const list = BADGES.filter((b) => badgeGroup(b) === g.key);
+              if (!list.length) return null;
+              return (
+                <section key={g.key} className="mb-8">
+                  <h3 className="flex items-baseline justify-between gap-3 mb-3"><span className="display text-xl">{badgeGroupName(g, lang)}</span><span className="text-xs text-smoke tnum">{list.filter((b) => stats.badges.includes(b.id)).length} / {list.length}</span></h3>
+                  <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {list.map((b, i) => {
+                      const on = stats.badges.includes(b.id);
+                      const p = b.progress?.(stats, ctx);
+                      return (
+                        <Reveal key={b.id} delay={Math.min(i, 12) * 0.02}>
+                          <li className={`card h-full p-4 grid justify-items-center text-center gap-2 ${on ? "border-line-strong" : ""}`}>
+                            <BadgeEmblem id={b.id} pillar={badgeEmblem(b)} earned={on} progress={p} size={76} />
+                            <span className="text-sm font-medium leading-tight">{badgeName(b, lang)}</span>
+                            <span className="text-xs text-smoke leading-tight">{badgeDesc(b, lang)}</span>
+                            {on
+                              ? <span className="chip chip--volt mt-1">{t("Obtenu", "Earned")}</span>
+                              : p && <span className="text-[11px] text-smoke tnum mt-1">{Math.round(p[0]).toLocaleString(loc)} / {p[1].toLocaleString(loc)}</span>}
+                          </li>
+                        </Reveal>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
           </>
         )}
         <Toast text={toast} />

@@ -396,7 +396,17 @@ export interface Stats {
   /** Daily rewards already paid today (check-in, each meal, full day), so
    *  undoing and redoing an action cannot pay twice. */
   paidDay?: { date: string; keys: string[] };
-  totals: { sessions: number; volumeKg: number; distanceM: number; mobilityMin: number; mealsLogged: number; activities?: number; shared?: number; elevGainM?: number };
+  /** Sparks spent in the FORGE Ride garage (the balance is derived, see lib/shop.ts). */
+  coinsSpent?: number;
+  /** Garage items bought ("skin:frame:5"). */
+  owned?: string[];
+  totals: { sessions: number; volumeKg: number; distanceM: number; mobilityMin: number; mealsLogged: number; activities?: number; shared?: number; elevGainM?: number;
+    /** Personal records set (counted from the day this was added). */
+    prs?: number;
+    /** Sessions done in their adjusted (bad-day) version. */
+    adjustedSessions?: number;
+    /** Morning check-ins, full nutrition days and weigh-ins, once a day each. */
+    checkIns?: number; fullDays?: number; weighIns?: number };
 }
 export interface Badge {
   id: string; name: string; desc: string; pillar: Pillar | "all";
@@ -411,4 +421,12 @@ export interface BadgeContext {
   goal?: Goal;
   /** Training weeks where every planned session was done. */
   fullWeeks?: number;
+  /** Indoor rides (activities with meta.indoor). Everything but `rides` leaves out effort typed on a slider. */
+  indoor?: { rides: number; km: number; climbM: number; hours: number; workouts: number; ftpTests: number; groupRides: number; powerRides: number };
+  /** FORGE Ride palmarès: segment medals won with a real effort (demo medals do not count). */
+  medals?: { gold: number; climbGold: number; sprintGold: number; any: number };
+  /** Outdoor activities: longest plausible run, run km and climb; early starts and sports tried count every activity. */
+  outdoor?: { longestRunM: number; runKm: number; climbM: number; earlyStarts: number; sports: number };
+  /** Counted from the saved rows, so history before the totals existed still counts. */
+  checkIns?: number; weighIns?: number; fullDays?: number;
 }
