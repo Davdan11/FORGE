@@ -44,7 +44,8 @@ export interface UnitySummary {
 }
 
 export type UnityMessage =
-  | { type: "ready"; lang?: "fr" | "en"; routeId: number; route: string; routes: { id: number; key: string; name: string; country: string; lengthKm: number; ascent: number }[] }
+  | { type: "graphics"; gfx: "high" | "normal" }
+  | { type: "ready"; lang?: "fr" | "en"; gfx?: "high" | "normal"; routeId: number; route: string; routes: { id: number; key: string; name: string; country: string; lengthKm: number; ascent: number }[] }
   | { type: "grade"; grade: number }
   | { type: "ergTarget"; watts: number | null }
   | { type: "position"; routeId: number; route: string; distance: number; speedKph: number; elapsed: number; draft: number; altitude: number; category: string; paused: boolean }

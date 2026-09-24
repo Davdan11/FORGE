@@ -136,8 +136,9 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
         frameworkUrl: `${BUILD}.framework.js.unityweb`,
         codeUrl: `${BUILD}.wasm.unityweb`,
         companyName: "FORGE", productName: "FORGE Ride", productVersion: "0.1.0",
-        // Sharp enough, and a phone keeps its frame rate.
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+        // A phone (or "Normal" graphics) keeps its frame rate at 1.5×; a computer on "High" (the game's default
+        // there) gets the screen's full sharpness, up to 2×.
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, highGraphics() ? 2 : 1.5),
       }, (p) => setProgress(p))
         .then((u) => {
           if (cancelled) { u.Quit(); return; }
@@ -322,6 +323,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       switch (m.type) {
         case "ready":
           setReady(true);
+          if (m.gfx) writePref("forge.gfx", m.gfx);
           if (m.lang === "en" || m.lang === "fr") setEn(m.lang === "en");
           g.route = m.route;
           getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW }, s.xp), lang: navigator.language }));
@@ -338,6 +340,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           acc.current.lastSplit = addSplits(acc.current.splits, m.distance, m.elapsed, acc.current.lastSplit);
           enterRoom(unityRoom(g.route, g.event, g.eventRoom));
           break;
+        case "graphics": writePref("forge.gfx", m.gfx); break;
         case "grade": g.grade = m.grade; break;
         case "ergTarget": g.erg = m.watts; break;
         case "event":
@@ -630,6 +633,11 @@ interface Heard { id: string; name: string; gap: number; gain: number; linked: b
 /* Per-device conveniences (mic mode, who is muted): storage may be blocked, and that is fine. */
 function readPref(key: string): string | null { try { return typeof localStorage === "undefined" ? null : localStorage.getItem(key); } catch { return null; } }
 function writePref(key: string, value: string) { try { localStorage.setItem(key, value); } catch { /* private mode */ } }
+/** High graphics unless this is a phone or tablet, or the rider picked Normal in the game. */
+function highGraphics() {
+  const touch = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  return !touch && readPref("forge.gfx") !== "normal";
+}
 function parseIds(v: string | null): string[] { try { const a = JSON.parse(v ?? "[]"); return Array.isArray(a) ? a.filter((x): x is string => typeof x === "string") : []; } catch { return []; } }
 
 const freshRide = () => ({ streams: emptyStreams(), moving: 0, creditSec: 0, hr: [] as [number, number][], nextHrAt: 0, splits: [] as { km: number; sec: number }[], lastSplit: 0, maxPeople: 0, startedIso: new Date().toISOString(), saved: false });
