@@ -400,6 +400,8 @@ export interface Stats {
   coinsSpent?: number;
   /** Garage items bought ("skin:frame:5"). */
   owned?: string[];
+  /** TEMPORARY, remove before launch: the owner's test bonus of sparks (granted by the link /indoor?bonus=…). */
+  testSparks?: number;
   totals: { sessions: number; volumeKg: number; distanceM: number; mobilityMin: number; mealsLogged: number; activities?: number; shared?: number; elevGainM?: number;
     /** Personal records set (counted from the day this was added). */
     prs?: number;

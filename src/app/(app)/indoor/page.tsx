@@ -1,6 +1,6 @@
 "use client";
 
-import { sparks } from "@/lib/shop";
+import { sparks, TEST_BONUS } from "@/lib/shop";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Bluetooth, ChevronRight, Flag, Medal, Mountain, Play, Shirt, Timer, Users, Wind, Zap } from "lucide-react";
@@ -35,6 +35,20 @@ export default function IndoorPage() {
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3400); };
   const lang = useLang();
   const t = useT();
+
+  // TEMPORARY, remove before launch: the owner's garage test bonus, from the link /indoor?bonus=<code> (once per device).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("bonus") !== TEST_BONUS.code) return;
+    url.searchParams.delete("bonus");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    getStats().then(async (s) => {
+      if ((s.testSparks ?? 0) >= TEST_BONUS.sparks) { say(t("Bonus de test déjà ajouté.", "Test bonus already added.")); return; }
+      await db.stats.put({ ...s, testSparks: TEST_BONUS.sparks, dirty: 1, updatedAt: new Date().toISOString() });
+      say(t(`+${TEST_BONUS.sparks.toLocaleString("fr-CA")} étincelles de test ajoutées`, `+${TEST_BONUS.sparks.toLocaleString("en-US")} test sparks added`));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Live: the next events (from the game's own schedule) and the people riding now.
   const [now, setNow] = useState(() => Date.now());

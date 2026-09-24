@@ -65,8 +65,9 @@ export function findItem(key: string): ShopItem | undefined {
 export const isFree = (i: ShopItem) => i.level + i.golds + i.routes === 0;
 export const priceOf = (i: ShopItem) => (isFree(i) ? 0 : PRICE[i.rarity]);
 
-export function sparks(stats: Pick<Stats, "xp" | "badges" | "coinsSpent">) {
-  return Math.max(0, Math.round(stats.xp + BADGE_SPARKS * stats.badges.length - (stats.coinsSpent ?? 0)));
+export function sparks(stats: Pick<Stats, "xp" | "badges" | "coinsSpent" | "testSparks">) {
+  // testSparks: TEMPORARY owner's test bonus (see TEST_BONUS), remove before launch.
+  return Math.max(0, Math.round(stats.xp + BADGE_SPARKS * stats.badges.length + (stats.testSparks ?? 0) - (stats.coinsSpent ?? 0)));
 }
 
 /** Everything owned: the free items plus what was bought. */
@@ -93,3 +94,9 @@ export function tryBuy(stats: Pick<Stats, "xp" | "badges" | "coinsSpent" | "owne
   if (sparks(stats) < price) return { ok: false, reason: "sparks", need: price - sparks(stats) };
   return { ok: true, item, price };
 }
+
+/**
+ * TEMPORARY, remove before launch: a test bonus for the owner to try the garage before earning the sparks.
+ * Opening /indoor?bonus=<code> once adds it to this device's stats.
+ */
+export const TEST_BONUS = { code: "forge-garage-test", sparks: 20000 } as const;
