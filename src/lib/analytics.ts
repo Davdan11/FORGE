@@ -1,5 +1,6 @@
 import type { Activity, Goal, LoggedSet, Readiness, SessionLog, WeighIn } from "./types";
 import { e1rm } from "./units";
+import { tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Turning the log into something worth reading.
@@ -149,14 +150,20 @@ export function readGoal(input: {
   const thin = c.weeksTrained < 3;
   if (thin) {
     return {
-      headline: "Too early to call",
-      detail: `${c.weeksTrained} week${c.weeksTrained === 1 ? "" : "s"} logged so far. Trends need about three before they mean anything — keep going and this page fills in.`,
+      headline: tr("Trop tôt pour le dire", "Too early to call"),
+      detail: tr(
+        `${c.weeksTrained} semaine${c.weeksTrained > 1 ? "s" : ""} enregistrée${c.weeksTrained > 1 ? "s" : ""} jusqu’ici. Les tendances ont besoin d’environ trois semaines pour vouloir dire quelque chose. Continue, cette page va se remplir.`,
+        `${c.weeksTrained} week${c.weeksTrained === 1 ? "" : "s"} logged so far. Trends need about three before they mean anything — keep going and this page fills in.`,
+      ),
       onTrack: consistencyScore,
     };
   }
 
   const consistencyMiss = consistencyScore < 0.6
-    ? `You trained ${c.weeksTrained} of the last ${c.weeksTotal} weeks. Everything below moves faster at four.`
+    ? tr(
+      `Tu t’es entraîné ${c.weeksTrained} des ${c.weeksTotal} dernières semaines. Tout ce qui suit avance plus vite à quatre.`,
+      `You trained ${c.weeksTrained} of the last ${c.weeksTotal} weeks. Everything below moves faster at four.`,
+    )
     : undefined;
 
   switch (goal) {
@@ -164,47 +171,62 @@ export function readGoal(input: {
       const perWeek = Math.round(weightSlope * 10) / 10;
       const good = perWeek < 0 && perWeek > -1.2;
       return {
-        headline: good ? "Losing at a sustainable rate" : perWeek >= 0 ? "Weight is not moving down" : "Coming off faster than ideal",
+        headline: good ? tr("Tu perds à un rythme durable", "Losing at a sustainable rate") : perWeek >= 0 ? tr("Le poids descend pas", "Weight is not moving down") : tr("Ça descend plus vite que l’idéal", "Coming off faster than ideal"),
         detail: wSeries.length < 2
-          ? "Log your weight a couple of times a week — without it there is no way to tell a cut from maintenance."
-          : `${perWeek > 0 ? "+" : ""}${perWeek} kg a week over ${wSeries.length} weigh-ins. Strength is holding at ${strengthGain >= 0 ? "+" : ""}${strengthGain}% on your best lift, which is what matters in a deficit.`,
+          ? tr("Pèse-toi deux ou trois fois par semaine : sans ça, impossible de faire la différence entre une sèche et du maintien.", "Log your weight a couple of times a week — without it there is no way to tell a cut from maintenance.")
+          : tr(
+            `${perWeek > 0 ? "+" : ""}${perWeek} kg par semaine sur ${wSeries.length} pesées. Ta force tient à ${strengthGain >= 0 ? "+" : ""}${strengthGain} % sur ton meilleur lift, c’est ce qui compte en déficit.`,
+            `${perWeek > 0 ? "+" : ""}${perWeek} kg a week over ${wSeries.length} weigh-ins. Strength is holding at ${strengthGain >= 0 ? "+" : ""}${strengthGain}% on your best lift, which is what matters in a deficit.`,
+          ),
         onTrack: good ? 0.85 : 0.45,
-        missing: consistencyMiss ?? (perWeek >= 0 ? "Calories, most likely. The training side is doing its job." : undefined),
+        missing: consistencyMiss ?? (perWeek >= 0 ? tr("Les calories, fort probablement. Côté entraînement, ça fait sa job.", "Calories, most likely. The training side is doing its job.") : undefined),
       };
     }
     case "build": {
       const good = strengthGain > 2 && tonnageSlope >= 0;
       return {
-        headline: good ? "Building" : "Volume is flat",
-        detail: `Your best lift is up ${strengthGain}% since you started logging it, and weekly tonnage is ${tonnageSlope >= 0 ? "climbing" : "falling"}. Muscle follows load that keeps going up.`,
+        headline: good ? tr("Ça construit", "Building") : tr("Le volume stagne", "Volume is flat"),
+        detail: tr(
+          `Ton meilleur lift a monté de ${strengthGain} % depuis que tu l’enregistres, et le tonnage hebdo ${tonnageSlope >= 0 ? "monte" : "baisse"}. Le muscle suit une charge qui continue de monter.`,
+          `Your best lift is up ${strengthGain}% since you started logging it, and weekly tonnage is ${tonnageSlope >= 0 ? "climbing" : "falling"}. Muscle follows load that keeps going up.`,
+        ),
         onTrack: good ? 0.85 : 0.5,
-        missing: consistencyMiss ?? (tonnageSlope < 0 ? "Sets, not intensity. Add a set to your main lifts before adding weight." : undefined),
+        missing: consistencyMiss ?? (tonnageSlope < 0 ? tr("Des séries, pas de l’intensité. Ajoute une série à tes lifts principaux avant d’ajouter du poids.", "Sets, not intensity. Add a set to your main lifts before adding weight.") : undefined),
       };
     }
     case "strength": {
       const good = strengthGain > 3;
       return {
-        headline: good ? "Getting stronger" : "Strength has stalled",
-        detail: `${lifts.length} movement${lifts.length === 1 ? "" : "s"} tracked. Best gain: ${strengthGain}%.`,
+        headline: good ? tr("Tu deviens plus fort", "Getting stronger") : tr("La force plafonne", "Strength has stalled"),
+        detail: tr(
+          `${lifts.length} mouvement${lifts.length > 1 ? "s" : ""} suivi${lifts.length > 1 ? "s" : ""}. Meilleur gain : ${strengthGain} %.`,
+          `${lifts.length} movement${lifts.length === 1 ? "" : "s"} tracked. Best gain: ${strengthGain}%.`,
+        ),
         onTrack: good ? 0.9 : 0.45,
-        missing: consistencyMiss ?? (good ? undefined : "A deload. Stalls at this point are usually fatigue, not a missing exercise."),
+        missing: consistencyMiss ?? (good ? undefined : tr("Une semaine de décharge. À ce stade, un plateau, c’est souvent de la fatigue, pas un exercice qui manque.", "A deload. Stalls at this point are usually fatigue, not a missing exercise.")),
       };
     }
     case "endurance": case "perform": {
       const km = Math.round(distance.reduce((a, d) => a + d.value, 0) / 1000);
       const good = distanceSlope >= 0 && km > 0;
       return {
-        headline: good ? "Base is growing" : "Mileage is drifting down",
-        detail: `${km} km over the last ${distance.length} weeks, ${distanceSlope >= 0 ? "trending up" : "trending down"}.`,
+        headline: good ? tr("Ta base grossit", "Base is growing") : tr("Le kilométrage glisse vers le bas", "Mileage is drifting down"),
+        detail: tr(
+          `${km} km sur les ${distance.length} dernières semaines, ${distanceSlope >= 0 ? "en hausse" : "en baisse"}.`,
+          `${km} km over the last ${distance.length} weeks, ${distanceSlope >= 0 ? "trending up" : "trending down"}.`,
+        ),
         onTrack: good ? 0.85 : 0.45,
-        missing: consistencyMiss ?? (distanceSlope < 0 ? "Easy minutes. Most of the base is built well below the pace that feels productive." : undefined),
+        missing: consistencyMiss ?? (distanceSlope < 0 ? tr("Des minutes faciles. La base se construit surtout bien en dessous du rythme qui a l’air productif.", "Easy minutes. Most of the base is built well below the pace that feels productive.") : undefined),
       };
     }
     default: {
       const good = strengthGain > 1 && weightSlope <= 0.1;
       return {
-        headline: good ? "Recomposition is working" : "Mixed signals",
-        detail: `Strength ${strengthGain >= 0 ? "up" : "down"} ${Math.abs(strengthGain)}%, body weight ${weightSlope > 0.05 ? "rising" : weightSlope < -0.05 ? "falling" : "steady"}. Holding weight while lifting more is exactly the shape of a recomp.`,
+        headline: good ? tr("La recomposition fonctionne", "Recomposition is working") : tr("Signaux mixtes", "Mixed signals"),
+        detail: tr(
+          `Force ${strengthGain >= 0 ? "en hausse" : "en baisse"} de ${Math.abs(strengthGain)} %, poids ${weightSlope > 0.05 ? "en hausse" : weightSlope < -0.05 ? "en baisse" : "stable"}. Garder ton poids en soulevant plus, c’est exactement ça, une recomp.`,
+          `Strength ${strengthGain >= 0 ? "up" : "down"} ${Math.abs(strengthGain)}%, body weight ${weightSlope > 0.05 ? "rising" : weightSlope < -0.05 ? "falling" : "steady"}. Holding weight while lifting more is exactly the shape of a recomp.`,
+        ),
         onTrack: good ? 0.8 : 0.5,
         missing: consistencyMiss,
       };

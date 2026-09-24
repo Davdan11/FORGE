@@ -11,6 +11,13 @@ import { fmtLoad } from "@/lib/units";
 import { IMG } from "@/lib/data/images";
 import { Screen, Hero, Section, ScreenSkeleton, Photo } from "@/components/ui";
 import { Page, Stagger, Item } from "@/components/motion";
+import { sessionTitle } from "@/lib/engine/plan";
+import { useT, locale } from "@/lib/i18n";
+import type { MealSlot } from "@/lib/types";
+
+/* Both languages kept side by side and picked at render, never at module load. */
+const WEEKDAYS: [string, string][] = [["Lun", "Mon"], ["Mar", "Tue"], ["Mer", "Wed"], ["Jeu", "Thu"], ["Ven", "Fri"], ["Sam", "Sat"], ["Dim", "Sun"]];
+const SLOT_FR: Record<MealSlot, string> = { breakfast: "déjeuner", lunch: "dîner", snack: "collation", dinner: "souper", pre: "pré-entraînement", post: "post-entraînement" };
 
 /* A month at a glance, and a day in full: what you train and what you eat,
    so tomorrow can be shopped for and packed tonight. */
@@ -28,6 +35,7 @@ export default function CalendarPage() {
 
   const [cursor, setCursor] = useState(() => { const d = new Date(today + "T00:00:00"); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [picked, setPicked] = useState(today);
+  const t = useT();
 
   type DayRow = { session?: NonNullable<typeof sessions>[number]; meals?: NonNullable<typeof nutrition>[number]; activities: NonNullable<typeof activities> };
   const byDate = useMemo(() => {
@@ -44,7 +52,7 @@ export default function CalendarPage() {
   const first = new Date(cursor.y, cursor.m, 1);
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
   const lead = (first.getDay() + 6) % 7;             // Monday-first grid
-  const monthLabel = first.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = first.toLocaleDateString(locale(), { month: "long", year: "numeric" });
   const step = (n: number) => setCursor(({ y, m }) => { const d = new Date(y, m + n, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
 
   const day = byDate.get(picked);
@@ -54,20 +62,20 @@ export default function CalendarPage() {
   return (
     <Page>
       <Screen>
-        <Hero image={IMG.dark} height="h-[300px]" back="/today" eyebrow="Plan ahead · training and food"
-          title={<>Your <em className="slab">month.</em></>} />
+        <Hero image={IMG.dark} height="h-[300px]" back="/today" eyebrow={t("Planifie d’avance · entraînement et bouffe", "Plan ahead · training and food")}
+          title={<>{t("Ton", "Your")} <em className="slab">{t("mois.", "month.")}</em></>} />
 
         <Stagger className="xl:grid xl:grid-cols-[minmax(0,1fr)_var(--rail)] xl:gap-x-12 xl:items-start">
           <div className="min-w-0">
             <Item>
               <Section title={monthLabel} aside={
                 <span className="flex gap-1">
-                  <button type="button" className="chip" onClick={() => step(-1)} aria-label="Previous month"><ChevronLeft className="w-4 h-4" /></button>
-                  <button type="button" className="chip" onClick={() => step(1)} aria-label="Next month"><ChevronRight className="w-4 h-4" /></button>
+                  <button type="button" className="chip" onClick={() => step(-1)} aria-label={t("Mois précédent", "Previous month")}><ChevronLeft className="w-4 h-4" /></button>
+                  <button type="button" className="chip" onClick={() => step(1)} aria-label={t("Mois suivant", "Next month")}><ChevronRight className="w-4 h-4" /></button>
                 </span>}>
                 <div className="grid grid-cols-7 gap-1.5 mb-2">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                    <span key={d} className="meta text-center">{d}</span>
+                  {WEEKDAYS.map(([fr, en]) => (
+                    <span key={en} className="meta text-center">{t(fr, en)}</span>
                   ))}
                 </div>
                 <div className="grid grid-cols-7 gap-1.5">
@@ -80,22 +88,22 @@ export default function CalendarPage() {
                     const done = info?.session?.status === "done" || (info?.activities.length ?? 0) > 0;
                     return (
                       <button key={d} type="button" onClick={() => setPicked(d)}
-                        aria-pressed={isPicked} aria-label={`${new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}${info?.session ? `, ${info.session.title}` : ""}`}
+                        aria-pressed={isPicked} aria-label={`${new Date(d + "T00:00:00").toLocaleDateString(locale(), { weekday: "long", month: "long", day: "numeric" })}${info?.session ? `, ${sessionTitle(info.session.kind)}` : ""}`}
                         className={`aspect-square rounded-xl border p-1.5 grid content-between text-left transition-colors
                           ${isPicked ? "border-ink bg-[rgba(16,16,16,.05)]" : isToday ? "border-volt" : "border-line hover:border-line-strong"}`}>
                         <span className={`text-xs tnum ${isToday ? "font-semibold" : "text-smoke"}`}>{i + 1}</span>
                         <span className="flex gap-1 items-center">
-                          {info?.session && <span className={`w-1.5 h-1.5 rounded-full ${done ? "bg-volt" : "bg-ink"}`} title="Training" />}
-                          {info?.meals && <span className="w-1.5 h-1.5 rounded-full bg-[var(--line-strong)]" title="Meals planned" />}
+                          {info?.session && <span className={`w-1.5 h-1.5 rounded-full ${done ? "bg-volt" : "bg-ink"}`} title={t("Entraînement", "Training")} />}
+                          {info?.meals && <span className="w-1.5 h-1.5 rounded-full bg-[var(--line-strong)]" title={t("Repas planifiés", "Meals planned")} />}
                         </span>
                       </button>
                     );
                   })}
                 </div>
                 <p className="text-xs text-smoke mt-3 flex gap-4 flex-wrap">
-                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-ink" />Training planned</span>
-                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-volt" />Done</span>
-                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[var(--line-strong)]" />Meals planned</span>
+                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-ink" />{t("Entraînement prévu", "Training planned")}</span>
+                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-volt" />{t("Fait", "Done")}</span>
+                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[var(--line-strong)]" />{t("Repas planifiés", "Meals planned")}</span>
                 </p>
               </Section>
             </Item>
@@ -103,15 +111,15 @@ export default function CalendarPage() {
 
           <div className="min-w-0">
             <Item>
-              <Section title={pickedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}>
+              <Section title={pickedDate.toLocaleDateString(locale(), { weekday: "long", month: "long", day: "numeric" })}>
                 {!day?.session && !day?.meals && (day?.activities.length ?? 0) === 0 ? (
-                  <div className="card p-4"><p className="text-sm text-smoke">Nothing planned on this day yet. Meals are built the morning of. Training is planned at least eight weeks ahead, and each new block is written from how the last one went.</p></div>
+                  <div className="card p-4"><p className="text-sm text-smoke">{t("Rien de prévu ce jour-là pour l’instant. Les repas sont bâtis le matin même. L’entraînement est planifié au moins huit semaines d’avance, et chaque nouveau bloc est écrit selon comment le dernier s’est passé.", "Nothing planned on this day yet. Meals are built the morning of. Training is planned at least eight weeks ahead, and each new block is written from how the last one went.")}</p></div>
                 ) : (
                   <div className="grid gap-3">
                     {day?.session && (
                       <Link href={`/session?id=${day.session.id}`} className="card p-4 grid gap-2">
-                        <span className="meta">Training · week {day.session.week} · {day.session.minutes} min</span>
-                        <p className="display text-2xl">{day.session.title}</p>
+                        <span className="meta">{t("Entraînement · semaine", "Training · week")} {day.session.week} · {day.session.minutes} min</span>
+                        <p className="display text-2xl">{sessionTitle(day.session.kind)}</p>
                         <ul className="grid gap-1 text-sm text-smoke">
                           {day.session.exercises.filter((e) => e.block === "main" || e.block === "accessory").slice(0, 4).map((e) => {
                             const meta = getExercise(e.slug); const f = e.sets[0];
@@ -124,8 +132,8 @@ export default function CalendarPage() {
                     {day?.meals && (
                       <div className="card overflow-hidden">
                         <div className="p-4 pb-2 flex items-baseline justify-between gap-3">
-                          <span className="meta flex items-center gap-1.5"><UtensilsCrossed className="w-3.5 h-3.5" strokeWidth={2} />Food</span>
-                          <span className="text-xs text-smoke tnum">{day.meals.targets.kcal} kcal · {day.meals.targets.protein} g protein</span>
+                          <span className="meta flex items-center gap-1.5"><UtensilsCrossed className="w-3.5 h-3.5" strokeWidth={2} />{t("Bouffe", "Food")}</span>
+                          <span className="text-xs text-smoke tnum">{day.meals.targets.kcal} kcal · {day.meals.targets.protein} {t("g protéines", "g protein")}</span>
                         </div>
                         <ul className="divide-y divide-line">
                           {meal0.map((m) => {
@@ -137,7 +145,7 @@ export default function CalendarPage() {
                                   <Photo src={meal.image} color className="thumb !w-11 !h-11 shrink-0" />
                                   <span className="min-w-0 flex-1">
                                     <span className="block text-sm font-medium truncate">{meal.name.split(" with ")[0]}</span>
-                                    <span className="meta">{m.time} · {m.slot}</span>
+                                    <span className="meta">{m.time} · {t(SLOT_FR[m.slot], m.slot)}</span>
                                   </span>
                                   <span className="text-xs text-smoke tnum shrink-0">{Math.round(meal.kcal * m.scale)} kcal</span>
                                 </Link>
@@ -146,14 +154,14 @@ export default function CalendarPage() {
                           })}
                         </ul>
                         <div className="px-4 py-3 border-t border-line">
-                          <Link href="/food" className="pill pill--sm">Groceries for the week</Link>
+                          <Link href="/food" className="pill pill--sm">{t("L’épicerie de la semaine", "Groceries for the week")}</Link>
                         </div>
                       </div>
                     )}
 
                     {day?.activities.map((a) => (
                       <Link key={a.id} href={`/move/activity?id=${a.id}`} className="card p-4 grid gap-1">
-                        <span className="meta">Recorded · {a.type}</span>
+                        <span className="meta">{t("Enregistré", "Recorded")} · {a.type}</span>
                         <p className="font-medium">{a.title}</p>
                       </Link>
                     ))}

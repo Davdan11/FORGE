@@ -1,4 +1,5 @@
 import type { DistanceUnit, UnitPrefs, Units, WeightUnit } from "./types";
+import { tr } from "./i18n";
 
 /* Each formatter knows which dimension it needs, so callers may hand it the
    whole preference object and never pick the wrong half. */
@@ -88,12 +89,12 @@ export function platesFor(loadKg: number, u: WeightLike): { bar: string; perSide
     const total = kgToLb(loadKg), bar = 45, plates = [45, 35, 25, 10, 5, 2.5];
     let rem = Math.max(0, (total - bar) / 2); const out: string[] = [];
     for (const p of plates) while (rem >= p - 0.01) { out.push(`${p}`); rem -= p; }
-    return { bar: "45 lb bar", perSide: out, short: total < bar };
+    return { bar: tr("barre de 45 lb", "45 lb bar"), perSide: out, short: total < bar };
   }
   const bar = 20, plates = [25, 20, 15, 10, 5, 2.5, 1.25];
   let rem = Math.max(0, (loadKg - bar) / 2); const out: string[] = [];
   for (const p of plates) while (rem >= p - 0.01) { out.push(`${p}`); rem -= p; }
-  return { bar: "20 kg bar", perSide: out, short: loadKg < bar };
+  return { bar: tr("barre de 20 kg", "20 kg bar"), perSide: out, short: loadKg < bar };
 }
 
 /** Epley e1RM. */

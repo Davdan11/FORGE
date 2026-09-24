@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { supabase } from "./supabase/client";
+import { tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Sync v2: push every dirty local row, then pull everything the
@@ -29,10 +30,20 @@ const writeCursor = (v: string) => { try { localStorage.setItem(CURSOR, v); } ca
 
 type RemoteRow = { id: string; data: Record<string, unknown>; updated_at: string };
 
+/** What a sync did: "off" (no backend or not signed in), "failed", or "ok". The message is for people. */
+export interface SyncResult { kind: "off" | "failed" | "ok"; message: string }
+
+/** Sync and return a sentence to show. */
 export async function syncNow(): Promise<string> {
-  if (!supabase) return "Supabase not configured.";
+  return (await syncNowResult()).message;
+}
+
+export async function syncNowResult(): Promise<SyncResult> {
+  const off = (message: string): SyncResult => ({ kind: "off", message });
+  const failed = (message: string): SyncResult => ({ kind: "failed", message });
+  if (!supabase) return off(tr("La synchro n’est pas configurée.", "Supabase not configured."));
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return "Sign in first.";
+  if (!user) return off(tr("Connecte-toi d’abord.", "Sign in first."));
 
   let pushed = 0;
   let pulled = 0;
@@ -47,7 +58,7 @@ export async function syncNow(): Promise<string> {
   for (const [t, ids] of Object.entries(pendingDeletes())) {
     if (!TABLES.includes(t as Table) || !ids.length) continue;
     const { error } = await supabase.from(remoteName(t as Table)).delete().in("id", ids);
-    if (error) return `Sync failed deleting from ${t}: ${error.message}`;
+    if (error) return failed(tr(`Échec de la synchro (suppression dans ${t}) : ${error.message}`, `Sync failed deleting from ${t}: ${error.message}`));
     clearDeletes(t, ids);
   }
 
@@ -61,7 +72,7 @@ export async function syncNow(): Promise<string> {
       const rows = stamped.map((r: Record<string, unknown>) => ({ id: r.id, user_id: user.id, data: { ...r, dirty: undefined }, updated_at: r.updatedAt as string }));
       // The key is (user_id, id): see supabase/schema.sql.
       const { error } = await supabase.from(remoteName(t)).upsert(rows, { onConflict: "user_id,id" });
-      if (error) return `Sync failed pushing ${t}: ${error.message}`;
+      if (error) return failed(tr(`Échec de la synchro (envoi de ${t}) : ${error.message}`, `Sync failed pushing ${t}: ${error.message}`));
       await table.bulkPut(stamped.map((r: Record<string, unknown>) => ({ ...r, dirty: 0 })));
       pushed += dirty.length;
     }
@@ -72,7 +83,7 @@ export async function syncNow(): Promise<string> {
       .select("id, data, updated_at")
       .gt("updated_at", since)
       .order("updated_at", { ascending: true });
-    if (error) return `Sync failed pulling ${t}: ${error.message}`;
+    if (error) return failed(tr(`Échec de la synchro (réception de ${t}) : ${error.message}`, `Sync failed pulling ${t}: ${error.message}`));
 
     for (const row of (data ?? []) as RemoteRow[]) {
       if (row.updated_at > newest) newest = row.updated_at;
@@ -86,10 +97,10 @@ export async function syncNow(): Promise<string> {
   }
 
   writeCursor(newest);
-  if (!pushed && !pulled) return "Everything is already up to date.";
-  const up = pushed ? `${pushed} change${pushed === 1 ? "" : "s"} up` : "";
-  const down = pulled ? `${pulled} record${pulled === 1 ? "" : "s"} down` : "";
-  return `Synced — ${[up, down].filter(Boolean).join(", ")}.`;
+  if (!pushed && !pulled) return { kind: "ok", message: tr("Tout est déjà à jour.", "Everything is already up to date.") };
+  const up = pushed ? tr(`${pushed} modif${pushed === 1 ? "" : "s"} envoyée${pushed === 1 ? "" : "s"}`, `${pushed} change${pushed === 1 ? "" : "s"} up`) : "";
+  const down = pulled ? tr(`${pulled} élément${pulled === 1 ? "" : "s"} reçu${pulled === 1 ? "" : "s"}`, `${pulled} record${pulled === 1 ? "" : "s"} down`) : "";
+  return { kind: "ok", message: tr(`Synchro faite — ${[up, down].filter(Boolean).join(", ")}.`, `Synced — ${[up, down].filter(Boolean).join(", ")}.`) };
 }
 
 /** Forget the pull cursor so the next sync restores the whole account. */

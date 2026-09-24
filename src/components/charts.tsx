@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
+import { useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Small, single-hue charts (volt on ink). Thin marks, rounded
@@ -33,7 +34,8 @@ export function Bars({ data, format = (v) => String(Math.round(v)), height = 120
 
 export function Sparkline({ values, height = 56, format = (v) => String(Math.round(v)), color = "var(--volt)", labels }: { values: number[]; height?: number; format?: (v: number) => string; color?: string; labels?: string[] }) {
   const [sel, setSel] = useState<number | null>(null);
-  if (values.length < 2) return <div className="text-xs text-smoke">Not enough data yet.</div>;
+  const t = useT();
+  if (values.length < 2) return <div className="text-xs text-smoke">{t("Pas encore assez de données.", "Not enough data yet.")}</div>;
   const w = 300, h = height, pad = 6;
   const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
   const x = (i: number) => pad + (i / (values.length - 1)) * (w - pad * 2);
@@ -57,6 +59,7 @@ export function Sparkline({ values, height = 56, format = (v) => String(Math.rou
 
 /** 12-week consistency grid: weeks as columns, days as rows. value 0..3 */
 export function Heatmap({ cells, weeks = 12 }: { cells: Record<string, number>; weeks?: number }) {
+  const t = useT();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const dow = (today.getDay() + 6) % 7;
   const start = new Date(today); start.setDate(today.getDate() - dow - (weeks - 1) * 7);
@@ -71,17 +74,18 @@ export function Heatmap({ cells, weeks = 12 }: { cells: Record<string, number>; 
         {cols.map((col, w) => (
           <div key={w} className="flex-1 grid gap-[3px]">
             {col.map((d) => { const k = iso(d); const v = Math.min(3, cells[k] ?? 0); const future = d > today; return (
-              <motion.span key={k} title={`${k}: ${v ? "active" : "rest"}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: w * 0.03 }} className="block aspect-square rounded-[3px]" style={{ background: future ? "transparent" : v ? `rgba(31,199,111,${op[v]})` : "rgba(16,16,16,.07)", boxShadow: iso(today) === k ? "inset 0 0 0 1.5px var(--ink)" : undefined }} />); })}
+              <motion.span key={k} title={`${k}: ${v ? t("actif", "active") : t("repos", "rest")}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: w * 0.03 }} className="block aspect-square rounded-[3px]" style={{ background: future ? "transparent" : v ? `rgba(31,199,111,${op[v]})` : "rgba(16,16,16,.07)", boxShadow: iso(today) === k ? "inset 0 0 0 1.5px var(--ink)" : undefined }} />); })}
           </div>
         ))}
       </div>
-      <div className="flex justify-between text-[10px] text-smoke"><span>{weeks} weeks ago</span><span>Mon → Sun per column</span><span>Today</span></div>
+      <div className="flex justify-between text-[10px] text-smoke"><span>{t(`Il y a ${weeks} semaines`, `${weeks} weeks ago`)}</span><span>{t("Lun → dim par colonne", "Mon → Sun per column")}</span><span>{t("Aujourd’hui", "Today")}</span></div>
     </div>
   );
 }
 
 export function ElevationChart({ profile, height = 90 }: { profile: { d: number; alt: number }[]; height?: number }) {
-  if (profile.length < 2) return <p className="text-xs text-smoke">No altitude data on this route.</p>;
+  const t = useT();
+  if (profile.length < 2) return <p className="text-xs text-smoke">{t("Pas de données d’altitude sur ce parcours.", "No altitude data on this route.")}</p>;
   const w = 300, h = height, pad = 4;
   const min = Math.min(...profile.map((p) => p.alt)), max = Math.max(...profile.map((p) => p.alt)), span = Math.max(10, max - min);
   const total = profile[profile.length - 1].d || 1;

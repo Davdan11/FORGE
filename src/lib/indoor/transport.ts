@@ -9,6 +9,7 @@ import {
   guessBrand, normUuid, trainerLabel, uuid16, wahooControl, type ControlOptions, type TrainerControl, type TrainerInfo, type TrainerProtocol,
 } from "./trainer";
 import { isNativeShell } from "../native";
+import { getLang, tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Two ways to reach a sensor, one way to read it.
@@ -62,6 +63,22 @@ export const SENSOR_LABEL: Record<SensorKind, string> = {
   footpod: "Footpod",
   trainer: "Trainer",
 };
+
+export const SENSOR_LABEL_FR: Record<SensorKind, string> = {
+  heart_rate: "Ceinture cardio",
+  cycling_power: "Capteur de puissance",
+  csc: "Capteur vitesse et cadence",
+  fitness_machine: "Trainer intelligent",
+  treadmill: "Tapis intelligent",
+  footpod: "Footpod",
+  trainer: "Trainer",
+};
+
+/** A sensor kind's name, in the app's language (or the one asked for). */
+export function sensorName(kind: SensorKind, en?: boolean): string {
+  const e = en ?? getLang() === "en";
+  return (e ? SENSOR_LABEL : SENSOR_LABEL_FR)[kind];
+}
 
 export type Availability =
   | { ok: true; via: "web" | "native" }
@@ -168,7 +185,7 @@ async function setupTrainer(g: Gatt, name: string | undefined, onReading: (r: Re
   const wahoo = !found.includes(FTMS_SERVICE) && !found.includes(FEC_SERVICE) && found.includes(CP_SERVICE)
     && await g.hasCharacteristic(CP_SERVICE, WAHOO_CONTROL);
   const protocol: TrainerProtocol | null = chooseProtocol({ services: found, wahooControl: wahoo });
-  if (!protocol) throw new Error("No trainer service found on this device (FTMS, Tacx FE-C, power or speed).");
+  if (!protocol) throw new Error(tr("Aucun service de trainer sur cet appareil (FTMS, Tacx FE-C, puissance ou vitesse).", "No trainer service found on this device (FTMS, Tacx FE-C, power or speed)."));
 
   const stops: (() => void)[] = [];
   let commands: TrainerControl | undefined;
@@ -242,7 +259,7 @@ type MinimalBluetooth = { requestDevice: (o: unknown) => Promise<MinimalDevice> 
 
 const webTransport: Transport = {
   async available() {
-    if (typeof navigator === "undefined") return { ok: false, reason: "Not in a browser.", nativeWouldFix: false };
+    if (typeof navigator === "undefined") return { ok: false, reason: tr("Pas dans un navigateur.", "Not in a browser."), nativeWouldFix: false };
     // Read before the `in` check: that check narrows `navigator` away entirely
     // in its false branch, and the useful properties go with it.
     const ua = navigator.userAgent;
@@ -253,15 +270,15 @@ const webTransport: Transport = {
       const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && "ontouchend" in document);
       const safari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
       if (apple || safari) {
-        return { ok: false, nativeWouldFix: true, reason: "Safari has no Bluetooth support, on any Apple device. Use Chrome on Android, Mac or Windows — or the FORGE app, which talks to sensors natively." };
+        return { ok: false, nativeWouldFix: true, reason: tr("Safari ne gère pas le Bluetooth, sur aucun appareil Apple. Prends Chrome sur Android, Mac ou Windows — ou l’appli FORGE, qui parle aux capteurs directement.", "Safari has no Bluetooth support, on any Apple device. Use Chrome on Android, Mac or Windows — or the FORGE app, which talks to sensors natively.") };
       }
-      return { ok: false, nativeWouldFix: false, reason: "This browser has no Bluetooth support. Chrome, Edge or Opera will work." };
+      return { ok: false, nativeWouldFix: false, reason: tr("Ce navigateur ne gère pas le Bluetooth. Chrome, Edge ou Opera vont marcher.", "This browser has no Bluetooth support. Chrome, Edge or Opera will work.") };
     }
 
     // Web Bluetooth needs a secure context: localhost counts, which is why it
     // works in development and then does not on a plain-http staging box.
     if (!window.isSecureContext) {
-      return { ok: false, nativeWouldFix: false, reason: "Bluetooth needs a secure connection. Open the app over https." };
+      return { ok: false, nativeWouldFix: false, reason: tr("Le Bluetooth demande une connexion sécurisée. Ouvre l’appli en https.", "Bluetooth needs a secure connection. Open the app over https.") };
     }
 
     return { ok: true, via: "web" };
@@ -279,7 +296,7 @@ const webTransport: Transport = {
     });
 
     const server = await device.gatt?.connect();
-    if (!server) throw new Error("Could not connect to the sensor.");
+    if (!server) throw new Error(tr("Impossible de se connecter au capteur.", "Could not connect to the sensor."));
     const service = await server.getPrimaryService(SERVICE[kind]);
     const characteristic = await service.getCharacteristic(CHARACTERISTIC[kind]);
 
@@ -316,7 +333,7 @@ const webTransport: Transport = {
 
     return {
       kind,
-      name: device.name ?? SENSOR_LABEL[kind],
+      name: device.name ?? sensorName(kind),
       control,
       disconnect: () => {
         if (cp && cpHandler) { cp.removeEventListener("characteristicvaluechanged", cpHandler); cp.stopNotifications().catch(() => {}); }
@@ -336,7 +353,7 @@ async function webTrainer(bt: MinimalBluetooth, onReading: (r: Reading) => void,
     optionalServices: [...TRAINER_SERVICES, uuid16(SERVICE.heart_rate)],
   });
   const server = await device.gatt?.connect();
-  if (!server) throw new Error("Could not connect to the trainer.");
+  if (!server) throw new Error(tr("Impossible de se connecter au trainer.", "Could not connect to the trainer."));
 
   const services = new Map<string, Promise<MinimalService | null>>();
   const svc = (u: string) => {
@@ -411,7 +428,7 @@ const nativeTransport: Transport = {
     const { BleClient, numberToUUID } = await ble();
 
     await BleClient.initialize();
-    if (!(await BleClient.isEnabled())) throw new Error("Bluetooth is off. Turn it on and try again.");
+    if (!(await BleClient.isEnabled())) throw new Error(tr("Le Bluetooth est éteint. Allume-le et réessaie.", "Bluetooth is off. Turn it on and try again."));
     if (kind === "trainer") return nativeTrainer(onReading, onDisconnect, opts);
 
     const service = numberToUUID(SERVICE[kind]);
@@ -439,7 +456,7 @@ const nativeTransport: Transport = {
 
     return {
       kind,
-      name: device.name ?? SENSOR_LABEL[kind],
+      name: device.name ?? sensorName(kind),
       control,
       disconnect: () => {
         if (cpOn) BleClient.stopNotifications(device.deviceId, service, cp).catch(() => {});

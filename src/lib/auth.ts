@@ -3,6 +3,7 @@ import { supabase } from "./supabase/client";
 import { isNativeShell } from "./native";
 import { forgetSyncCursor, syncNow } from "./sync";
 import { getProfile } from "./db";
+import { tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Accounts: Google, Apple, phone number or email.
@@ -30,7 +31,7 @@ export type Provider = "google" | "apple";
 export const NATIVE_CALLBACK = "ca.danjou.forge://auth/callback";
 
 const need = () => {
-  if (!supabase) throw new Error("Accounts are not set up yet (Supabase is not configured).");
+  if (!supabase) throw new Error(tr("Les comptes ne sont pas encore configurés (Supabase n’est pas configuré).", "Accounts are not set up yet (Supabase is not configured)."));
   return supabase;
 };
 
@@ -42,7 +43,7 @@ export async function currentUser(): Promise<User | null> {
 
 /** A readable name for the signed-in account: email, phone or provider name. */
 export function accountLabel(u: User) {
-  return u.email || (u.phone ? `+${u.phone.replace(/^\+/, "")}` : "") || (u.user_metadata?.full_name as string | undefined) || "your account";
+  return u.email || (u.phone ? `+${u.phone.replace(/^\+/, "")}` : "") || (u.user_metadata?.full_name as string | undefined) || tr("ton compte", "your account");
 }
 
 /** First name from the provider, to pre-fill onboarding. */
@@ -97,7 +98,7 @@ export async function listenForAuthRedirects(onSignedIn: (u: User) => void, onEr
       const user = await completeFromUrl(url);
       if (user) onSignedIn(user);
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Sign-in failed.");
+      onError(e instanceof Error ? e.message : tr("La connexion a échoué.", "Sign-in failed."));
     }
   });
 }
@@ -139,7 +140,7 @@ export async function verifyCode(to: { email: string } | { phone: string }, code
     ? await sb.auth.verifyOtp({ email: to.email.trim(), token, type: "email" })
     : await sb.auth.verifyOtp({ phone: to.phone, token, type: "sms" });
   if (error) throw error;
-  if (!data.user) throw new Error("That code did not sign you in. Ask for a new one.");
+  if (!data.user) throw new Error(tr("Ce code ne t’a pas connecté. Demandes-en un nouveau.", "That code did not sign you in. Ask for a new one."));
   return data.user;
 }
 
@@ -164,14 +165,14 @@ export async function signOut() {
  * this device afterwards; what is here is not the server's to delete.
  */
 export async function deleteAccount(): Promise<string | null> {
-  if (!supabase) return "Accounts aren't set up in this build.";
+  if (!supabase) return tr("Les comptes ne sont pas activés dans cette version.", "Accounts aren't set up in this build.");
   const { error } = await supabase.rpc("delete_my_account");
   if (error) {
     // The function is created by supabase/delete-account.sql. Until it has
     // been run, say so plainly rather than pretending the account is gone.
     return /function|schema cache/i.test(error.message)
-      ? "Account deletion isn't available yet. Contact support and we'll delete it for you."
-      : `Couldn't delete the account: ${error.message}`;
+      ? tr("La suppression de compte n’est pas encore disponible. Écris au support et on le supprimera pour toi.", "Account deletion isn't available yet. Contact support and we'll delete it for you.")
+      : tr(`Impossible de supprimer le compte : ${error.message}`, `Couldn't delete the account: ${error.message}`);
   }
   await supabase.auth.signOut().catch(() => {});
   return null;

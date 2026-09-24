@@ -1,5 +1,6 @@
 import type { Activity, UnitPrefs } from "./types";
 import { fmtDist, fmtDuration, fmtPace } from "./units";
+import { tr } from "./i18n";
 
 /* Render a 1080×1350 share card (route + stats) and hand it to the OS share
    sheet; falls back to a download when Web Share can't take files. */
@@ -32,7 +33,7 @@ export async function renderShareCard(a: Activity, units: UnitPrefs, name: strin
   ctx.font = "500 32px Archivo, system-ui, sans-serif"; ctx.fillStyle = "#8F8A82";
   ctx.fillText(`${name.toUpperCase()}  ·  ${a.startedAt.slice(0, 10)}`, 72, 1110);
 
-  const stats = [[fmtDist(a.distanceM, units), "DISTANCE"], [fmtDuration(a.durationSec), "TIME"], [fmtPace(a.avgPaceSecKm, units).replace(/ \/.*$/, ""), "PACE"], [`${Math.round(a.elevGainM)} m`, "CLIMB"]];
+  const stats = [[fmtDist(a.distanceM, units), "DISTANCE"], [fmtDuration(a.durationSec), tr("TEMPS", "TIME")], [fmtPace(a.avgPaceSecKm, units).replace(/ \/.*$/, ""), tr("ALLURE", "PACE")], [`${Math.round(a.elevGainM)} m`, tr("DÉNIVELÉ", "CLIMB")]];
   stats.forEach(([v, l], i) => {
     const x = 72 + i * 240;
     ctx.fillStyle = "#ECE7DF"; ctx.font = "800 56px Archivo, system-ui, sans-serif"; ctx.fillText(v, x, 1220);
@@ -47,7 +48,7 @@ export async function renderShareCard(a: Activity, units: UnitPrefs, name: strin
 export async function shareCard(a: Activity, units: UnitPrefs, name: string) {
   const blob = await renderShareCard(a, units, name);
   const file = new File([blob], `forge-${a.id.slice(0, 8)}.png`, { type: "image/png" });
-  const text = `${a.title} · ${fmtDist(a.distanceM, units)} · ${fmtDuration(a.durationSec)} · +${a.xp} XP on FORGE`;
+  const text = `${a.title} · ${fmtDist(a.distanceM, units)} · ${fmtDuration(a.durationSec)} · +${a.xp} XP ${tr("sur", "on")} FORGE`;
   if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: a.title, text }); return "shared" as const; }
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a"); link.href = url; link.download = file.name; link.click();

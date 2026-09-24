@@ -1,6 +1,7 @@
 import type { ActivityType, TrackPoint } from "./types";
 import { haversine } from "./geo";
 import { sportSpec } from "./data/sports";
+import { tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Does the track hold together?
@@ -68,7 +69,7 @@ export function verifyActivity(points: TrackPoint[], type: ActivityType, elapsed
 
   if (points.length < 2) {
     const sec = round(elapsedSec ?? 0);
-    if (sec > 60) flags.push({ kind: "sparse", amount: sec, message: "No usable GPS track was recorded for this activity." });
+    if (sec > 60) flags.push({ kind: "sparse", amount: sec, message: tr("Aucun tracé GPS utilisable a été enregistré pour cette activité.", "No usable GPS track was recorded for this activity.") });
     return { verdict: sec > 60 ? "unverified" : "verified", movingSec: 0, idleSec: sec, verifiedDistanceM: 0, discardedDistanceM: 0, credit: 0, flags };
   }
 
@@ -105,20 +106,23 @@ export function verifyActivity(points: TrackPoint[], type: ActivityType, elapsed
   if (vehicleMs > 0) {
     flags.push({
       kind: "vehicle", amount: round(discardedM - teleportM),
-      message: `${round((discardedM - teleportM) / 10) / 100} km was covered faster than ${spec.label.toLowerCase()} allows and doesn't count.`,
+      message: tr(
+        `${round((discardedM - teleportM) / 10) / 100} km ont été parcourus plus vite que ce sport le permet et comptent pas.`,
+        `${round((discardedM - teleportM) / 10) / 100} km was covered faster than ${spec.label.toLowerCase()} allows and doesn't count.`,
+      ),
     });
   }
   if (teleportM > 0) {
-    flags.push({ kind: "teleport", amount: round(teleportM), message: "The track jumps between distant points — those gaps were dropped." });
+    flags.push({ kind: "teleport", amount: round(teleportM), message: tr("Le tracé saute entre des points éloignés : ces trous ont été retirés.", "The track jumps between distant points — those gaps were dropped.") });
   }
   if (idleMs / 1000 > IDLE_GAP_SEC) {
-    flags.push({ kind: "idle", amount: round(idleMs / 1000), message: `${Math.round(idleMs / 60000)} min stopped. Breaks don't count toward the effort.` });
+    flags.push({ kind: "idle", amount: round(idleMs / 1000), message: tr(`${Math.round(idleMs / 60000)} min à l’arrêt. Les pauses comptent pas dans l’effort.`, `${Math.round(idleMs / 60000)} min stopped. Breaks don't count toward the effort.`) });
   }
   if (sparseMs / 1000 > SPARSE_GAP_SEC) {
-    flags.push({ kind: "sparse", amount: round(sparseMs / 1000), message: "The recorder lost signal for a stretch, which was left out." });
+    flags.push({ kind: "sparse", amount: round(sparseMs / 1000), message: tr("L’enregistreur a perdu le signal un bout de temps, ce bout-là a été retiré.", "The recorder lost signal for a stretch, which was left out.") });
   }
   if (movingSec > 60 && verifiedM < 20) {
-    flags.push({ kind: "static", amount: movingSec, message: "The timer ran but the device barely moved." });
+    flags.push({ kind: "static", amount: movingSec, message: tr("Le chrono roulait, mais l’appareil a presque pas bougé.", "The timer ran but the device barely moved.") });
   }
 
   // Credit is the share of the elapsed activity that survived the audit.
@@ -135,8 +139,8 @@ export function verifyActivity(points: TrackPoint[], type: ActivityType, elapsed
 /** One line for the activity card. */
 export function verdictLabel(v: Verification) {
   switch (v.verdict) {
-    case "verified": return "Verified effort";
-    case "partial": return "Partly credited";
-    default: return "Not credited";
+    case "verified": return tr("Effort vérifié", "Verified effort");
+    case "partial": return tr("Crédité en partie", "Partly credited");
+    default: return tr("Non crédité", "Not credited");
   }
 }

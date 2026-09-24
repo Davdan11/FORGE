@@ -43,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${archivo.variable} ${mono.variable} ${instrument.variable} h-full antialiased`}>
+    <html lang="fr" suppressHydrationWarning className={`${archivo.variable} ${mono.variable} ${instrument.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
         <PwaRegister />

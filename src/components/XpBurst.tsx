@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getStats } from "@/lib/db";
 import { AnimatePresence, motion } from "@/components/motion";
+import { useLang } from "@/lib/i18n";
 
 /*
  * Every XP gain, made visible: a lime "+60 XP" that pops up above the tab bar,
@@ -21,6 +22,7 @@ export function XpBurst() {
   const stats = useLiveQuery(() => getStats(), []);
   const last = useRef<number | null>(null);
   const [bursts, setBursts] = useState<Burst[]>([]);
+  const lang = useLang();
 
   useEffect(() => {
     if (!stats) return;
@@ -55,7 +57,7 @@ export function XpBurst() {
               );
             })}
             <span className="relative inline-flex items-center gap-2 px-4 h-11 rounded-2xl bg-volt text-ink font-extrabold tnum shadow-[var(--e4)]" style={{ fontStretch: "125%" }}>
-              +{b.xp.toLocaleString("en-US")} <span className="font-[family-name:var(--font-mono)] text-xs font-bold tracking-[.14em]">XP</span>
+              +{b.xp.toLocaleString(lang === "fr" ? "fr-CA" : "en-US")} <span className="font-[family-name:var(--font-mono)] text-xs font-bold tracking-[.14em]">XP</span>
             </span>
           </motion.div>
         ))}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Three seconds between pressing start and the first GPS point.
@@ -14,6 +15,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 export function StartCountdown({ label, onDone }: { label: string; onDone: () => void }) {
   const reduce = useReducedMotion();
+  const t = useT();
   const [n, setN] = useState(3);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function StartCountdown({ label, onDone }: { label: string; onDone: () =>
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
       className="fixed inset-0 z-[60] grid place-items-center text-bone"
       style={{ background: "#08090a" }}
-      role="status" aria-live="assertive" aria-label={n > 0 ? `Starting in ${n}` : `Go — ${label} started`}
+      role="status" aria-live="assertive" aria-label={n > 0 ? t(`Départ dans ${n}`, `Starting in ${n}`) : t(`Go — ${label} lancé`, `Go — ${label} started`)}
     >
       <div className="grid justify-items-center text-center">
         <p className="eyebrow mb-8">{label}</p>

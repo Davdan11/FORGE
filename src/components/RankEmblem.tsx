@@ -1,7 +1,8 @@
 "use client";
 
 import { useId } from "react";
-import type { Tier } from "@/lib/gamification";
+import { tierName, type Tier } from "@/lib/gamification";
+import { useLang, useT } from "@/lib/i18n";
 import { rankArt, rankNeedsDimming } from "@/lib/data/art";
 
 /* ─────────────────────────────────────────────────────────────
@@ -17,12 +18,14 @@ export function RankEmblem({ tier, sub, size = 128, locked = false, className = 
   tier: Tier; sub?: string; size?: number; locked?: boolean; className?: string;
 }) {
   const id = useId().replace(/:/g, "");
+  const t = useT();
+  const name = tierName(tier, useLang());
   const art = rankArt(tier.key, !locked, sub);
   if (art) {
     return (
       // The supplied shields are square, so they render square — stretching
       // them to the drawn shield's 1:1.1 would distort the sculpt.
-      <img src={art} alt={`${tier.name}${sub ? ` ${sub}` : ""}`} width={size} height={size} decoding="async"
+      <img src={art} alt={`${name}${sub ? ` ${sub}` : ""}`} width={size} height={size} decoding="async"
         className={`object-contain ${className}`} style={{ width: size, height: size, ...(rankNeedsDimming(tier.key, !locked) ? { filter: "grayscale(.6) brightness(.85)", opacity: 0.55 } : {}) }} />
     );
   }
@@ -30,7 +33,7 @@ export function RankEmblem({ tier, sub, size = 128, locked = false, className = 
 
   return (
     <svg viewBox="0 0 120 132" width={size} height={size * 1.1} className={className}
-      role="img" aria-label={`${tier.name}${sub ? ` ${sub}` : ""}${locked ? ", locked" : ""}`}>
+      role="img" aria-label={`${name}${sub ? ` ${sub}` : ""}${locked ? t(", verrouillé", ", locked") : ""}`}>
       <defs>
         {/* Face: lit from the upper left, falling away to the lower right. */}
         <linearGradient id={`face${id}`} x1="0.18" y1="0" x2="0.85" y2="1">

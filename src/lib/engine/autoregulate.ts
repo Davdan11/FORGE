@@ -1,5 +1,6 @@
 import type { PrescribedSet, UnitPrefs } from "../types";
 import { roundLoad } from "../units";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    In-session auto-regulation: after each logged set, re-prescribe
@@ -17,22 +18,22 @@ export function nextSetFromRpe(prev: PrescribedSet, logged: { rpe?: number; reps
   if (load && next.loadKg) {
     if (gap >= 2 || repsShort >= 2) {
       const l = roundLoad(load * 0.92, units);
-      return { next: { ...next, loadKg: l }, why: `That set came in at RPE ${logged.rpe} (target ${prev.rpe})${repsShort >= 2 ? ` and ${repsShort} reps short` : ""}. Load −8% so the block finishes at the intended intensity, not fried.` };
+      return { next: { ...next, loadKg: l }, why: tr(`Cette série est sortie à RPE ${logged.rpe} (cible ${prev.rpe})${repsShort >= 2 ? ` avec ${repsShort} reps de moins` : ""}. Charge −8 % pour finir le bloc à l’intensité prévue, pas brûlé.`, `That set came in at RPE ${logged.rpe} (target ${prev.rpe})${repsShort >= 2 ? ` and ${repsShort} reps short` : ""}. Load −8% so the block finishes at the intended intensity, not fried.`) };
     }
     if (gap >= 1 || repsShort === 1) {
       const l = roundLoad(load * 0.96, units);
-      return { next: { ...next, loadKg: l }, why: `RPE ${logged.rpe} vs target ${prev.rpe}. Taking a notch off (−4%) to keep the reps clean.` };
+      return { next: { ...next, loadKg: l }, why: tr(`RPE ${logged.rpe} contre une cible de ${prev.rpe}. On enlève un cran (−4 %) pour garder des reps propres.`, `RPE ${logged.rpe} vs target ${prev.rpe}. Taking a notch off (−4%) to keep the reps clean.`) };
     }
     if (gap <= -1.5 && repsShort <= 0) {
       const l = roundLoad(load * 1.04, units);
-      return { next: { ...next, loadKg: l }, why: `RPE ${logged.rpe} — easier than planned. +4% on the next set; the target is ${prev.rpe}.` };
+      return { next: { ...next, loadKg: l }, why: tr(`RPE ${logged.rpe} — plus facile que prévu. +4 % sur la prochaine série; la cible est ${prev.rpe}.`, `RPE ${logged.rpe} — easier than planned. +4% on the next set; the target is ${prev.rpe}.`) };
     }
     if (logged.loadKg && logged.loadKg !== next.loadKg && Math.abs(gap) < 1) {
       return { next: { ...next, loadKg: logged.loadKg }, why: null }; // carry the load you actually used
     }
   } else if (next.reps != null && prev.reps != null) {
-    if (gap >= 2) return { next: { ...next, reps: Math.max(3, next.reps - 2) }, why: `RPE ${logged.rpe} on bodyweight work — two reps off the next set.` };
-    if (gap <= -1.5) return { next: { ...next, reps: next.reps + 2 }, why: `Felt easy (RPE ${logged.rpe}). Two more reps next set.` };
+    if (gap >= 2) return { next: { ...next, reps: Math.max(3, next.reps - 2) }, why: tr(`RPE ${logged.rpe} au poids du corps — deux reps de moins à la prochaine série.`, `RPE ${logged.rpe} on bodyweight work — two reps off the next set.`) };
+    if (gap <= -1.5) return { next: { ...next, reps: next.reps + 2 }, why: tr(`C’était facile (RPE ${logged.rpe}). Deux reps de plus à la prochaine série.`, `Felt easy (RPE ${logged.rpe}). Two more reps next set.`) };
   }
   return { next, why: null };
 }

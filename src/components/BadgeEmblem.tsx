@@ -3,6 +3,7 @@
 import { useId } from "react";
 import type { Pillar } from "@/lib/types";
 import { badgeArt, badgeNeedsDimming } from "@/lib/data/art";
+import { useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Badge emblems.
@@ -39,6 +40,7 @@ export function BadgeEmblem({ id: badgeId, pillar, earned, progress, size = 72, 
   id?: string; pillar: BadgePillar; earned: boolean; progress?: [number, number]; size?: number; className?: string;
 }) {
   const id = useId().replace(/:/g, "");
+  const t = useT();
   const art = badgeId ? badgeArt(badgeId, earned) : undefined;
 
   // Supplied artwork wins. The progress ring still draws around it, so a
@@ -68,7 +70,7 @@ export function BadgeEmblem({ id: badgeId, pillar, earned, progress, size = 72, 
 
   return (
     <svg viewBox="0 0 104 104" width={size} height={size} className={className} role="img"
-      aria-label={earned ? "Earned" : progress ? `${Math.round(pct * 100)}% of the way there` : "Locked"}>
+      aria-label={earned ? t("Obtenu", "Earned") : progress ? t(`${Math.round(pct * 100)} % du chemin fait`, `${Math.round(pct * 100)}% of the way there`) : t("Verrouillé", "Locked")}>
       <defs>
         <linearGradient id={`f${id}`} x1="0.2" y1="0" x2="0.85" y2="1">
           <stop offset="0" stopColor={shine} /><stop offset="0.45" stopColor={face} /><stop offset="1" stopColor={rim} />

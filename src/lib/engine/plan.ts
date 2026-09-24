@@ -4,7 +4,8 @@ import type {
 import { EXERCISES, getExercise } from "../data/exercises";
 import { addDays, uid } from "../db";
 import { roundLoad } from "../units";
-import { limitFor, protectedAreas, type InjuryAdaptation } from "./injury";
+import { areaYour, limitFor, protectedAreas, type InjuryAdaptation } from "./injury";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    THE ENGINE — plan generation.
@@ -46,27 +47,32 @@ export interface BlockTuning {
 }
 export const NEUTRAL_TUNING: BlockTuning = { loadMul: 1, accessorySets: 0, rpe: 0 };
 
-/* Three phases per cycle, named and shaped by the goal. */
+/* Three phases per cycle, named and shaped by the goal. Words are kept in both
+   languages ([fr, en]) and picked when read, never at module load. */
 type Phase = { name: string; intent: string; reps: [[number, number], [number, number], [number, number]]; accReps: [number, number] };
-const PHASES: Record<"strength" | "hypertrophy" | "conditioning", [Phase, Phase, Phase]> = {
+type RawPhase = Omit<Phase, "name" | "intent"> & { name: [string, string]; intent: [string, string] };
+const PHASES: Record<"strength" | "hypertrophy" | "conditioning", [RawPhase, RawPhase, RawPhase]> = {
   strength: [
-    { name: "Volume", intent: "More sets at moderate weight. Builds the muscle the heavy blocks will use.", reps: [[6, 6], [5, 6], [5, 5]], accReps: [8, 12] },
-    { name: "Strength", intent: "Fewer reps, heavier bars. The work moves toward what you are training for.", reps: [[5, 5], [4, 5], [3, 4]], accReps: [8, 10] },
-    { name: "Peak", intent: "The heaviest weeks of the cycle, then a lighter recovery week that lets it show.", reps: [[4, 4], [3, 3], [2, 3]], accReps: [6, 8] },
+    { name: ["Volume", "Volume"], intent: ["Plus de séries à charge modérée. Ça bâtit le muscle que les blocs lourds vont utiliser.", "More sets at moderate weight. Builds the muscle the heavy blocks will use."], reps: [[6, 6], [5, 6], [5, 5]], accReps: [8, 12] },
+    { name: ["Force", "Strength"], intent: ["Moins de reps, des barres plus lourdes. Le travail se rapproche de ce que tu vises.", "Fewer reps, heavier bars. The work moves toward what you are training for."], reps: [[5, 5], [4, 5], [3, 4]], accReps: [8, 10] },
+    { name: ["Pic", "Peak"], intent: ["Les semaines les plus lourdes du cycle, puis une semaine de récup plus légère pour que ça paraisse.", "The heaviest weeks of the cycle, then a lighter recovery week that lets it show."], reps: [[4, 4], [3, 3], [2, 3]], accReps: [6, 8] },
   ],
   hypertrophy: [
-    { name: "Volume", intent: "High reps, controlled tempo, lots of total work. The most muscle-building block.", reps: [[10, 12], [8, 10], [8, 10]], accReps: [10, 15] },
-    { name: "Muscle", intent: "Moderate reps and heavier loads. Where most of the size comes from.", reps: [[8, 10], [6, 8], [5, 6]], accReps: [8, 12] },
-    { name: "Heavy", intent: "Heavier and lower reps. The strength built here carries into the next cycle's volume.", reps: [[6, 8], [5, 6], [4, 5]], accReps: [6, 10] },
+    { name: ["Volume", "Volume"], intent: ["Reps élevées, tempo contrôlé, beaucoup de travail total. Le bloc qui bâtit le plus de muscle.", "High reps, controlled tempo, lots of total work. The most muscle-building block."], reps: [[10, 12], [8, 10], [8, 10]], accReps: [10, 15] },
+    { name: ["Muscle", "Muscle"], intent: ["Reps modérées et charges plus lourdes. C’est là que tu prends le plus de masse.", "Moderate reps and heavier loads. Where most of the size comes from."], reps: [[8, 10], [6, 8], [5, 6]], accReps: [8, 12] },
+    { name: ["Lourd", "Heavy"], intent: ["Plus lourd, moins de reps. La force bâtie ici se reporte sur le volume du prochain cycle.", "Heavier and lower reps. The strength built here carries into the next cycle's volume."], reps: [[6, 8], [5, 6], [4, 5]], accReps: [6, 10] },
   ],
   conditioning: [
-    { name: "Base", intent: "Aerobic base and clean technique. Easy to recover from, hard to skip.", reps: [[10, 12], [8, 10], [8, 10]], accReps: [10, 15] },
-    { name: "Build", intent: "Cardio gets sharper; lifting stays heavy enough to keep your muscle.", reps: [[8, 10], [8, 10], [6, 8]], accReps: [8, 12] },
-    { name: "Sharpen", intent: "The hardest intervals of the cycle. Strength is maintained, not chased.", reps: [[6, 8], [6, 8], [5, 6]], accReps: [8, 12] },
+    { name: ["Base", "Base"], intent: ["Base aérobie et technique propre. Facile à récupérer, difficile à sauter.", "Aerobic base and clean technique. Easy to recover from, hard to skip."], reps: [[10, 12], [8, 10], [8, 10]], accReps: [10, 15] },
+    { name: ["Construction", "Build"], intent: ["Le cardio s’aiguise; les charges restent assez lourdes pour garder ton muscle.", "Cardio gets sharper; lifting stays heavy enough to keep your muscle."], reps: [[8, 10], [8, 10], [6, 8]], accReps: [8, 12] },
+    { name: ["Affûtage", "Sharpen"], intent: ["Les intervalles les plus durs du cycle. La force est maintenue, pas poursuivie.", "The hardest intervals of the cycle. Strength is maintained, not chased."], reps: [[6, 8], [6, 8], [5, 6]], accReps: [8, 12] },
   ],
 };
 const family = (goal: Goal) => (goal === "strength" ? "strength" : goal === "endurance" || goal === "cut" || goal === "perform" ? "conditioning" : "hypertrophy");
-export const phaseOf = (goal: Goal, week: number) => PHASES[family(goal)][MESO(week).phase];
+export const phaseOf = (goal: Goal, week: number): Phase => {
+  const p = PHASES[family(goal)][MESO(week).phase];
+  return { ...p, name: tr(...p.name), intent: tr(...p.intent) };
+};
 
 /* Intensity ramps inside each block and phase by phase: %e1RM for the main
    lift. Across cycles, progress comes from logged e1RM rising, not from the
@@ -117,21 +123,22 @@ function slotsFor(kind: SessionKind, goal: Goal, week: number, minutes: number, 
   const mainSets = deload ? 3 : minutes >= 60 ? 4 : 3;
   const accReps = phaseOf(goal, week).accReps;
   const intervals = deload ? 4 : 5 + phase;
-  const prep: Slot[] = [{ pattern: "mobility", block: "prep", sets: 1, reps: [1, 1], rpe: 4, rest: 0, timedSec: 60, why: "Two minutes of targeted mobility before load — cheaper than a warm-up set you don't need." }];
-  const core: Slot = { pattern: "core", block: "finisher", sets: 2, reps: [8, 12], rpe: 7, rest: 45, timedSec: 40, why: "Trunk work at the end, when it can't compromise the main lifts." };
+  const prep: Slot[] = [{ pattern: "mobility", block: "prep", sets: 1, reps: [1, 1], rpe: 4, rest: 0, timedSec: 60, why: tr("Deux minutes de mobilité ciblée avant de charger — moins coûteux qu’une série d’échauffement inutile.", "Two minutes of targeted mobility before load — cheaper than a warm-up set you don't need.") }];
+  const core: Slot = { pattern: "core", block: "finisher", sets: 2, reps: [8, 12], rpe: 7, rest: 45, timedSec: 40, why: tr("Le tronc à la fin, quand il ne peut plus nuire aux mouvements principaux.", "Trunk work at the end, when it can't compromise the main lifts.") };
+  const squatFirst = tr("Squat en premier : le moteur principal du bloc, fait à frais.", "Squat first: the biggest driver of the block, done fresh.");
   const acc = (pattern: Exercise["pattern"], why: string): Slot => ({ pattern, block: "accessory", sets: accSets, reps: accReps, rpe: 7.5 + rpeShift, rest: 75, why });
   const main = (pattern: Exercise["pattern"], why: string): Slot => ({ pattern, block: "main", sets: mainSets, reps, rpe, rest: goal === "strength" ? 180 : 120, why });
 
   const byKind: Record<SessionKind, Slot[]> = {
-    full: [...prep, main("squat", "Squat first: the biggest driver of the block, done fresh."), main("push_h", "Horizontal press to balance the pull volume."), acc("hinge", "Posterior chain after the squat — hamstrings and glutes need their own stimulus."), acc("pull_h", "Rowing keeps the shoulders healthy and the back strong."), core],
-    lower: [...prep, main("squat", "Squat first: the biggest driver of the block, done fresh."), acc("hinge", "Hinge after squat to load the posterior chain."), acc("lunge", "Single-leg work fixes the asymmetries bilateral lifts hide."), core],
-    upper: [...prep, main("push_h", "Press first while the shoulders are fresh."), acc("pull_v", "Vertical pull to balance every press."), acc("push_v", "Overhead work for shoulder strength and health."), acc("pull_h", "Row volume: 1:1 with pressing, minimum."), core],
-    push: [...prep, main("push_h", "Main press of the week."), acc("push_v", "Overhead second: lighter, more careful."), acc("push_h", "A second pressing angle for volume."), core],
-    pull: [...prep, main("hinge", "Deadlift or hinge leads the pull day."), acc("pull_v", "Pull-ups or pulldowns: lats."), acc("pull_h", "Rows: mid-back."), core],
-    legs: [...prep, main("squat", "Squat leads leg day."), acc("lunge", "Unilateral after the bilateral lift."), acc("hinge", "Hamstrings get their own slot."), core],
-    cardio_z2: [{ pattern: "cardio", block: "main", sets: 1, reps: [1, 1], rpe: 4, rest: 0, timedSec: Math.max(25, minutes - 10) * 60, why: "Zone 2 builds the aerobic base everything else sits on. Conversational pace — genuinely easy." }],
-    cardio_intervals: [...prep, { pattern: "cardio", block: "main", sets: intervals, reps: [1, 1], rpe: 8.5, rest: 120, timedSec: 120, why: "Intervals at threshold raise the ceiling. Hard, but you should finish the last one at the same pace as the first." }, core],
-    mobility: [{ pattern: "mobility", block: "main", sets: 4, reps: [1, 1], rpe: 4, rest: 0, timedSec: 90, why: "Twelve minutes to keep the hips, shoulders and ankles moving. This is what keeps you training at fifty." }],
+    full: [...prep, main("squat", squatFirst), main("push_h", tr("Poussée horizontale pour équilibrer le volume de tirage.", "Horizontal press to balance the pull volume.")), acc("hinge", tr("Chaîne postérieure après le squat — ischios et fessiers ont besoin de leur propre stimulus.", "Posterior chain after the squat — hamstrings and glutes need their own stimulus.")), acc("pull_h", tr("Le rowing garde les épaules en santé et le dos solide.", "Rowing keeps the shoulders healthy and the back strong.")), core],
+    lower: [...prep, main("squat", squatFirst), acc("hinge", tr("Charnière après le squat pour charger la chaîne postérieure.", "Hinge after squat to load the posterior chain.")), acc("lunge", tr("Le travail sur une jambe corrige les asymétries que les mouvements à deux jambes cachent.", "Single-leg work fixes the asymmetries bilateral lifts hide.")), core],
+    upper: [...prep, main("push_h", tr("Poussée en premier, pendant que les épaules sont fraîches.", "Press first while the shoulders are fresh.")), acc("pull_v", tr("Tirage vertical pour équilibrer chaque poussée.", "Vertical pull to balance every press.")), acc("push_v", tr("Travail au-dessus de la tête pour des épaules fortes et en santé.", "Overhead work for shoulder strength and health.")), acc("pull_h", tr("Volume de rowing : au moins 1:1 avec la poussée.", "Row volume: 1:1 with pressing, minimum.")), core],
+    push: [...prep, main("push_h", tr("La poussée principale de la semaine.", "Main press of the week.")), acc("push_v", tr("Au-dessus de la tête en deuxième : plus léger, plus prudent.", "Overhead second: lighter, more careful.")), acc("push_h", tr("Un deuxième angle de poussée pour le volume.", "A second pressing angle for volume.")), core],
+    pull: [...prep, main("hinge", tr("Soulevé de terre ou charnière en tête de la journée tirage.", "Deadlift or hinge leads the pull day.")), acc("pull_v", tr("Tractions ou tirage vertical : les dorsaux.", "Pull-ups or pulldowns: lats.")), acc("pull_h", tr("Rowing : le milieu du dos.", "Rows: mid-back.")), core],
+    legs: [...prep, main("squat", tr("Le squat mène la journée jambes.", "Squat leads leg day.")), acc("lunge", tr("Unilatéral après le mouvement bilatéral.", "Unilateral after the bilateral lift.")), acc("hinge", tr("Les ischios ont leur propre créneau.", "Hamstrings get their own slot.")), core],
+    cardio_z2: [{ pattern: "cardio", block: "main", sets: 1, reps: [1, 1], rpe: 4, rest: 0, timedSec: Math.max(25, minutes - 10) * 60, why: tr("La zone 2 bâtit la base aérobie sur laquelle tout le reste repose. Rythme de jasette — vraiment facile.", "Zone 2 builds the aerobic base everything else sits on. Conversational pace — genuinely easy.") }],
+    cardio_intervals: [...prep, { pattern: "cardio", block: "main", sets: intervals, reps: [1, 1], rpe: 8.5, rest: 120, timedSec: 120, why: tr("Les intervalles au seuil montent le plafond. C’est dur, mais tu dois finir le dernier au même rythme que le premier.", "Intervals at threshold raise the ceiling. Hard, but you should finish the last one at the same pace as the first.") }, core],
+    mobility: [{ pattern: "mobility", block: "main", sets: 4, reps: [1, 1], rpe: 4, rest: 0, timedSec: 90, why: tr("Douze minutes pour garder les hanches, les épaules et les chevilles mobiles. C’est ça qui te garde à l’entraînement à cinquante ans.", "Twelve minutes to keep the hips, shoulders and ankles moving. This is what keeps you training at fifty.") }],
     rest: [],
   };
   return byKind[kind];
@@ -229,6 +236,16 @@ function withLifestyle(profile: Profile, tuning: BlockTuning): BlockTuning {
   return tuning;
 }
 
+/** A session's name from its kind, in the current language. Screens use it
+ *  rather than the stored title, so a language switch renames the whole plan. */
+export function sessionTitle(kind: SessionKind): string {
+  const t: Record<SessionKind, [string, string]> = {
+    full: ["Corps complet", "Full body"], lower: ["Bas du corps", "Lower"], upper: ["Haut du corps", "Upper"], push: ["Poussée", "Push"], pull: ["Tirage", "Pull"],
+    legs: ["Jambes", "Legs"], cardio_z2: ["Zone 2", "Zone 2"], cardio_intervals: ["Intervalles", "Intervals"], mobility: ["Mobilité", "Mobility"], rest: ["Repos", "Rest"],
+  };
+  return tr(...t[kind]);
+}
+
 export function buildSession(profile: Profile, planId: string, week: number, day: number, date: string, kind: SessionKind, minutes: number, painToday: PainArea[] = [], measured: MeasuredE1rm = {}, injuries: InjuryAdaptation[] = [], tuning: BlockTuning = NEUTRAL_TUNING): Session {
   const used = new Set<string>();
   const tuned = withLifestyle(profile, tuning);
@@ -254,20 +271,20 @@ export function buildSession(profile: Profile, planId: string, week: number, day
       sets = sets.slice(0, keep).map((s) => (s.loadKg ? { ...s, loadKg: roundLoad(s.loadKg * limit.loadCap, profile.units) } : s));
     }
     const why = limit.because
-      ? `${slot.why} Held at ${Math.round(limit.loadCap * 100)}% while your ${limit.because} settles.`
+      ? tr(`${slot.why} Maintenu à ${Math.round(limit.loadCap * 100)} % le temps que ${areaYour(limit.because)} se calme.`, `${slot.why} Held at ${Math.round(limit.loadCap * 100)}% while your ${limit.because} settles.`)
       : slot.why;
     exercises.push({ id: uid(), slug: ex.slug, block: slot.block, sets, why });
   }
   const { deload, w } = MESO(week);
   const phase = phaseOf(profile.goal, week);
   const focus: Pillar = kind.startsWith("cardio") ? "endurance" : kind === "mobility" ? "mobility" : "strength";
-  const titles: Record<SessionKind, string> = { full: "Full body", lower: "Lower", upper: "Upper", push: "Push", pull: "Pull", legs: "Legs", cardio_z2: "Zone 2", cardio_intervals: "Intervals", mobility: "Mobility", rest: "Rest" };
   const why = deload
-    ? "Deload week: same movements, 60% of the load, fewer sets. This is where the last three weeks turn into strength."
-    : `${phase.name} block, week ${w}${w > 1 ? ": a notch heavier than last week" : ""}. Finish every main set at the target RPE, not a grind.`;
+    ? tr("Semaine de décharge : mêmes mouvements, 60 % de la charge, moins de séries. C’est là que les trois dernières semaines deviennent de la force.", "Deload week: same movements, 60% of the load, fewer sets. This is where the last three weeks turn into strength.")
+    : tr(`Bloc ${phase.name}, semaine ${w}${w > 1 ? " : un cran plus lourd que la semaine passée" : ""}. Termine chaque série principale au RPE cible, sans t’arracher.`, `${phase.name} block, week ${w}${w > 1 ? ": a notch heavier than last week" : ""}. Finish every main set at the target RPE, not a grind.`);
+  const rounds = deload ? 4 : 5 + MESO(week).phase;
   return {
-    id: uid(), planId, week, day, date, kind, title: titles[kind], minutes, focus, exercises, why, status: "planned",
-    cardio: kind === "cardio_z2" ? { zone: 2, minutes: Math.max(25, minutes - 10) } : kind === "cardio_intervals" ? { zone: 4, minutes, structure: `${deload ? 4 : 5 + MESO(week).phase} × 2 min hard / 2 min easy` } : undefined,
+    id: uid(), planId, week, day, date, kind, title: sessionTitle(kind), minutes, focus, exercises, why, status: "planned",
+    cardio: kind === "cardio_z2" ? { zone: 2, minutes: Math.max(25, minutes - 10) } : kind === "cardio_intervals" ? { zone: 4, minutes, structure: tr(`${rounds} × 2 min dur / 2 min facile`, `${rounds} × 2 min hard / 2 min easy`) } : undefined,
   };
 }
 
@@ -284,7 +301,7 @@ export function prescribeAdded(ex: Exercise, profile: Profile, week: number, min
     reps: phaseOf(profile.goal, week).accReps, rpe: deload ? 6 : 7.5, rest: 75,
     timedSec: ex.pattern === "cardio" ? 600 : timed ? 45 : undefined, why: "",
   };
-  return { id: uid(), slug: ex.slug, block: "accessory", sets: buildSets(slot, ex, profile, week, profile.goal, measured), why: "You added this from the library.", added: true };
+  return { id: uid(), slug: ex.slug, block: "accessory", sets: buildSets(slot, ex, profile, week, profile.goal, measured), why: tr("Tu l’as ajouté depuis la bibliothèque.", "You added this from the library."), added: true };
 }
 
 /** The Monday a plan starts on: the start date itself if it is one. */
@@ -342,13 +359,13 @@ function seasonPhases(start: string, eventDate: string) {
   const total = Math.max(4, Math.round((new Date(eventDate).getTime() - new Date(start).getTime()) / 86400000 / 7));
   const cut = (a: number, b: number) => ({ from: addDays(start, Math.round(total * a) * 7), to: addDays(start, Math.round(total * b) * 7 - 1) });
   return [
-    { name: "General preparation", ...cut(0, 0.4) },
-    { name: "Specific preparation", ...cut(0.4, 0.75) },
-    { name: "Pre-competition", ...cut(0.75, 0.93) },
-    { name: "Taper", ...cut(0.93, 1) },
+    { name: tr("Préparation générale", "General preparation"), ...cut(0, 0.4) },
+    { name: tr("Préparation spécifique", "Specific preparation"), ...cut(0.4, 0.75) },
+    { name: tr("Précompétition", "Pre-competition"), ...cut(0.75, 0.93) },
+    { name: tr("Affûtage", "Taper"), ...cut(0.93, 1) },
   ];
 }
 
-export const levelLabel = (l: Level) => ({ new: "New to training", intermediate: "1–3 years", advanced: "3+ years" }[l]);
-export const goalLabel = (g: Goal) => ({ strength: "Get strong", build: "Build muscle", recomp: "Recomposition", cut: "Lose fat", endurance: "Endurance", perform: "Perform for a date" }[g]);
+export const levelLabel = (l: Level) => ({ new: tr("Débutant", "New to training"), intermediate: tr("1 à 3 ans", "1–3 years"), advanced: tr("3 ans et plus", "3+ years") }[l]);
+export const goalLabel = (g: Goal) => ({ strength: tr("Devenir fort", "Get strong"), build: tr("Prendre du muscle", "Build muscle"), recomp: tr("Recomposition", "Recomposition"), cut: tr("Perdre du gras", "Lose fat"), endurance: tr("Endurance", "Endurance"), perform: tr("Performer à une date", "Perform for a date") }[g]);
 export { getExercise };

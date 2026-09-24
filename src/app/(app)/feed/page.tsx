@@ -13,6 +13,7 @@ import { Screen, Section, ScreenSkeleton, Seg, Toast } from "@/components/ui";
 import { Page, Stagger, Item, Press, motion } from "@/components/motion";
 import { HandleSetup } from "@/components/HandleSetup";
 import type { UnitPrefs } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Two tabs and nothing else: what happened near you, and what
@@ -29,7 +30,8 @@ type Tab = "near" | "mine";
 export default function FeedPage() {
   const profile = useLiveQuery(() => getProfile(), []);
   const [tab, setTabState] = useState<Tab>("near");
-  const setTab = (t: Tab) => { setTabState(t); setPending(true); };
+  const setTab = (x: Tab) => { setTabState(x); setPending(true); };
+  const t = useT();
   const [handle, setHandleState] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -86,10 +88,10 @@ export default function FeedPage() {
     <Page>
       <Screen>
         <header className="mb-6">
-          <span className="eyebrow">The feed</span>
-          <h1 className="display text-4xl lg:text-5xl mt-2 leading-none">Who else<br /><em>showed up.</em></h1>
+          <span className="eyebrow">{t("Le fil", "The feed")}</span>
+          <h1 className="display text-4xl lg:text-5xl mt-2 leading-none">{t("Qui d’autre", "Who else")}<br /><em>{t("s’est présenté.", "showed up.")}</em></h1>
           <p className="text-sm text-smoke mt-3 max-w-[46ch]">
-            Finished work from your area. Routes appear once an activity is logged, with the ends cut off — never while anyone is out there.
+            {t("Du travail terminé dans ton coin. Les parcours apparaissent une fois l’activité enregistrée, les bouts coupés, jamais pendant que quelqu’un est dehors.", "Finished work from your area. Routes appear once an activity is logged, with the ends cut off — never while anyone is out there.")}
           </p>
         </header>
 
@@ -97,9 +99,9 @@ export default function FeedPage() {
           <Offline />
         ) : (
           <>
-            <div className="mb-5"><Seg value={tab} onChange={setTab} options={[{ v: "near" as Tab, label: "Near you" }, { v: "mine" as Tab, label: "Your posts" }]} /></div>
+            <div className="mb-5"><Seg value={tab} onChange={setTab} options={[{ v: "near" as Tab, label: t("Près de toi", "Near you") }, { v: "mine" as Tab, label: t("Tes publications", "Your posts") }]} /></div>
 
-            {!handle && <div className="mb-5"><HandleSetup onDone={(h) => { setHandleState(h); say(`You are @${h}.`); }} /></div>}
+            {!handle && <div className="mb-5"><HandleSetup onDone={(h) => { setHandleState(h); say(t(`T’es @${h}.`, `You are @${h}.`)); }} /></div>}
 
             {error && <p className="card p-4 text-sm text-smoke">{error}</p>}
 
@@ -107,14 +109,14 @@ export default function FeedPage() {
 
             {!error && posts?.length === 0 && (
               tab === "mine"
-                ? <Empty title="Nothing posted yet" body="Finish an activity, open it, and press Post to feed. You choose each one." />
+                ? <Empty title={t("Rien de publié encore", "Nothing posted yet")} body={t("Termine une activité, ouvre-la et appuie sur Publier dans le fil. Tu choisis chacune.", "Finish an activity, open it, and press Post to feed. You choose each one.")} />
                 : cell === null
-                  ? <Empty title="No area yet" body="Record an outdoor activity first. Your area comes from where you train, so the app never has to ask the browser where you are." />
-                  : <Empty title="Quiet around here" body="Nobody near you has posted yet. Be the first — yours will show up here." />
+                  ? <Empty title={t("Pas encore de zone", "No area yet")} body={t("Enregistre d’abord une activité dehors. Ta zone vient de là où tu t’entraînes, donc l’app a jamais besoin de demander au navigateur où tu es.", "Record an outdoor activity first. Your area comes from where you train, so the app never has to ask the browser where you are.")} />
+                  : <Empty title={t("C’est tranquille par ici", "Quiet around here")} body={t("Personne près de toi a publié encore. Sois le premier : ta publication va apparaître ici.", "Nobody near you has posted yet. Be the first — yours will show up here.")} />
             )}
 
             {!error && posts && posts.length > 0 && (
-              <Section title={tab === "mine" ? "Your posts" : "Around you"} aside={<span className="text-xs text-smoke tnum">{posts.length}</span>}>
+              <Section title={tab === "mine" ? t("Tes publications", "Your posts") : t("Autour de toi", "Around you")} aside={<span className="text-xs text-smoke tnum">{posts.length}</span>}>
                 <Stagger className="grid gap-3" delay={0.04}>
                   {posts.map((p) => <Item key={p.id}><PostCard post={p} units={units} onLike={() => like(p)} /></Item>)}
                 </Stagger>
@@ -131,6 +133,7 @@ export default function FeedPage() {
 }
 
 function PostCard({ post, units, onLike }: { post: FeedPost; units: UnitPrefs; onLike: () => void }) {
+  const t = useT();
   const pace = post.distanceM > 0 && post.durationSec > 0 ? fmtPace(post.durationSec / (post.distanceM / 1000), units) : null;
 
   return (
@@ -144,7 +147,7 @@ function PostCard({ post, units, onLike }: { post: FeedPost; units: UnitPrefs; o
           <div className="flex items-center gap-2 min-w-0">
             <SportGlyph sport={post.sport} className="w-4 h-4 shrink-0" />
             <span className="text-sm font-semibold truncate">@{post.handle}</span>
-            {post.mine && <span className="chip">You</span>}
+            {post.mine && <span className="chip">{t("Toi", "You")}</span>}
             <Verdict v={post.verdict} />
           </div>
           <p className="text-sm text-smoke truncate mt-0.5">{post.title}</p>
@@ -152,14 +155,14 @@ function PostCard({ post, units, onLike }: { post: FeedPost; units: UnitPrefs; o
 
         <div className="flex items-end justify-between gap-3">
           <dl className="flex gap-4 text-xs tnum min-w-0">
-            <div className="grid"><dt className="meta">Distance</dt><dd className="font-semibold text-sm">{fmtDist(post.distanceM, units)}</dd></div>
-            <div className="grid"><dt className="meta">Time</dt><dd className="font-semibold text-sm">{fmtDuration(post.durationSec)}</dd></div>
-            {pace && <div className="grid min-w-0"><dt className="meta">Pace</dt><dd className="font-semibold text-sm truncate">{pace}</dd></div>}
+            <div className="grid"><dt className="meta">{t("Distance", "Distance")}</dt><dd className="font-semibold text-sm">{fmtDist(post.distanceM, units)}</dd></div>
+            <div className="grid"><dt className="meta">{t("Temps", "Time")}</dt><dd className="font-semibold text-sm">{fmtDuration(post.durationSec)}</dd></div>
+            {pace && <div className="grid min-w-0"><dt className="meta">{t("Allure", "Pace")}</dt><dd className="font-semibold text-sm truncate">{pace}</dd></div>}
           </dl>
 
           <Press>
             <button type="button" onClick={onLike} aria-pressed={post.likedByMe}
-              aria-label={post.likedByMe ? `Unlike ${post.handle}'s activity` : `Like ${post.handle}'s activity`}
+              aria-label={post.likedByMe ? t(`Retirer ton j’aime de l’activité de ${post.handle}`, `Unlike ${post.handle}'s activity`) : t(`Aimer l’activité de ${post.handle}`, `Like ${post.handle}'s activity`)}
               className={`flex items-center gap-1.5 h-10 px-3 rounded-full border text-xs tnum transition-colors ${post.likedByMe ? "bg-volt border-volt text-ink font-medium" : "border-line-strong text-smoke hover:border-ink hover:text-ink"}`}>
               <motion.span animate={post.likedByMe ? { scale: [1, 1.35, 1] } : { scale: 1 }} transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }} className="grid place-items-center">
                 <Heart className="w-4 h-4" strokeWidth={2} fill={post.likedByMe ? "currentColor" : "none"} />
@@ -176,9 +179,10 @@ function PostCard({ post, units, onLike }: { post: FeedPost; units: UnitPrefs; o
 /** The verdict from the anti-cheat pass. Shown plainly, never as an accusation:
  *  a partial track is usually a tunnel or a dead battery, not a liar. */
 function Verdict({ v }: { v: FeedPost["verdict"] }) {
-  if (v === "verified") return <span className="chip chip--volt ml-auto shrink-0" title="The track supports the whole effort"><ShieldCheck className="w-3 h-3" strokeWidth={2.4} />Verified</span>;
-  if (v === "partial") return <span className="chip ml-auto shrink-0" title="Part of this track could not be credited"><ShieldAlert className="w-3 h-3" strokeWidth={2.4} />Partial</span>;
-  return <span className="chip ml-auto shrink-0" title="No usable GPS track"><MapPinOff className="w-3 h-3" strokeWidth={2.4} />No track</span>;
+  const t = useT();
+  if (v === "verified") return <span className="chip chip--volt ml-auto shrink-0" title={t("Le tracé appuie tout l’effort", "The track supports the whole effort")}><ShieldCheck className="w-3 h-3" strokeWidth={2.4} />{t("Vérifié", "Verified")}</span>;
+  if (v === "partial") return <span className="chip ml-auto shrink-0" title={t("Une partie de ce tracé a pas pu être créditée", "Part of this track could not be credited")}><ShieldAlert className="w-3 h-3" strokeWidth={2.4} />{t("Partiel", "Partial")}</span>;
+  return <span className="chip ml-auto shrink-0" title={t("Aucun tracé GPS utilisable", "No usable GPS track")}><MapPinOff className="w-3 h-3" strokeWidth={2.4} />{t("Pas de tracé", "No track")}</span>;
 }
 
 function Empty({ title, body }: { title: string; body: string }) {
@@ -191,25 +195,27 @@ function Empty({ title, body }: { title: string; body: string }) {
 }
 
 function Offline() {
+  const t = useT();
   return (
     <div className="card p-6 grid gap-2">
-      <p className="display text-2xl">The feed needs an account</p>
+      <p className="display text-2xl">{t("Le fil a besoin d’un compte", "The feed needs an account")}</p>
       <p className="text-sm text-smoke max-w-[52ch]">
-        Everything else in the app works offline and always will. Sharing cannot — it needs somewhere for a post to live. Add your Supabase keys and sign in from Settings.
+        {t("Tout le reste de l’app fonctionne hors ligne et va toujours fonctionner. Le partage, non : une publication a besoin d’un endroit où vivre. Ajoute tes clés Supabase et connecte-toi dans les Réglages.", "Everything else in the app works offline and always will. Sharing cannot — it needs somewhere for a post to live. Add your Supabase keys and sign in from Settings.")}
       </p>
     </div>
   );
 }
 
 function PrivacyNote() {
+  const t = useT();
   return (
     <div className="card p-5 mt-6 grid gap-3">
-      <span className="eyebrow">What other people can see</span>
+      <span className="eyebrow">{t("Ce que les autres peuvent voir", "What other people can see")}</span>
       <ul className="grid gap-2 text-sm text-smoke">
-        <li><strong className="text-ink">Never where you are.</strong> A post can only be made from a finished activity. There is no live position in this app — not hidden behind a setting, not anywhere.</li>
-        <li><strong className="text-ink">Not where you start.</strong> The first and last 250 m of every published route are cut off, so a map of your loop does not end at your door.</li>
-        <li><strong className="text-ink">Your area, not your address.</strong> Posts are filed under a grid square several kilometres wide, taken from the middle of the route.</li>
-        <li><strong className="text-ink">Nothing is automatic.</strong> You press Post on each activity, one at a time, and Remove takes it down for good.</li>
+        <li><strong className="text-ink">{t("Jamais où tu es.", "Never where you are.")}</strong> {t("Une publication peut seulement venir d’une activité terminée. Il y a aucune position en direct dans cette app : pas cachée derrière un réglage, nulle part.", "A post can only be made from a finished activity. There is no live position in this app — not hidden behind a setting, not anywhere.")}</li>
+        <li><strong className="text-ink">{t("Pas où tu pars.", "Not where you start.")}</strong> {t("Les 250 premiers et derniers mètres de chaque parcours publié sont coupés, pour que la carte de ta boucle finisse pas à ta porte.", "The first and last 250 m of every published route are cut off, so a map of your loop does not end at your door.")}</li>
+        <li><strong className="text-ink">{t("Ton coin, pas ton adresse.", "Your area, not your address.")}</strong> {t("Les publications sont classées dans un carré de plusieurs kilomètres de large, pris au milieu du parcours.", "Posts are filed under a grid square several kilometres wide, taken from the middle of the route.")}</li>
+        <li><strong className="text-ink">{t("Rien d’automatique.", "Nothing is automatic.")}</strong> {t("T’appuies sur Publier pour chaque activité, une à la fois, et Retirer l’enlève pour de bon.", "You press Post on each activity, one at a time, and Remove takes it down for good.")}</li>
       </ul>
     </div>
   );

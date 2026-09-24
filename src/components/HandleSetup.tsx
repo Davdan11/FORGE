@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { handleProblem, setHandle } from "@/lib/social/feed";
 import { Press } from "./motion";
+import { useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    A handle is chosen, never inherited.
@@ -14,6 +15,7 @@ import { Press } from "./motion";
    ───────────────────────────────────────────────────────────── */
 
 export function HandleSetup({ onDone }: { onDone: (handle: string) => void }) {
+  const t = useT();
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -32,8 +34,8 @@ export function HandleSetup({ onDone }: { onDone: (handle: string) => void }) {
   return (
     <div className="card p-5 grid gap-3">
       <div className="grid gap-1">
-        <span className="eyebrow">Pick a handle</span>
-        <p className="text-sm text-smoke max-w-[48ch]">This is the only name the feed shows. Your real name stays where you typed it.</p>
+        <span className="eyebrow">{t("Choisis un pseudo", "Pick a handle")}</span>
+        <p className="text-sm text-smoke max-w-[48ch]">{t("C’est le seul nom que le fil affiche. Ton vrai nom reste là où tu l’as tapé.", "This is the only name the feed shows. Your real name stays where you typed it.")}</p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -43,11 +45,11 @@ export function HandleSetup({ onDone }: { onDone: (handle: string) => void }) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && clean && !problem && !busy) save(); }}
-          placeholder="your_handle"
+          placeholder={t("ton_pseudo", "your_handle")}
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
-          aria-label="Handle"
+          aria-label={t("Pseudo", "Handle")}
           aria-invalid={!!problem}
           maxLength={20}
         />
@@ -57,7 +59,7 @@ export function HandleSetup({ onDone }: { onDone: (handle: string) => void }) {
 
       <Press className="justify-self-start">
         <button type="button" className="pill pill--volt pill--sm" disabled={!clean || !!problem || busy} onClick={save}>
-          {busy ? "Saving…" : "Use this handle"}
+          {busy ? t("Enregistrement…", "Saving…") : t("Utiliser ce pseudo", "Use this handle")}
         </button>
       </Press>
     </div>

@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion, animate, useInView, AnimatePresence } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useLang } from "@/lib/i18n";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -52,13 +53,14 @@ export function Reveal({ children, className = "", delay = 0 }: { children: Reac
 export function CountUp({ value, decimals = 0, suffix = "", prefix = "", duration = 1.2, className = "" }: { value: number; decimals?: number; suffix?: string; prefix?: string; duration?: number; className?: string }) {
   const [v, setV] = useState(0);
   const reduce = useReducedMotion();
+  const loc = useLang() === "fr" ? "fr-CA" : "en-US";
   useEffect(() => {
     if (reduce) return;
     const c = animate(0, value, { duration, ease: [0.22, 1, 0.36, 1], onUpdate: (x) => setV(x) });
     return () => c.stop();
   }, [value, duration, reduce]);
   const shown = reduce ? value : v;
-  return <span className={`tnum ${className}`}>{prefix}{shown.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
+  return <span className={`tnum ${className}`}>{prefix}{shown.toLocaleString(loc, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
 }
 
 /** Circular progress ring (0–1). */

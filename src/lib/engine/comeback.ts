@@ -1,6 +1,7 @@
 import type { Plan, Session } from "../types";
 import { addDays, db, getProfile, todayISO } from "../db";
 import { roundLoad } from "../units";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Coming back after a break.
@@ -54,9 +55,9 @@ export function easeSessions(sessions: Session[], today: string, c: Comeback, un
         })),
       })),
       adjustment: {
-        reason: `Welcome back — ${c.daysAway} days away. This ${c.easeDays === 7 ? "week" : "fortnight"} eases you in: loads ${pct} % lighter, effort one point easier, one set fewer on the main lifts. Your loads climb back from here.`,
+        reason: tr(`Bon retour — ${c.daysAway} jours d’absence. ${c.easeDays === 7 ? "Cette semaine" : "Ces deux semaines"} te remet${c.easeDays === 7 ? "" : "tent"} en douceur : charges ${pct} % plus légères, effort d’un point plus facile, une série de moins sur les mouvements principaux. Tes charges remontent à partir d’ici.`, `Welcome back — ${c.daysAway} days away. This ${c.easeDays === 7 ? "week" : "fortnight"} eases you in: loads ${pct} % lighter, effort one point easier, one set fewer on the main lifts. Your loads climb back from here.`),
         from: "comeback",
-        changes: [`Loads −${pct} %`, "RPE −1", "Main lifts: one set fewer"],
+        changes: [tr(`Charges −${pct} %`, `Loads −${pct} %`), "RPE −1", tr("Mouvements principaux : une série de moins", "Main lifts: one set fewer")],
       },
     }));
 }

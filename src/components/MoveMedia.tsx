@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { useInView, useReducedMotion } from "motion/react";
 import { moveMedia } from "@/lib/data/media";
 import { exerciseImage } from "@/lib/data/images";
+import { exName } from "@/lib/data/exercises";
+import { useLang, useT } from "@/lib/i18n";
 import { Photo } from "./ui";
 import type { Exercise, Muscle } from "@/lib/types";
 
@@ -24,6 +26,8 @@ export function MoveMedia({ ex, size = 160, className = "", label = false, speed
   const ref = useRef<HTMLVideoElement>(null);
   const inView = useInView(ref, { margin: "120px" });
   const reduce = useReducedMotion();
+  const t = useT();
+  const name = exName(ex, useLang());
 
   useEffect(() => {
     const v = ref.current; if (!v) return;
@@ -34,7 +38,7 @@ export function MoveMedia({ ex, size = 160, className = "", label = false, speed
   const style = fill ? undefined : { width: size, height: size };
 
   if (!media) {
-    return <Photo src={exerciseImage({ slug: ex.slug, pattern: ex.pattern, pillar: ex.pillar ?? "strength" }, fill ? 1200 : Math.max(400, size * 2), fill ? 900 : Math.max(400, size * 2))} alt={ex.name} kb className={`${box} ${className}`} style={style} />;
+    return <Photo src={exerciseImage({ slug: ex.slug, pattern: ex.pattern, pillar: ex.pillar ?? "strength" }, fill ? 1200 : Math.max(400, size * 2), fill ? 900 : Math.max(400, size * 2))} alt={name} kb className={`${box} ${className}`} style={style} />;
   }
   if (media.loop) {
     const src = (still || thumb || reduce) && media.poster ? media.poster : media.loop;
@@ -43,18 +47,18 @@ export function MoveMedia({ ex, size = 160, className = "", label = false, speed
     // edges fade into it — several source loops have torn, noisy borders, and
     // a studio vignette is what the eye expects there anyway.
     return (
-      <div className={`${fill ? "" : "relative"} overflow-hidden bg-[#ede5da] ${box} ${className}`} style={style} role="img" aria-label={`${ex.name} demonstration`}>
+      <div className={`${fill ? "" : "relative"} overflow-hidden bg-[#ede5da] ${box} ${className}`} style={style} role="img" aria-label={t(`Démonstration : ${name}`, `${ex.name} demonstration`)}>
         <img src={src} alt="" loading="lazy" decoding="async" className={`relative w-full h-full ${thumb ? "object-cover object-top" : "object-contain"}`} style={thumb ? undefined : EDGE_FADE} />
       </div>
     );
   }
   return (
-    <div className={`${fill ? "" : "relative"} overflow-hidden ${box} ${className}`} style={style} role="img" aria-label={`${ex.name} demonstration`}>
+    <div className={`${fill ? "" : "relative"} overflow-hidden ${box} ${className}`} style={style} role="img" aria-label={t(`Démonstration : ${name}`, `${ex.name} demonstration`)}>
       <video ref={ref} muted loop playsInline preload="metadata" poster={media.poster} className="w-full h-full object-cover">
         {media.webm && <source src={media.webm} type="video/webm" />}
         {media.mp4 && <source src={media.mp4} type="video/mp4" />}
       </video>
-      {label && <span className="absolute bottom-1 right-2 text-[9px] tracking-[.14em] uppercase text-smoke">3D · loop</span>}
+      {label && <span className="absolute bottom-1 right-2 text-[9px] tracking-[.14em] uppercase text-smoke">{t("3D · boucle", "3D · loop")}</span>}
     </div>
   );
 }

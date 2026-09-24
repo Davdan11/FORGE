@@ -1,5 +1,6 @@
 import type { Exercise, Injury, InjuryPhase, PainArea, Pattern } from "../types";
 import { getExercise } from "../data/exercises";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    TRAINING AROUND AN INJURY.
@@ -36,19 +37,35 @@ const LOADS: Record<PainArea, Pattern[]> = {
 };
 
 /** What still trains well while an area is protected. */
-const KEEP_TRAINING: Record<PainArea, string> = {
-  knee: "Everything above the waist stays at full load — press, pull and carry as planned. Hinge patterns are usually fine when the knee stays tall.",
-  back: "Arms and legs keep working with the spine supported: machine and single-leg work, seated presses, supported rows.",
-  shoulder: "Legs and hips lose nothing. Lower-body work runs at full load all the way through.",
-  hip: "Upper body runs as planned, and core work continues where it doesn't put the hip into end range.",
-  wrist: "Legs, hinges and pulling with straps carry on. Pressing moves to a neutral grip or a machine.",
-  ankle: "Upper body is untouched. Seated and supported leg work keeps the quads and hamstrings loaded.",
-  elbow: "Legs and trunk run in full. Pressing and pulling volume comes back as the elbow settles.",
+const KEEP_TRAINING: Record<PainArea, [string, string]> = {
+  knee: ["Tout ce qui est au-dessus de la taille reste à pleine charge — pousse, tire et porte comme prévu. Les charnières passent souvent bien quand le genou reste presque droit.", "Everything above the waist stays at full load — press, pull and carry as planned. Hinge patterns are usually fine when the knee stays tall."],
+  back: ["Les bras et les jambes continuent de travailler avec la colonne soutenue : machines et travail sur une jambe, poussées assises, rowing avec appui.", "Arms and legs keep working with the spine supported: machine and single-leg work, seated presses, supported rows."],
+  shoulder: ["Les jambes et les hanches ne perdent rien. Le bas du corps roule à pleine charge du début à la fin.", "Legs and hips lose nothing. Lower-body work runs at full load all the way through."],
+  hip: ["Le haut du corps roule comme prévu, et le tronc continue tant qu’il n’amène pas la hanche en fin d’amplitude.", "Upper body runs as planned, and core work continues where it doesn't put the hip into end range."],
+  wrist: ["Les jambes, les charnières et le tirage avec sangles continuent. La poussée passe en prise neutre ou à la machine.", "Legs, hinges and pulling with straps carry on. Pressing moves to a neutral grip or a machine."],
+  ankle: ["Le haut du corps n’est pas touché. Le travail de jambes assis ou avec appui garde les quads et les ischios chargés.", "Upper body is untouched. Seated and supported leg work keeps the quads and hamstrings loaded."],
+  elbow: ["Les jambes et le tronc roulent au complet. Le volume de poussée et de tirage revient à mesure que le coude se calme.", "Legs and trunk run in full. Pressing and pulling volume comes back as the elbow settles."],
 };
 
-export const AREA_LABEL: Record<PainArea, string> = {
-  knee: "knee", back: "lower back", shoulder: "shoulder", hip: "hip", wrist: "wrist", ankle: "ankle", elbow: "elbow",
+/* Words per area: [fr label, en label, fr "your …"]. Read through getters so
+   the language is picked when the label is shown, not when the module loads. */
+const AREA_WORDS: Record<PainArea, [string, string, string]> = {
+  knee: ["genou", "knee", "ton genou"], back: ["bas du dos", "lower back", "ton bas du dos"], shoulder: ["épaule", "shoulder", "ton épaule"],
+  hip: ["hanche", "hip", "ta hanche"], wrist: ["poignet", "wrist", "ton poignet"], ankle: ["cheville", "ankle", "ta cheville"], elbow: ["coude", "elbow", "ton coude"],
 };
+
+export const AREA_LABEL: Record<PainArea, string> = Object.defineProperties({} as Record<PainArea, string>,
+  Object.fromEntries((Object.keys(AREA_WORDS) as PainArea[]).map((k) => [k, { get: () => tr(AREA_WORDS[k][0], AREA_WORDS[k][1]), enumerable: true }])));
+
+/** "ton genou" / "your knee", with the right French possessive. */
+export const areaYour = (area: PainArea) => tr(AREA_WORDS[area][2], `your ${AREA_WORDS[area][1]}`);
+
+/** An array whose items are picked in the current language each time they are read. */
+function lazyList(pairs: [string, string][]): string[] {
+  const arr: string[] = [];
+  pairs.forEach(([fr, en], i) => Object.defineProperty(arr, i, { get: () => tr(fr, en), enumerable: true }));
+  return arr;
+}
 
 /** Days without a flare needed to reach each phase. */
 const LADDER: { phase: InjuryPhase; minQuietDays: number; loadCap: number; volumeCap: number }[] = [
@@ -78,13 +95,13 @@ export interface InjuryAdaptation {
 const dayDiff = (fromISO: string, toISO: string) =>
   Math.max(0, Math.round((new Date(toISO + "T00:00:00").getTime() - new Date(fromISO + "T00:00:00").getTime()) / 86400000));
 
-export const RED_FLAGS = [
-  "Numbness, pins and needles, or weakness that doesn’t pass.",
-  "Pain that wakes you at night, or that is worse at rest than when you move.",
-  "You can’t put weight on it, or the joint gives way.",
-  "Swelling or bruising that keeps getting worse after 48 hours.",
-  "It started with a fall, a collision or a sudden pop.",
-];
+export const RED_FLAGS = lazyList([
+  ["Engourdissement, fourmillements ou faiblesse qui ne passe pas.", "Numbness, pins and needles, or weakness that doesn’t pass."],
+  ["Une douleur qui te réveille la nuit, ou qui est pire au repos qu’en bougeant.", "Pain that wakes you at night, or that is worse at rest than when you move."],
+  ["Tu ne peux pas mettre de poids dessus, ou l’articulation lâche.", "You can’t put weight on it, or the joint gives way."],
+  ["Une enflure ou un bleu qui continue d’empirer après 48 heures.", "Swelling or bruising that keeps getting worse after 48 hours."],
+  ["Ça a commencé par une chute, un choc ou un « pop » soudain.", "It started with a fall, a collision or a sudden pop."],
+]);
 
 /**
  * Where this injury sits today, and what that means for the prescription.
@@ -105,25 +122,28 @@ export function adaptationFor(injury: Injury, today: string): InjuryAdaptation {
   const idx = LADDER.findIndex((s) => s.phase === step.phase);
   const next = reachable[idx + 1];
   const affectedPatterns = step.phase === "clear" ? [] : LOADS[injury.area];
-  const label = AREA_LABEL[injury.area];
+  const label = AREA_WORDS[injury.area][1];
+  const yours = AREA_WORDS[injury.area][2];
+  const Yours = yours.charAt(0).toUpperCase() + yours.slice(1);
+  const quiet = tr(`${quietDays} jour${quietDays > 1 ? "s" : ""} tranquille${quietDays > 1 ? "s" : ""}.`, `${quietDays} quiet days.`);
 
   const guidance: string[] = [];
   if (step.phase === "protect") {
-    guidance.push(`Your ${label} is being protected: exercises that load it are left out for now.`);
-    guidance.push(KEEP_TRAINING[injury.area]);
-    guidance.push("Move it through whatever range is comfortable every day. Complete rest stiffens a joint; it rarely settles it.");
+    guidance.push(tr(`On protège ${yours} : les exercices qui sollicitent cette zone sont mis de côté pour l’instant.`, `Your ${label} is being protected: exercises that load it are left out for now.`));
+    guidance.push(tr(...KEEP_TRAINING[injury.area]));
+    guidance.push(tr("Bouge la zone chaque jour dans l’amplitude qui reste confortable. Le repos complet raidit une articulation; il la calme rarement.", "Move it through whatever range is comfortable every day. Complete rest stiffens a joint; it rarely settles it."));
   } else if (step.phase === "reload") {
-    guidance.push(`${quietDays} quiet days. Your ${label} goes back under light load — about half of what you were lifting — to remind the tissue what work feels like.`);
-    guidance.push("Aim for a 2 out of 10 during the set that settles by the next morning. If it climbs above that, mark a flare-up and we step back.");
+    guidance.push(tr(`${quiet} ${Yours} retourne sous une charge légère — environ la moitié de ce que tu soulevais — pour rappeler aux tissus ce qu’est le travail.`, `${quietDays} quiet days. Your ${label} goes back under light load — about half of what you were lifting — to remind the tissue what work feels like.`));
+    guidance.push(tr("Vise un 2 sur 10 pendant la série, qui se calme d’ici le lendemain matin. Si ça monte plus haut, note une rechute et on recule d’un cran.", "Aim for a 2 out of 10 during the set that settles by the next morning. If it climbs above that, mark a flare-up and we step back."));
   } else if (step.phase === "return") {
-    guidance.push(`${quietDays} quiet days. Load is back to roughly four fifths, full sets. This is the last step before normal.`);
-    guidance.push("Keep the reps smooth. If a lift still feels guarded, stay here another week — nothing is lost by taking it.");
+    guidance.push(tr(`${quiet} La charge revient à environ quatre cinquièmes, séries complètes. C’est la dernière étape avant la normale.`, `${quietDays} quiet days. Load is back to roughly four fifths, full sets. This is the last step before normal.`));
+    guidance.push(tr("Garde des reps fluides. Si un mouvement te semble encore retenu, reste ici une semaine de plus — tu ne perds rien.", "Keep the reps smooth. If a lift still feels guarded, stay here another week — nothing is lost by taking it."));
   } else {
-    guidance.push(`Four quiet weeks. Your ${label} is back on full load and out of the way of the block.`);
-    guidance.push("Clear it in Settings when you’re confident, and the prescription forgets it entirely.");
+    guidance.push(tr(`Quatre semaines tranquilles. ${Yours} est de retour à pleine charge et ne gêne plus le bloc.`, `Four quiet weeks. Your ${label} is back on full load and out of the way of the block.`));
+    guidance.push(tr("Retire la blessure dans les Réglages quand tu as confiance, et le programme l’oublie complètement.", "Clear it in Settings when you’re confident, and the prescription forgets it entirely."));
   }
   if (injury.severity === 3) {
-    guidance.push("You’ve marked this as limiting daily life. The app will hold here and not add load — please get it looked at by a professional.");
+    guidance.push(tr("Tu as indiqué que ça limite ta vie de tous les jours. L’app va rester ici sans ajouter de charge — fais-la évaluer par un professionnel, s’il te plaît.", "You’ve marked this as limiting daily life. The app will hold here and not add load — please get it looked at by a professional."));
   }
 
   return {

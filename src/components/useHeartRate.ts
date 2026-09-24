@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectSensor, sensorAvailability, type Sensor } from "@/lib/indoor/sensors";
+import { tr } from "@/lib/i18n";
 
 /* A heart-rate strap or watch for an outdoor activity. Same Bluetooth path as
    the indoor rides (the standard Heart Rate service every strap and most
@@ -27,10 +28,10 @@ export function useHeartRate() {
         if (r.hr == null || r.hr < 30 || r.hr > 230) return;
         last.current = { bpm: r.hr, at: Date.now() };
         setBpm(r.hr);
-      }, () => { setSensor(null); setBpm(null); last.current = null; setError("Heart rate disconnected."); });
+      }, () => { setSensor(null); setBpm(null); last.current = null; setError(tr("Cardio déconnecté.", "Heart rate disconnected.")); });
       setSensor(s);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't connect.");
+      setError(e instanceof Error ? e.message : tr("Connexion impossible.", "Couldn't connect."));
     } finally {
       setBusy(false);
     }

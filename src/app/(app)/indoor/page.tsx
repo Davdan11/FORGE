@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Bluetooth, ChevronRight, Flag, Medal, Mountain, Play, Shirt, Timer, Users, Wind, Zap } from "lucide-react";
 import { db, getProfile, getStats } from "@/lib/db";
 import { guessFtp } from "@/lib/indoor/physics";
 import { peekRoom } from "@/lib/indoor/live";
-import { GAME_ROUTES, categoryFor, upcomingEvents, type Lang } from "@/lib/indoor/forgeRide";
+import { GAME_ROUTES, categoryFor, upcomingEvents } from "@/lib/indoor/forgeRide";
+import { useLang, useT } from "@/lib/i18n";
 import { levelFromXp, rankFor } from "@/lib/gamification";
 import { isConfigured } from "@/lib/supabase/client";
 import { ScreenSkeleton, Toast } from "@/components/ui";
@@ -19,11 +20,10 @@ import type { Profile as AthleteProfile } from "@/lib/types";
    online, the next group ride, your level and race category), the nine
    worlds, what the game does, and one big button to ride. The game itself
    runs in UnityRide, which keeps sensors, XP and saving in the app. The
-   page follows the device language, like the game (French or English). */
+   page follows the app language (French or English). */
 
 const HERO = ["hero", "alpine", "provence", "sakura", "giant"].map((n) => `/indoor/${n}.jpg`);
 const PINK = "#FF2E78", ORANGE = "#FF5A3D";
-const noop = () => () => {};
 
 export default function IndoorPage() {
   const profile = useLiveQuery(() => getProfile(), []);
@@ -32,9 +32,8 @@ export default function IndoorPage() {
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3400); };
-  // The device language, read on the client only (the page is prerendered in English).
-  const lang = useSyncExternalStore<Lang>(noop, () => (navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en"), () => "en");
-  const t = (fr: string, en: string) => (lang === "fr" ? fr : en);
+  const lang = useLang();
+  const t = useT();
 
   // Live: the next events (from the game's own schedule) and the people riding now.
   const [now, setNow] = useState(() => Date.now());
@@ -163,7 +162,7 @@ export default function IndoorPage() {
           </div>
 
           <div className="absolute bottom-5 right-5 md:right-12 flex gap-1.5">
-            {HERO.map((_, i) => <button key={i} type="button" aria-label={`${i + 1}`} onClick={() => setSlide(i)} className={`h-1.5 rounded-full transition-all ${i === slide ? "w-8 bg-white" : "w-3 bg-white/35"}`} />)}
+            {HERO.map((_, i) => <button key={i} type="button" aria-label={t(`Image ${i + 1}`, `Slide ${i + 1}`)} onClick={() => setSlide(i)} className={`h-1.5 rounded-full transition-all ${i === slide ? "w-8 bg-white" : "w-3 bg-white/35"}`} />)}
           </div>
         </header>
 

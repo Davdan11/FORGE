@@ -1,4 +1,5 @@
 import type { CardioWorkout, WorkoutSegment } from "../types";
+import type { Lang } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Guided cardio workouts v0.1 — structured segments the recorder
@@ -108,3 +109,104 @@ export const WORKOUT_MAP: Record<string, CardioWorkout> = Object.fromEntries(WOR
 export const ZONE_LABEL: Record<number, string> = { 1: "Recovery", 2: "Easy", 3: "Steady", 4: "Threshold", 5: "Max" };
 export const ZONE_TALK: Record<number, string> = { 1: "Full conversation", 2: "Full sentences", 3: "Short sentences", 4: "A few words", 5: "No talking" };
 export const workoutsFor = (type?: string) => (type ? WORKOUTS.filter((w) => w.type === type) : WORKOUTS);
+
+/* ── French ─────────────────────────────────────────────────────
+   The catalogue above is the source (English). French lives here,
+   keyed by workout id; segment cues follow the order of `segments`.
+   Picked at render time with localizeWorkout(w, lang). */
+
+const SEG_LABEL_FR: Record<string, string> = {
+  "Warm-up": "Échauffement", "Cool-down": "Retour au calme", "Walk": "Marche", "Easy run": "Course facile",
+  "Tempo": "Tempo", "Hard": "Intense", "Easy": "Facile", "Hill": "Côte", "Walk down": "Descente à pied",
+  "Quick": "Vite", "Jog": "Jogging", "12-minute test": "Test de 12 minutes", "Easy ride": "Vélo facile",
+  "Sweet spot": "Sweet spot", "Easy spin": "Pédalage facile", "Hike": "Rando", "Ruck": "Ruck",
+  "1000 m": "1000 m", "Easy paddle": "Rame facile", "Ski": "Ski", "Trail": "Trail",
+};
+const WU_FR = "Facile. Tu peux jaser. Laisse les jambes se réveiller avant de leur demander quoi que ce soit.";
+const CD_FR = "Ralentis jusqu’au petit trot, puis marche. Respire par le nez si tu peux.";
+
+interface WorkoutFr { name: string; description: string; why: string; cues: string[]; seg: string[] }
+const WORKOUTS_FR: Record<string, WorkoutFr> = {
+  "z2-run-40": { name: "Course zone 2 · 40", description: "Quarante minutes faciles. Le rythme où tu pourrais raconter une histoire. C’est la base sur laquelle tout le reste se construit.",
+    why: "La zone 2 développe les mitochondries et les capillaires — le moteur aérobie qui te permet de récupérer de chaque grosse séance.",
+    seg: ["Trois minutes de marche rapide. Les bras qui balancent.", "Le rythme où tu respires par le nez. Si tu ne peux pas dire une phrase complète, ralentis.", CD_FR],
+    cues: ["Cadence autour de 170–180 pas par minute — des petits pas rapides.", "Si ton cœur grimpe, marche 30 s. L’ego reste à la maison.", "Finis en ayant l’impression que tu pourrais recommencer."] },
+  "z2-run-60": { name: "Longue course facile · 60", description: "La longue de la semaine. Même effort facile, plus de temps sur les pieds.",
+    why: "C’est la durée, pas la vitesse, qui améliore l’oxydation des graisses et la résistance des tendons. C’est là que naissent les records de distance.",
+    seg: [WU_FR, "Installe-toi. Vérifie ta posture aux dix minutes : grand, épaules relâchées, pieds silencieux.", CD_FR],
+    cues: ["Mange avant : 30–60 g de glucides une heure avant.", "Prends des gorgées d’eau s’il fait chaud.", "Les 10 dernières minutes : garde ta forme, ne cours pas après l’allure."] },
+  "tempo-run-20": { name: "Course tempo · 20 min", description: "Dix faciles, vingt au seuil, dix faciles. Confortablement difficile : tu peux dire trois mots, pas une phrase.",
+    why: "Le travail au seuil augmente l’allure que tu peux tenir pendant une heure. C’est le meilleur rendement pour ton temps de course intense.",
+    seg: [WU_FR, "Confortablement difficile. Respiration contrôlée, 2 temps à l’inspiration, 2 à l’expiration. Ne pars pas trop vite — les cinq dernières minutes doivent ressembler aux premières.", CD_FR],
+    cues: ["Choisis un parcours plat.", "La même allure du début à la fin bat un départ rapide suivi d’un gros ralentissement.", "Mange dans l’heure qui suit."] },
+  "intervals-6x2": { name: "Intervalles · 6 × 2 min", description: "Six répétitions de deux minutes intenses, deux minutes faciles entre chacune. Ça monte le plafond.",
+    why: "Les répétitions courtes à l’allure VO2max apprennent au cœur à pomper plus à chaque battement. Six, c’est le juste milieu pour la qualité.",
+    seg: [WU_FR, "Vite mais grand. Pousse avec les bras, pose le pied sous les hanches. La 1re doit sembler trop facile.", "Trotte ou marche. Laisse le cœur redescendre — tu en as besoin pour la prochaine.", CD_FR],
+    cues: ["L’effort se demande sur les deux dernières, pas sur les deux premières.", "Même temps ou même distance à chaque répétition — c’est ça, le test.", "Saute celle-ci si ta forme du jour est au rouge."] },
+  "hills-8": { name: "Côtes · 8 × 45 s", description: "Trouve une côte qui prend 45 secondes à fond. Huit montées, redescends à pied.",
+    why: "Les côtes développent la puissance et l’économie de course avec moins d’impact que les sprints sur le plat. De la musculation déguisée.",
+    seg: [WU_FR, "Petits pas, genoux hauts, regarde le haut de la côte, pas tes pieds.", "Marche. Secoue les bras. Récupère complètement.", CD_FR],
+    cues: ["Pousse avec les bras — ce sont eux qui donnent le rythme aux jambes.", "Penche-toi à partir des chevilles, pas de la taille.", "Descends à pied; c’est en trottant dans la descente que les genoux se plaignent."] },
+  "fartlek-30": { name: "Fartlek · 30 min", description: "Joue avec la vitesse : une minute rapide, deux minutes faciles, en boucle. Sans fixer ta montre.",
+    why: "La vitesse sans structure bâtit le même moteur que les intervalles avec moins de charge mentale — idéal en phase de base.",
+    seg: [WU_FR, "Choisis un lampadaire et cours-y d’un bon pas.", "Retour au facile. Relâché.", CD_FR],
+    cues: ["Le terrain est ton coach — accélère sur le plat, relâche dans les montées.", "Souris. Celle-ci est faite pour être le fun."] },
+  "recovery-jog": { name: "Jogging de récup · 25", description: "Gênant de lenteur. De la circulation sanguine, pas de l’entraînement.",
+    why: "La récupération active chasse les raideurs du lendemain plus vite que le divan — tant que ça reste vraiment facile.",
+    seg: ["Marche pour commencer.", "Plus lent que ce qui te semble raisonnable. Respiration par le nez tout le long.", "Marche pour finir."],
+    cues: ["Si un marcheur te dépasse, tu fais ça comme il faut.", "Des surfaces molles si tu en as."] },
+  "cooper-12": { name: "Test de 12 minutes", description: "Cours le plus loin possible en douze minutes. Le moteur recalibre tes zones selon le résultat.",
+    why: "Le test de Cooper estime ta VO2max à partir de la distance seulement. Refais-le à chaque bloc pour voir le moteur grandir.",
+    seg: [WU_FR, "Allure régulière. La plupart partent trop vite — les deux premières minutes doivent sembler presque faciles.", CD_FR],
+    cues: ["Une boucle plate ou une piste.", "Jambes fraîches : fais-le après une journée de repos.", "Enregistre-le — la distance met ta base à jour."] },
+  "ride-z2-60": { name: "Vélo zone 2 · 60", description: "Une heure à pédaler facile. Cadence élevée, braquet léger.",
+    why: "Le vélo te permet d’accumuler des heures aérobies sans impact — parfait entre deux grosses journées de jambes.",
+    seg: [WU_FR, "85–95 tr/min. Tu peux jaser. Redresse-toi et regarde autour.", CD_FR],
+    cues: ["Braquet léger, jambes rapides.", "Bois aux 15 minutes.", "Plat ou vallonné, pas une montagne."] },
+  "ride-sweetspot": { name: "Vélo sweet spot · 2 × 15", description: "Deux efforts de 15 minutes juste sous le seuil, cinq faciles entre les deux.",
+    why: "Le sweet spot (88–94 % du seuil) donne l’essentiel des gains du travail au seuil avec la moitié de la fatigue.",
+    seg: [WU_FR, "Difficile mais soutenable. Cadence stable, respiration stable.", "Tourne les jambes, bois.", CD_FR],
+    cues: ["Même puissance sur les deux efforts.", "Reste assis.", "Mange après — celle-ci vide le réservoir."] },
+  "hike-90": { name: "Rando · 90 min", description: "Quatre-vingt-dix minutes en sentier, en montée si tu peux. Du temps sur les pieds, du dénivelé en banque.",
+    why: "La rando avec du dénivelé, c’est de la zone 2 avec une composante force — et chaque mètre de montée compte.",
+    seg: ["Régulier. Des bâtons si tu en as. Petits pas dans les montées."],
+    cues: ["Apporte de l’eau et une collation.", "Descentes : plie les genoux, atterris en douceur.", "Les mètres de dénivelé sont le but — choisis une montagne."] },
+  "ruck-45": { name: "Ruck · 45 min", description: "Marche vite avec 10–20 % de ton poids sur le dos.",
+    why: "Le ruck sollicite la posture et le cœur en même temps. Peu de technique, beaucoup de rendement, et c’est juste une marche.",
+    seg: ["D’un bon pas. Poitrine haute, sac collé au dos. 12–14 min par km."],
+    cues: ["Commence à 10 % de ton poids; ajoute 2 kg par semaine.", "Ceinture de hanches serrée, épaules relâchées.", "De bons souliers comptent plus que le sac."] },
+  "row-4x1000": { name: "Rameur · 4 × 1000 m", description: "Quatre blocs de 1000 mètres au seuil, trois minutes faciles entre chacun.",
+    why: "Le rameur entraîne toute la chaîne postérieure et le cœur ensemble. Les blocs de 1 km sont le classique pour bâtir le seuil.",
+    seg: [WU_FR, "Jambes, dos, bras. Cadence 26–28. Même temps au 500 m à chaque bloc.", "Coups lents, respire.", CD_FR],
+    cues: ["Damper à 4–6.", "Pousse avec les jambes — les bras, c’est les derniers 10 %.", "Accélère sur le dernier bloc s’il t’en reste."] },
+  "walk-30": { name: "Marche · 30 min", description: "Trente minutes dehors. Ça compte. Vraiment.",
+    why: "La marche quotidienne est l’outil de récupération et de composition corporelle le plus sous-estimé qui soit.",
+    seg: ["Tête haute, téléphone rangé. Assez vite pour que parler demande un petit effort."],
+    cues: ["Marcher après un repas freine la hausse de glycémie.", "Dix minutes, c’est mieux que zéro minute."] },
+  "ski-touring": { name: "Ski · 60 min", description: "Une heure sur la neige — ski de randonnée, de fond ou des descentes. Effort régulier, gros dénivelé.",
+    why: "Le ski, c’est un travail aérobie complet avec un énorme gain de dénivelé. La meilleure zone 2–3 de l’hiver.",
+    seg: ["Régulier. Enlève une couche avant de suer, remets-la avant d’avoir froid."],
+    cues: ["Hydrate-toi — le froid cache la soif.", "Les jambes brûlent? Relâche les carres."] },
+  "trail-run-50": { name: "Trail · 50", description: "Cinquante minutes en sentier. Effort facile, terrain honnête.",
+    why: "Le trail renforce les chevilles, la proprioception, et le cœur, plus par kilomètre que la route.",
+    seg: [WU_FR, "L’effort, pas l’allure. Marche dans les montées raides — tout le monde le fait.", CD_FR],
+    cues: ["Les yeux 3 m devant dans les descentes.", "Raccourcis la foulée sur les roches.", "Le GPS sous-estime la distance sous les arbres — fie-toi au temps."] },
+};
+
+/** A segment label in the reader's language; keeps a trailing " 3/6" rep counter. */
+export function segmentLabel(label: string, lang: Lang): string {
+  if (lang !== "fr") return label;
+  const m = /^(.*?)( \d+\/\d+)?$/.exec(label);
+  const base = m?.[1] ?? label;
+  return (SEG_LABEL_FR[base] ?? base) + (m?.[2] ?? "");
+}
+
+/** The workout with its words in the reader's language (English is the catalogue as is). */
+export function localizeWorkout(w: CardioWorkout, lang: Lang): CardioWorkout {
+  const fr = lang === "fr" ? WORKOUTS_FR[w.id] : undefined;
+  if (!fr) return w;
+  return {
+    ...w, name: fr.name, description: fr.description, why: fr.why, cues: fr.cues,
+    segments: w.segments.map((s, i) => ({ ...s, label: segmentLabel(s.label, lang), cue: fr.seg[i] ?? s.cue })),
+  };
+}

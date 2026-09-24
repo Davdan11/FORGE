@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal, Mic, MicOff, Volume2, VolumeX, Flag } from "lucide-react";
 import { powerFromHr, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
-import { sensorAvailability, connectSensor, SensorFusion, SENSOR_LABEL, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
-import { shouldSendGrade, RESULT_TEXT } from "@/lib/indoor/ftms";
-import { powerFromCurve, trainerLabel, PROTOCOL_LABEL, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
+import { sensorAvailability, connectSensor, SensorFusion, sensorName, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
+import { shouldSendGrade, resultText } from "@/lib/indoor/ftms";
+import { curveName, powerFromCurve, trainerLabel, PROTOCOL_LABEL, PROTOCOL_LABEL_FR, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
 import { extrapolate, joinRoom, prune, type Room } from "@/lib/indoor/live";
 import { DROP_AT, VoiceChat, reportVoice, voiceSignal, type ReportReason } from "@/lib/indoor/voice";
 import { RadioCards, RadioField } from "@/components/ui";
@@ -17,6 +17,7 @@ import { activityKcal, hrSummary } from "@/lib/heart";
 import { awardChallenges, awardIndoor, awardRouteBadge } from "@/lib/progress";
 import { db, getStats, uid } from "@/lib/db";
 import type { Activity, Profile } from "@/lib/types";
+import { getLang } from "@/lib/i18n";
 
 /* The Unity Web build lives in public/unity (built from the FORGE-Unity repo,
    menu File > Build, target Web, output <this app>/public/unity). */
@@ -40,13 +41,7 @@ const kept = {
   lost: null as ((kind: SensorKind) => void) | null,
 };
 
-const PROTOCOL_FR: Record<TrainerProtocol, string> = {
-  ftms: "FTMS",
-  "tacx-fec": "FE-C",
-  "wahoo-legacy": "Wahoo",
-  "power-only": "puissance seule",
-  "speed-only": "vitesse seule",
-};
+const PROTOCOL_FR: Record<TrainerProtocol, string> = PROTOCOL_LABEL_FR;
 
 /**
  * The indoor ride drawn by the Unity game. This component is the app's half of
@@ -65,8 +60,9 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
   const [progress, setProgress] = useState(0);
   const [failed, setFailed] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  // The overlay speaks the game's language (the game follows the device, or the rider's choice in its menu).
-  const [en, setEn] = useState(() => typeof navigator !== "undefined" && !navigator.language.toLowerCase().startsWith("fr"));
+  // The overlay starts in the app's language, then speaks the game's once it is loaded (the game follows the
+  // device, or the rider's choice in its menu).
+  const [en, setEn] = useState(() => getLang() === "en");
   const enRef = useRef(en);
   useEffect(() => { enRef.current = en; }, [en]);
   const t = (fr: string, english: string) => (en ? english : fr);
@@ -188,7 +184,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       const c = controller.current;
       if (!c) return;
       busy = true;
-      command(c).then((r) => { if (!r.ok && r.result) sayRef.current(`Trainer: ${RESULT_TEXT[r.result] ?? tr("commande refusée", "command refused")}.`); }).finally(() => { busy = false; });
+      command(c).then((r) => { if (!r.ok && r.result) sayRef.current(`Trainer${enRef.current ? "" : " "}: ${resultText(r.result, enRef.current) ?? tr("commande refusée", "command refused")}.`); }).finally(() => { busy = false; });
     };
     const timer = setInterval(() => {
       const now = Date.now(), g = game.current, L = live.current, a = acc.current;
@@ -242,7 +238,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     kept.lost = (kind) => {
       setSensorList((cur) => (kept.sensors = cur.filter((x) => x.kind !== kind)));
       if (kind === "trainer") { controller.current = null; controlOk.current = false; setControl("none"); }
-      sayRef.current(tr(`${SENSOR_LABEL[kind]} déconnecté.`, `${SENSOR_LABEL[kind]} disconnected.`));
+      sayRef.current(tr(`${sensorName(kind, false)} : déconnecté.`, `${sensorName(kind, true)} disconnected.`));
     };
     return () => { kept.sink = null; kept.lost = null; };
   }, []);
@@ -252,7 +248,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     if (!ready || !commands || controller.current) return;
     controller.current = commands; setControl("asking");
     commands.start().then((r) => {
-      if (!r.ok) { setControl(r.result ? RESULT_TEXT[r.result] ?? tr("refusé", "refused") : tr("pas de réponse", "no answer")); return; }
+      if (!r.ok) { setControl(r.result ? resultText(r.result, enRef.current) ?? tr("refusé", "refused") : tr("pas de réponse", "no answer")); return; }
       controlOk.current = true; setControl("ok");
     }).catch(() => setControl(tr("pas de réponse", "no answer")));
   }, [ready]);
@@ -277,7 +273,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
       distanceM: Math.round(s.distance), durationSec: Math.round(s.elapsed), movingSec,
       avgPaceSecKm: s.distance > 0 ? movingSec / (s.distance / 1000) : undefined,
       elevGainM: Math.round(s.ascent), points: [], splits: a.splits,
-      title: `${routeName} · indoor ride`, shared: false, xp: 0,
+      title: tr(`${routeName} · sortie indoor`, `${routeName} · indoor ride`), shared: false, xp: 0,
       meta: { discipline: "indoor", indoor: { course: routeName, quality, avgW, workout: s.workout ?? undefined, workoutDone: s.workoutDone || undefined, with: a.maxPeople || undefined } },
       hrSeries: a.hr.length ? a.hr : undefined, streams: a.streams.t.length ? a.streams : undefined, avgHr: hrs?.avg, maxHr: hrs?.max, kcal, kcalSource: k.source,
     };
@@ -400,7 +396,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
         // and simulation init. FE-C: rider weight.
         controller.current = commands; setControl("asking");
         const r = await commands.start();
-        if (!r.ok) { setControl(r.result ? RESULT_TEXT[r.result] ?? tr("refusé", "refused") : tr("pas de réponse", "no answer")); return; }
+        if (!r.ok) { setControl(r.result ? resultText(r.result, enRef.current) ?? tr("refusé", "refused") : tr("pas de réponse", "no answer")); return; }
         controlOk.current = true; setControl("ok");
         window.setTimeout(() => setPanel(false), 1500);
       }
@@ -581,7 +577,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
                     <button key={k} type="button" onClick={() => !on && connect(k)} disabled={connecting !== null || on}
                       className={`h-9 px-3 rounded-full border text-xs flex items-center gap-1.5 ${on || connecting === k ? "border-volt text-volt-deep" : "border-line-strong text-ink"} ${connecting !== null && connecting !== k ? "opacity-40" : ""}`}>
                       {on ? <Check className="w-3.5 h-3.5" strokeWidth={2.4} /> : <Bluetooth className="w-3.5 h-3.5" strokeWidth={2} />}
-                      {on ? sensorLabel(sensors.find((s) => s.kind === k), en) ?? SENSOR_LABEL[k] : SENSOR_LABEL[k]}
+                      {on ? sensorLabel(sensors.find((s) => s.kind === k), en) ?? sensorName(k, en) : sensorName(k, en)}
                     </button>
                   );
                 })}
@@ -600,7 +596,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
               <label className="flex items-center gap-2 text-xs">
                 <span className="meta">{t("Courbe vitesse → puissance (estimée)", "Speed → power curve (estimated)")}</span>
                 <select value={curve} onChange={(e) => setCurve(e.target.value as SpeedCurveId)} className="h-8 rounded-lg border border-line-strong px-2 bg-transparent">
-                  {SPEED_CURVES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {SPEED_CURVES.map((c) => <option key={c.id} value={c.id}>{curveName(c, en)}</option>)}
                 </select>
               </label>
             )}

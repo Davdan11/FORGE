@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, CountUp } from "./motion";
 import { useScroll, useTransform, useReducedMotion } from "motion/react";
+import { useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Horizontal rail.
@@ -88,6 +89,7 @@ export function Hero({ image, eyebrow, title, right, back, height = "h-[300px]",
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 400], [0, reduce ? 0 : 120]);
   const fade = useTransform(scrollY, [0, 260], [1, reduce ? 1 : 0.25]);
+  const t = useT();
   return (
     <header ref={ref} className={`on-photo bleed relative overflow-hidden -mt-[calc(var(--safe-top)+16px)] lg:-mt-10 ${height} lg:h-auto lg:min-h-[78vh] mb-8 lg:mb-[var(--stack-section)]`}>
       <motion.div style={{ y }} className="absolute inset-0 scale-[1.06]">
@@ -96,7 +98,7 @@ export function Hero({ image, eyebrow, title, right, back, height = "h-[300px]",
       </motion.div>
       <div className="absolute inset-x-0 top-0 pt-[calc(var(--safe-top)+16px)] lg:pt-8">
         <div className="screen flex justify-between items-start">
-          {back ? <Link href={back} className="chip chip--live backdrop-blur-md">← Back</Link> : <span />}
+          {back ? <Link href={back} className="chip chip--live backdrop-blur-md">{t("← Retour", "← Back")}</Link> : <span />}
           {right}
         </div>
       </div>
@@ -125,10 +127,11 @@ export function Hero({ image, eyebrow, title, right, back, height = "h-[300px]",
 }
 
 export function TopBar({ title, eyebrow, right, back }: { title: ReactNode; eyebrow?: string; right?: ReactNode; back?: string }) {
+  const t = useT();
   return (
     <header className="flex items-end justify-between gap-4 mb-6">
       <div className="min-w-0">
-        {back && <Link href={back} className="meta inline-flex items-center gap-1 mb-2 text-ink min-h-11">← Back</Link>}
+        {back && <Link href={back} className="meta inline-flex items-center gap-1 mb-2 text-ink min-h-11">{t("← Retour", "← Back")}</Link>}
         {eyebrow && !back && <p className="meta mb-2">{eyebrow}</p>}
         <h1 className="display display--lg leading-[0.92]" style={{ fontSize: "var(--text-display-md)" }}>{title}</h1>
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { getProfile } from "@/lib/db";
 import { documentUrl } from "@/lib/native";
+import { tr, useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Boot.
@@ -33,6 +34,7 @@ type Boot =
   | { state: "failed"; why: string };
 
 export default function Root() {
+  const t = useT();
   const [boot, setBoot] = useState<Boot>({ state: "reading" });
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function Root() {
     };
 
     const timer = window.setTimeout(
-      () => fail("Storage did not respond. Your data is on this device; the app just could not open it."),
+      () => fail(tr("Le stockage n’a pas répondu. Tes données sont sur cet appareil; l’app n’a juste pas réussi à les ouvrir.", "Storage did not respond. Your data is on this device; the app just could not open it.")),
       DEADLINE_MS,
     );
 
@@ -80,8 +82,8 @@ export default function Root() {
           <div className="grid gap-3 mt-8 max-w-[38ch]">
             <p className="text-sm text-danger">{boot.why}</p>
             <div className="flex gap-2 justify-center">
-              <button type="button" className="pill pill--sm" onClick={() => window.location.reload()}>Try again</button>
-              <button type="button" className="pill pill--sm pill--volt" onClick={() => window.location.replace(documentUrl("/onboarding/"))}>Start anyway</button>
+              <button type="button" className="pill pill--sm" onClick={() => window.location.reload()}>{t("Réessayer", "Try again")}</button>
+              <button type="button" className="pill pill--sm pill--volt" onClick={() => window.location.replace(documentUrl("/onboarding/"))}>{t("Commencer quand même", "Start anyway")}</button>
             </div>
           </div>
         )}

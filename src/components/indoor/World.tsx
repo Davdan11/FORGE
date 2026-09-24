@@ -4,6 +4,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { at, type Course } from "@/lib/indoor/course";
 import { buildTerrain, scatter, hashSeed } from "@/lib/indoor/terrain";
+import { useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    The world.
@@ -93,6 +94,7 @@ function loadRiderModel(): Promise<Loaded> {
 export function World({ course, riders, mode = "ride", className = "" }: { course: Course; riders: RefObject<Rider[]>; mode?: WorldMode; className?: string }) {
   const mount = useRef<HTMLDivElement | null>(null);
   const live = riders;
+  const t = useT();
 
   useEffect(() => {
     const host = mount.current;
@@ -266,7 +268,7 @@ export function World({ course, riders, mode = "ride", className = "" }: { cours
     // one thing this design exists to avoid.
   }, [course, live, mode]);
 
-  return <div ref={mount} className={`overflow-hidden ${className}`} aria-label="Virtual course" role="img" />;
+  return <div ref={mount} className={`overflow-hidden ${className}`} aria-label={t("Parcours virtuel", "Virtual course")} role="img" />;
 }
 
 /* ── geometry, all built once ─────────────────────────────── */

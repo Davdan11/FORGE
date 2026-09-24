@@ -2,6 +2,7 @@ import type { Activity, ActivityType, DistanceUnit } from "./types";
 import { sportSpec } from "./data/sports";
 import { verifyActivity } from "./verify";
 import { addDays, isoWeek } from "./db";
+import { getLang, locale, tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Sport challenges.
@@ -131,14 +132,15 @@ function target(kind: ChallengeKind, sport: ActivityType, b: ReturnType<typeof b
 
 export function fmtTarget(kind: ChallengeKind, n: number, units: DistanceUnit) {
   if (kind === "distance" || kind === "distance_total") {
-    if (units === "mi") return `${(Math.round((n / 1609.344) * 10) / 10).toLocaleString("en-US")} mi`;
-    return n < 2000 ? `${n.toLocaleString("en-US")} m` : `${(n / 1000).toLocaleString("en-US")} km`;
+    if (units === "mi") return `${(Math.round((n / 1609.344) * 10) / 10).toLocaleString(locale())} mi`;
+    return n < 2000 ? `${n.toLocaleString(locale())} m` : `${(n / 1000).toLocaleString(locale())} km`;
   }
-  if (kind === "climb" || kind === "climb_total" || kind === "descent" || kind === "descent_total") return `${n.toLocaleString("en-US")} m`;
-  return n.toLocaleString("en-US");
+  if (kind === "climb" || kind === "climb_total" || kind === "descent" || kind === "descent_total") return `${n.toLocaleString(locale())} m`;
+  return n.toLocaleString(locale());
 }
 
 function words(kind: ChallengeKind, sport: ActivityType, t: string, usual: string | null): { title: string; detail: string } {
+  if (getLang() === "fr") return wordsFr(kind, t, usual);
   const noun = sportSpec(sport).label.toLowerCase();
   const said = usual ? `Your usual is ${usual}.` : "Your first one sets your baseline.";
   switch (kind) {
@@ -155,6 +157,23 @@ function words(kind: ChallengeKind, sport: ActivityType, t: string, usual: strin
   }
 }
 
+/* French: the sport's name is left out ("une sortie"), which reads naturally and needs no gendered noun. */
+function wordsFr(kind: ChallengeKind, t: string, usual: string | null): { title: string; detail: string } {
+  const said = usual ? `D’habitude, tu fais ${usual}.` : "Ta première sortie fixe ta référence.";
+  switch (kind) {
+    case "distance": return { title: `${t} d’un coup`, detail: `Une sortie, ${t} ou plus. ${said}` };
+    case "moving": return { title: `${t} minutes en mouvement`, detail: `Une sortie, seul le temps en mouvement compte : les arrêts comptent pas. ${said}` };
+    case "climb": return { title: `Grimpe ${t}`, detail: `${t} de dénivelé positif en une seule sortie. ${said}` };
+    case "descent": return { title: `${t} de dénivelé`, detail: `Descends ${t} aujourd’hui, remontées mécaniques exclues. ${said}` };
+    case "negative_split": return { title: "Split négatif", detail: "Au moins 4 km, avec la deuxième moitié plus rapide que la première. Pars lentement exprès." };
+    case "distance_total": return { title: `${t} cette semaine`, detail: `Chaque sortie de la semaine s’additionne. ${said}` };
+    case "moving_total": return { title: `${t} minutes cette semaine`, detail: `Temps total en mouvement sur la semaine. ${said}` };
+    case "climb_total": return { title: `${t} de montée cette semaine`, detail: `Le dénivelé de chaque sortie s’additionne. ${said}` };
+    case "descent_total": return { title: `${t} de dénivelé cette semaine`, detail: `Sur toutes tes journées sur la pente. ${said}` };
+    case "sessions": return { title: `${t} sorties cette semaine`, detail: `La régularité bat une grosse journée. ${said}` };
+  }
+}
+
 function usualFor(kind: ChallengeKind, b: ReturnType<typeof baseline>, units: DistanceUnit): string | null {
   if (!b) return null;
   const round = (k: ChallengeKind, n: number) => fmtTarget(k, k.startsWith("distance") ? nice(n, distStep(n)) : k === "sessions" ? Math.round(n) : nice(n, k.includes("moving") ? 5 : 50), units);
@@ -163,11 +182,11 @@ function usualFor(kind: ChallengeKind, b: ReturnType<typeof baseline>, units: Di
     case "moving": return `${round(kind, b.movingMin)} min`;
     case "climb": return round(kind, b.climbM);
     case "descent": return round(kind, b.descentM);
-    case "distance_total": return `${round(kind, b.weekDistanceM)} a week`;
-    case "moving_total": return `${round(kind, b.weekMovingMin)} min a week`;
-    case "climb_total": return `${round(kind, b.weekClimbM)} a week`;
-    case "descent_total": return `${round(kind, b.weekDescentM)} a week`;
-    case "sessions": return `${Math.max(1, Math.round(b.weekCount))} a week`;
+    case "distance_total": return `${round(kind, b.weekDistanceM)} ${tr("par semaine", "a week")}`;
+    case "moving_total": return `${round(kind, b.weekMovingMin)} ${tr("min par semaine", "min a week")}`;
+    case "climb_total": return `${round(kind, b.weekClimbM)} ${tr("par semaine", "a week")}`;
+    case "descent_total": return `${round(kind, b.weekDescentM)} ${tr("par semaine", "a week")}`;
+    case "sessions": return `${Math.max(1, Math.round(b.weekCount))} ${tr("par semaine", "a week")}`;
     default: return null;
   }
 }

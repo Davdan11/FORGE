@@ -4,6 +4,7 @@ import { fitScore, getMeal, sampleIds, searchRecipes } from "./recipes";
 import { MEALS as CURATED } from "../data/meals";
 import type { Diet } from "./ingredients";
 import { explainTargets, type DayType as SciDayType } from "./science";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    NUTRITION ENGINE v3
@@ -21,6 +22,35 @@ import { explainTargets, type DayType as SciDayType } from "./science";
    ───────────────────────────────────────────────────────────── */
 
 export type DayType = NutritionDay["dayType"];
+
+type Label = { fr: string; en: string };
+/** Labels for the day types, slots and plan notes. The data keeps English keys ("Recovery meal" is
+ *  compared in logic); screens pick the reader's language at render time. */
+export const DAY_TYPE_LABEL: Record<DayType, Label> = {
+  rest: { fr: "Jour de repos", en: "Rest day" },
+  train: { fr: "Jour d’entraînement", en: "Training day" },
+  hard: { fr: "Grosse journée", en: "Hard day" },
+};
+export const SLOT_LABEL: Record<MealSlot, Label> = {
+  breakfast: { fr: "Déjeuner", en: "Breakfast" },
+  lunch: { fr: "Dîner", en: "Lunch" },
+  dinner: { fr: "Souper", en: "Dinner" },
+  snack: { fr: "Collation", en: "Snack" },
+  pre: { fr: "Pré-entraînement", en: "Pre-workout" },
+  post: { fr: "Récupération", en: "Recovery" },
+};
+export const NOTE_LABEL: Record<string, Label> = {
+  "Pre-workout": { fr: "Pré-entraînement", en: "Pre-workout" },
+  "Recovery meal": { fr: "Repas de récup", en: "Recovery meal" },
+  "Protein top-up": { fr: "Coup de pouce protéines", en: "Protein top-up" },
+  "Energy top-up": { fr: "Coup de pouce énergie", en: "Energy top-up" },
+};
+
+/** "Rest day" / "Jour de repos" — the day type, as a reader sees it. */
+export function dayTypeLabel(d: DayType): string {
+  const l = DAY_TYPE_LABEL[d];
+  return tr(l.fr, l.en);
+}
 
 /** The day's targets. The reasoning behind each lives in ./science.ts. */
 export function dailyTargets(p: Profile, dayType: DayType) {
@@ -322,11 +352,14 @@ export function nudgesFor(day: NutritionDay, session: Session | null, tomorrow?:
   const out: { time: string; title: string; body: string }[] = [];
   const pre = day.meals.find((m) => m.slot === "pre");
   const post = day.meals.find((m) => m.slot === "post");
-  if (pre && session) out.push({ time: pre.time, title: `${session.title} in 90 min`, body: `Eat now: ${getMeal(pre.mealId)?.name}. Carbs before, protein after.` });
-  if (post && session) out.push({ time: post.time, title: "Session done — protein window", body: `${getMeal(post.mealId)?.name}: ~30 g protein within the hour.` });
+  if (pre && session) out.push({ time: pre.time, title: tr(`${session.title} dans 90 min`, `${session.title} in 90 min`), body: tr(`Mange maintenant : ${getMeal(pre.mealId)?.name}. Des glucides avant, des protéines après.`, `Eat now: ${getMeal(pre.mealId)?.name}. Carbs before, protein after.`) });
+  if (post && session) out.push({ time: post.time, title: tr("Séance finie — fenêtre protéines", "Session done — protein window"), body: tr(`${getMeal(post.mealId)?.name} : ~30 g de protéines dans l’heure.`, `${getMeal(post.mealId)?.name}: ~30 g protein within the hour.`) });
   const lunch = day.meals.find((m) => m.slot === "lunch");
-  if (lunch) out.push({ time: lunch.time, title: "Lunch", body: `${getMeal(lunch.mealId)?.name} · ${Math.round((getMeal(lunch.mealId)?.kcal ?? 0) * lunch.scale)} kcal` });
-  if (tomorrow && tomorrow.dayType !== day.dayType) out.push({ time: "20:30", title: `Tomorrow: ${tomorrow.dayType} day`, body: `Calories ${tomorrow.targets.kcal > day.targets.kcal ? "up" : "down"} to ${tomorrow.targets.kcal}. Groceries updated.` });
+  if (lunch) out.push({ time: lunch.time, title: tr("Dîner", "Lunch"), body: `${getMeal(lunch.mealId)?.name} · ${Math.round((getMeal(lunch.mealId)?.kcal ?? 0) * lunch.scale)} kcal` });
+  if (tomorrow && tomorrow.dayType !== day.dayType) {
+    const up = tomorrow.targets.kcal > day.targets.kcal;
+    out.push({ time: "20:30", title: tr(`Demain : ${dayTypeLabel(tomorrow.dayType).toLowerCase()}`, `Tomorrow: ${tomorrow.dayType} day`), body: tr(`Calories ${up ? "à la hausse" : "à la baisse"} : ${tomorrow.targets.kcal}. Épicerie à jour.`, `Calories ${up ? "up" : "down"} to ${tomorrow.targets.kcal}. Groceries updated.`) });
+  }
   return out.sort((a, b) => a.time.localeCompare(b.time));
 }
 

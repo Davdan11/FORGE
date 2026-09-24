@@ -16,6 +16,7 @@ function announceLevelUp(level: number) {
   window.dispatchEvent(new CustomEvent<number>(LEVEL_UP_EVENT, { detail: level }));
 }
 import { e1rm } from "./units";
+import { tr } from "./i18n";
 import type { Activity, ActivityType, DistanceUnit, SessionLog, Stats } from "./types";
 
 /* ─────────────────────────────────────────────────────────────
@@ -114,14 +115,14 @@ export function activityXpBreakdown(
   const v = verification ?? verifyActivity(a.points ?? [], a.type, a.durationSec);
   const minutes = Math.round(v.movingSec / 60);
   const parts = [
-    { label: "Activity", xp: XP.activityBase },
-    { label: `${minutes} min moving`, xp: Math.round(minutes * XP.cardioMinute) },
+    { label: tr("Activité", "Activity"), xp: XP.activityBase },
+    { label: tr(`${minutes} min en mouvement`, `${minutes} min moving`), xp: Math.round(minutes * XP.cardioMinute) },
   ];
   // Climbing credit follows the same rule: only the part that was verified.
   const climbed = Math.round(a.elevGainM * v.credit);
-  if (climbed >= 100) parts.push({ label: `${climbed} m climbed`, xp: Math.floor(climbed / 100) * XP.elevPer100m });
-  if (a.workoutId) parts.push({ label: "Guided workout", xp: XP.guidedWorkout });
-  if (a.shared) parts.push({ label: "Shared to profile", xp: XP.shareActivity });
+  if (climbed >= 100) parts.push({ label: tr(`${climbed} m grimpés`, `${climbed} m climbed`), xp: Math.floor(climbed / 100) * XP.elevPer100m });
+  if (a.workoutId) parts.push({ label: tr("Entraînement guidé", "Guided workout"), xp: XP.guidedWorkout });
+  if (a.shared) parts.push({ label: tr("Partagé sur le profil", "Shared to profile"), xp: XP.shareActivity });
   const skipped = v.flags.map((f) => f.message);
   return { parts, skipped, verification: v, total: parts.reduce((s, p) => s + p.xp, 0) };
 }
@@ -153,11 +154,11 @@ export async function awardActivity(a: Activity) {
 export function indoorXpBreakdown(a: Pick<Activity, "durationSec" | "elevGainM"> & { movingSec?: number; workout?: boolean }, credit: number) {
   const minutes = Math.round((a.movingSec ?? a.durationSec) / 60);
   const parts = [
-    { label: "Indoor session", xp: XP.activityBase },
-    { label: `${minutes} min moving`, xp: Math.round(minutes * XP.cardioMinute) },
+    { label: tr("Séance intérieure", "Indoor session"), xp: XP.activityBase },
+    { label: tr(`${minutes} min en mouvement`, `${minutes} min moving`), xp: Math.round(minutes * XP.cardioMinute) },
   ];
-  if (a.elevGainM >= 100) parts.push({ label: `${Math.round(a.elevGainM)} m climbed`, xp: Math.floor(a.elevGainM / 100) * XP.elevPer100m });
-  if (a.workout) parts.push({ label: "Structured workout", xp: XP.guidedWorkout });
+  if (a.elevGainM >= 100) parts.push({ label: tr(`${Math.round(a.elevGainM)} m grimpés`, `${Math.round(a.elevGainM)} m climbed`), xp: Math.floor(a.elevGainM / 100) * XP.elevPer100m });
+  if (a.workout) parts.push({ label: tr("Entraînement structuré", "Structured workout"), xp: XP.guidedWorkout });
   const raw = parts.reduce((s, p) => s + p.xp, 0);
   return { parts, credit, total: Math.round(raw * credit) };
 }

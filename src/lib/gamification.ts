@@ -1,4 +1,5 @@
 import type { Badge, Stats, BadgeContext } from "./types";
+import { getLang, type Lang } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    THE LADDER.
@@ -47,8 +48,10 @@ export function levelFromXp(xp: number) {
 export interface Reward {
   /** What the athlete actually receives. */
   item: string;
+  itemFr: string;
   /** One line on why it exists, shown under the item. */
   note: string;
+  noteFr: string;
   /** Needs a shipping address rather than being granted in-app. */
   physical: boolean;
 }
@@ -56,6 +59,7 @@ export interface Reward {
 export interface Tier {
   key: string;
   name: string;
+  nameFr: string;
   /** First level in the tier. */
   from: number;
   /** Emblem colours: rim, face, and the light that catches the bevel. */
@@ -64,26 +68,26 @@ export interface Tier {
 }
 
 export const TIERS: Tier[] = [
-  { key: "iron", name: "Iron", from: 1,
+  { key: "iron", name: "Iron", nameFr: "Fer", from: 1,
     metal: { rim: "#4a4c50", face: "#7e8288", shine: "#bfc3c8" } },
-  { key: "copper", name: "Copper", from: 11,
+  { key: "copper", name: "Copper", nameFr: "Cuivre", from: 11,
     metal: { rim: "#6e3315", face: "#b0592c", shine: "#e59a63" },
-    reward: { item: "Enamel pin + sticker set", note: "A month in. The first thing you own that says you train here.", physical: true } },
-  { key: "bronze", name: "Bronze", from: 21,
+    reward: { item: "Enamel pin + sticker set", itemFr: "Épinglette émaillée + autocollants", note: "A month in. The first thing you own that says you train here.", noteFr: "Un mois. La première chose à toi qui dit que tu t’entraînes ici.", physical: true } },
+  { key: "bronze", name: "Bronze", nameFr: "Bronze", from: 21,
     metal: { rim: "#7a441d", face: "#b9743a", shine: "#e6ab73" },
-    reward: { item: "Insulated water bottle", note: "Three months. You are not experimenting any more.", physical: true } },
-  { key: "silver", name: "Silver", from: 31,
+    reward: { item: "Insulated water bottle", itemFr: "Gourde isotherme", note: "Three months. You are not experimenting any more.", noteFr: "Trois mois. T’es plus en train d’essayer.", physical: true } },
+  { key: "silver", name: "Silver", nameFr: "Argent", from: 31,
     metal: { rim: "#6f7883", face: "#aab4c0", shine: "#e8eef5" },
-    reward: { item: "Training tee", note: "Half a year of work. Earned, not bought.", physical: true } },
-  { key: "gold", name: "Gold", from: 41,
+    reward: { item: "Training tee", itemFr: "T-shirt d’entraînement", note: "Half a year of work. Earned, not bought.", noteFr: "Six mois de travail. Gagné, pas acheté.", physical: true } },
+  { key: "gold", name: "Gold", nameFr: "Or", from: 41,
     metal: { rim: "#8a6410", face: "#d7a327", shine: "#fbe08a" },
-    reward: { item: "Gym bag", note: "A full year. Most people never see this tier.", physical: true } },
-  { key: "emerald", name: "Emerald", from: 51,
+    reward: { item: "Gym bag", itemFr: "Sac de sport", note: "A full year. Most people never see this tier.", noteFr: "Une année complète. La plupart du monde ne voit jamais ce palier.", physical: true } },
+  { key: "emerald", name: "Emerald", nameFr: "Émeraude", from: 51,
     metal: { rim: "#134f33", face: "#2f9c66", shine: "#8fe3b6" },
-    reward: { item: "Gift card, store of your choice", note: "Two years of showing up. Spend it on whatever you train for.", physical: true } },
-  { key: "platine", name: "Platine", from: 61,
+    reward: { item: "Gift card, store of your choice", itemFr: "Carte-cadeau, magasin de ton choix", note: "Two years of showing up. Spend it on whatever you train for.", noteFr: "Deux ans à être là. Dépense-la pour ce qui te fait t’entraîner.", physical: true } },
+  { key: "platine", name: "Platine", nameFr: "Platine", from: 61,
     metal: { rim: "#5f6c72", face: "#b6c9cb", shine: "#f0fbfb" },
-    reward: { item: "Forge jacket", note: "The last tier. There is nothing after this but the work.", physical: true } },
+    reward: { item: "Forge jacket", itemFr: "Manteau FORGE", note: "The last tier. There is nothing after this but the work.", noteFr: "Le dernier palier. Après ça, il reste juste le travail.", physical: true } },
 ];
 
 export const tierForLevel = (level: number): Tier =>
@@ -99,8 +103,13 @@ export function subRankFor(level: number) {
   return SUB_RANKS[Math.floor(into / (LEVELS_PER_TIER / SUB_RANKS.length))] ?? "V";
 }
 
-export function rankFor(level: number) {
-  return `${tierForLevel(level).name} ${subRankFor(level)}`;
+/** A tier's name in the given language (the current one by default). */
+export const tierName = (t: Pick<Tier, "name" | "nameFr">, lang: Lang = getLang()) => (lang === "fr" ? t.nameFr : t.name);
+export const rewardItem = (r: Reward, lang: Lang = getLang()) => (lang === "fr" ? r.itemFr : r.item);
+export const rewardNote = (r: Reward, lang: Lang = getLang()) => (lang === "fr" ? r.noteFr : r.note);
+
+export function rankFor(level: number, lang: Lang = getLang()) {
+  return `${tierName(tierForLevel(level), lang)} ${subRankFor(level)}`;
 }
 
 /** The next tier that carries a reward, and how far away it is. */
@@ -167,6 +176,41 @@ export const BADGES: Badge[] = [
   { id: "full_month", name: "Four full weeks", desc: "Four weeks with every planned session done.", pillar: "all", check: (_s, c) => (c.fullWeeks ?? 0) >= 4, progress: (_s, c) => [Math.min(4, c.fullWeeks ?? 0), 4] },
   { id: "meals_100", name: "Fed", desc: "100 meals logged.", pillar: "nutrition", check: (s) => s.totals.mealsLogged >= 100, progress: (s) => [s.totals.mealsLogged, 100] },
 ];
+
+/** Badge names and descriptions in French, by id. */
+const BADGE_FR: Record<string, { name: string; desc: string }> = {
+  first_session: { name: "Jour un", desc: "Première séance enregistrée." },
+  ten_sessions: { name: "Dix de suite", desc: "Dix séances enregistrées." },
+  fifty_sessions: { name: "Cinquante", desc: "Cinquante séances enregistrées." },
+  streak_4: { name: "Un mois", desc: "Quatre semaines de suite." },
+  streak_12: { name: "Un bloc", desc: "Douze semaines de suite." },
+  streak_52: { name: "Un an", desc: "Cinquante-deux semaines de suite." },
+  volume_100k: { name: "100 tonnes", desc: "100 000 kg soulevés." },
+  bw_squat: { name: "Squat au poids du corps", desc: "e1RM au squat ≥ 1× ton poids." },
+  "2x_deadlift": { name: "Soulevé de terre 2×", desc: "e1RM au soulevé de terre ≥ 2× ton poids." },
+  first_pullup: { name: "Première traction", desc: "Une traction stricte enregistrée." },
+  first_route: { name: "Premier parcours", desc: "Première activité enregistrée." },
+  dist_100k: { name: "100 km", desc: "100 km enregistrés." },
+  dist_1000k: { name: "1 000 km", desc: "1 000 km enregistrés." },
+  everest: { name: "Everest", desc: "8 849 m de dénivelé enregistrés." },
+  sub20_5k: { name: "5 km sous 20 min", desc: "5 km en moins de 20 minutes." },
+  zone2_100h: { name: "100 h en zone 2", desc: "Cent heures d’aérobie facile." },
+  shared_10: { name: "À voix haute", desc: "Dix activités partagées sur ton profil." },
+  mobility_10h: { name: "Dix heures de mobilité", desc: "600 minutes de mobilité faites." },
+  down_1lb: { name: "Première livre en moins", desc: "1 lb (0,45 kg) de moins qu’au jour un." },
+  down_5lb: { name: "Cinq de moins", desc: "5 lb (2,3 kg) de moins qu’au jour un." },
+  down_10lb: { name: "Dix de moins", desc: "10 lb (4,5 kg) de moins qu’au jour un." },
+  down_20lb: { name: "Vingt de moins", desc: "20 lb (9 kg) de moins qu’au jour un." },
+  up_2lb: { name: "Premiers gains", desc: "2 lb (0,9 kg) de plus qu’au jour un, sur un plan de prise de muscle." },
+  up_5lb: { name: "Cinq de plus", desc: "5 lb (2,3 kg) de plus qu’au jour un, sur un plan de prise de muscle." },
+  full_week: { name: "Semaine complète", desc: "Toutes les séances prévues d’une semaine, faites." },
+  full_month: { name: "Quatre semaines complètes", desc: "Quatre semaines avec toutes les séances prévues faites." },
+  meals_100: { name: "Bien nourri", desc: "100 repas enregistrés." },
+};
+
+/** A badge's name and description in the given language (the current one by default). */
+export const badgeName = (b: Pick<Badge, "id" | "name">, lang: Lang = getLang()) => (lang === "fr" ? BADGE_FR[b.id]?.name ?? b.name : b.name);
+export const badgeDesc = (b: Pick<Badge, "id" | "desc">, lang: Lang = getLang()) => (lang === "fr" ? BADGE_FR[b.id]?.desc ?? b.desc : b.desc);
 
 function isLoss(c: BadgeContext) { return c.goal === "cut" || c.goal === "recomp"; }
 function isGain(c: BadgeContext) { return c.goal === "build" || c.goal === "strength"; }

@@ -1,4 +1,4 @@
-import type { Exercise } from "../types";
+import type { Equipment, Exercise, Muscle, PainArea, Pattern } from "../types";
 
 /* ─────────────────────────────────────────────────────────────
    Exercise bank v0.1 — hand-authored, structured for the engine.
@@ -268,6 +268,147 @@ export function searchExercises(q: string, filters: { pattern?: string; equipmen
     if (filters.pillar && e.pillar !== filters.pillar) return false;
     if (filters.equipment && !e.equipment.includes(filters.equipment as never)) return false;
     if (!needle) return true;
-    return e.name.toLowerCase().includes(needle) || e.primary.some((m) => m.includes(needle)) || e.pattern.includes(needle);
+    return e.name.toLowerCase().includes(needle) || !!EXERCISE_FR[e.slug]?.name.toLowerCase().includes(needle) || e.primary.some((m) => m.includes(needle)) || e.pattern.includes(needle);
   });
 }
+
+/* ── French ────────────────────────────────────────────────────
+   The bank is authored in English (the engine and the tests read it).
+   French names, cues and faults live here, keyed by slug, in the same
+   order as the English arrays; `exText` picks the one to show. */
+type ExText = { name: string; cues: string[]; faults: string[] };
+const F = (name: string, cues: string[], faults: string[]): ExText => ({ name, cues, faults });
+
+export const EXERCISE_FR: Record<string, ExText> = {
+  "back-squat": F("Squat arrière", ["Gaine-toi avant de décrocher la barre : grosse inspiration jusqu’à la ceinture.", "Les genoux suivent l’orteil du milieu.", "Hanches et poitrine montent ensemble — pas de good morning."], ["Genoux qui rentrent en montant.", "Talons qui décollent : mobilité de cheville ou appui trop étroit.", "Poitrine qui tombe en bas."]),
+  "front-squat": F("Squat avant", ["Coudes hauts, barre posée sur les épaules.", "Descends droit entre les talons.", "Reste grand en sortant du bas."], ["Coudes qui tombent — la barre roule vers l’avant.", "Douleur aux poignets en tenant la barre : prends des sangles ou une prise croisée."]),
+  "goblet-squat": F("Squat gobelet", ["Tiens le poids contre la poitrine, coudes rentrés.", "Pousse les genoux vers l’extérieur et assieds-toi entre eux.", "Pause en bas, puis pousse le sol."], ["Pencher vers l’avant pour faire contrepoids.", "Descendre trop vite."]),
+  "bodyweight-squat": F("Squat au poids du corps", ["Bras devant pour l’équilibre.", "Pleine amplitude si les genoux le permettent.", "Contrôle la descente — trois secondes."], ["Talons qui décollent.", "Demi-répétitions."]),
+  "leg-press": F("Presse à cuisses", ["Pieds au milieu de la plateforme, largeur d’épaules.", "Descends jusqu’à ce que les hanches commencent à s’enrouler.", "Ne verrouille pas les genoux en haut."], ["Bas du dos qui décolle du dossier.", "Verrouiller fort en haut."]),
+  "hack-squat": F("Hack squat", ["Dos à plat sur le dossier.", "Pousse avec le milieu du pied."], ["Talons qui lèvent."]),
+  "safety-bar-squat": F("Squat à la barre de sécurité", ["Poignées vers l’avant, coudes vers le bas.", "Résiste à la barre qui te tire vers l’avant."], ["Effondrement vers l’avant."]),
+  "wall-sit": F("Chaise au mur", ["Cuisses parallèles, dos à plat sur le mur.", "Respire."], ["Mains sur les cuisses."]),
+  "deadlift": F("Soulevé de terre", ["Barre au-dessus du milieu du pied, tibias à la barre.", "Enlève le jeu de la barre avant qu’elle quitte le sol.", "Pousse le sol ; hanches et épaules montent ensemble."], ["Hanches qui montent en premier.", "Barre qui s’éloigne des jambes.", "Haut du dos qui s’arrondit sous la charge."]),
+  "trap-bar-deadlift": F("Soulevé de terre à la trap bar", ["Place-toi au centre, poignées à mi-cuisse.", "Poitrine ouverte, pousse dans le sol."], ["Le remonter en squat avec le dos rond."]),
+  "romanian-deadlift": F("Soulevé de terre roumain", ["Genoux souples, hanches vers l’arrière jusqu’à sentir les ischios.", "La barre reste collée aux cuisses.", "Colonne neutre tout du long."], ["Plier les genoux comme un squat.", "Descendre plus bas que les ischios le permettent — le dos s’arrondit."]),
+  "single-leg-rdl": F("Soulevé roumain sur une jambe", ["Hanches de face, la jambe arrière s’allonge droit derrière.", "Ralentis ; l’équilibre, c’est le but."], ["Hanche qui s’ouvre sur le côté."]),
+  "hip-thrust": F("Hip thrust", ["Menton rentré, côtes basses.", "Serre fort en haut pendant une seconde."], ["Cambrer le bas du dos en haut."]),
+  "glute-bridge": F("Pont fessier", ["Talons proches, serre en haut."], ["Pousser avec les orteils."]),
+  "kettlebell-swing": F("Swing au kettlebell", ["Charnière, pas squat. Le kettlebell flotte à hauteur de poitrine.", "Claque les hanches ; les bras sont des cordes."], ["Lever avec les bras.", "Dos rond en bas."]),
+  "good-morning": F("Good morning", ["Barre haute sur les trapèzes, hanches vers l’arrière."], ["Arrondir le dos."]),
+  "bulgarian-split-squat": F("Squat bulgare", ["Pied avant assez loin pour que le genou reste derrière les orteils.", "Buste un peu penché pour les fessiers, droit pour les quads."], ["Pousser avec le pied arrière.", "Ça vacille : ralentis."]),
+  "reverse-lunge": F("Fente arrière", ["Recule, descends le genou droit vers le sol.", "Pousse avec le talon avant."], ["Genou avant qui rentre vers l’intérieur."]),
+  "walking-lunge": F("Fentes marchées", ["Grands pas, pieds silencieux."], ["Petits pas saccadés."]),
+  "step-up": F("Montée sur banc", ["Tout le pied sur la boîte, monte sans pousser du sol."], ["Rebondir sur la jambe arrière."]),
+  "bench-press": F("Développé couché", ["Omoplates serrées, pieds ancrés.", "La barre touche au sternum, coudes à environ 45°.", "Pousse en revenant vers les supports."], ["Coudes ouverts à 90°.", "Rebondir sur la poitrine.", "Pieds qui bougent."]),
+  "dumbbell-bench-press": F("Développé couché aux haltères", ["Monte les haltères avec un coup de genoux.", "Léger arc — les haltères se rejoignent en haut."], ["Épaules qui roulent vers l’avant."]),
+  "incline-dumbbell-press": F("Développé incliné aux haltères", ["Banc à 30°, coudes sous les poignets."], ["Coudes trop ouverts."]),
+  "push-up": F("Pompe", ["Le corps fait une ligne des talons à la tête.", "Mains sous les épaules, coudes à 45°.", "La poitrine au sol, pas le menton."], ["Hanches qui s’affaissent.", "La tête qui plonge en premier."]),
+  "incline-push-up": F("Pompe inclinée", ["Mains sur un banc ; même ligne des talons à la tête."], ["Hanches qui s’affaissent."]),
+  "machine-chest-press": F("Presse pectorale à la machine", ["Poignées à mi-poitrine."], ["Hausser les épaules."]),
+  "dip": F("Dips", ["Penche-toi pour la poitrine, reste droit pour les triceps.", "Coudes à 90°, pas plus bas si l’épaule proteste."], ["Descendre trop bas."]),
+  "overhead-press": F("Développé militaire", ["Serre les fessiers, côtes basses.", "Recule la tête, la barre monte droit, la tête passe dessous en haut."], ["Se pencher en arrière comme un développé incliné debout.", "Trajectoire de barre devant le visage."]),
+  "dumbbell-shoulder-press": F("Développé épaules aux haltères", ["Paumes légèrement vers l’intérieur, coudes juste devant le corps."], ["Cambrer le bas du dos."]),
+  "landmine-press": F("Développé landmine", ["À genou sur une jambe, pousse vers le haut et l’avant."], ["Se tordre."]),
+  "lateral-raise": F("Élévation latérale", ["Mène avec les coudes, pouces un peu vers le bas.", "Arrête à hauteur d’épaules."], ["Se balancer.", "Hausser les épaules."]),
+  "cable-lateral-raise": F("Élévation latérale à la poulie", ["Câble derrière le corps."], ["Hausser les épaules."]),
+  "barbell-row": F("Rowing à la barre", ["Penche-toi à ~45°, la barre pend sous la poitrine.", "Tire vers le bas des côtes, coudes au-delà du buste.", "Pause, puis descends lentement."], ["Buste qui se relève à chaque rep.", "Tirer vers le cou."]),
+  "dumbbell-row": F("Rowing à l’haltère", ["Le coude va vers la hanche, pas sur le côté.", "Serre l’omoplate en haut."], ["Tourner le buste."]),
+  "chest-supported-row": F("Rowing poitrine appuyée", ["Poitrine sur le dossier ; tire les coudes vers l’arrière et le bas."], ["Hausser les épaules."]),
+  "cable-row": F("Tirage horizontal à la poulie", ["Buste droit, poignée vers le ventre."], ["Se balancer."]),
+  "inverted-row": F("Rowing inversé", ["Corps droit, poitrine à la barre."], ["Hanches qui s’affaissent."]),
+  "band-row": F("Rowing à l’élastique", ["Ancre à hauteur de poitrine, tire les coudes au-delà des côtes."], ["Hausser les épaules."]),
+  "face-pull": F("Face pull", ["Tire vers le front, pouces vers l’arrière.", "Rotation externe à la fin."], ["Tirer seulement avec les bras."]),
+  "band-pull-apart": F("Écartement à l’élastique", ["Bras tendus, serre les omoplates."], ["Hausser les épaules."]),
+  "pull-up": F("Traction", ["Pars suspendu bras tendus, épaules abaissées d’abord.", "Menton au-dessus de la barre, poitrine à la barre si tu peux.", "Descends en contrôle."], ["Kipping.", "Demi-reps en haut."]),
+  "band-assisted-pull-up": F("Traction assistée à l’élastique", ["Élastique sous les pieds ; même technique qu’une traction stricte."], ["Rebondir sur l’élastique."]),
+  "lat-pulldown": F("Tirage vertical", ["Penche-toi un peu en arrière, tire vers le haut de la poitrine."], ["Tirer derrière la nuque."]),
+  "chin-up": F("Traction en supination", ["Paumes vers toi ; ramène les coudes vers les côtes."], ["Kipping."]),
+  "dumbbell-curl": F("Curl aux haltères", ["Coudes fixes, tourne la paume vers le haut en montant."], ["Se balancer."]),
+  "cable-curl": F("Curl à la poulie", ["Tension constante ; ne te repose pas en bas."], ["Se pencher en arrière."]),
+  "triceps-pushdown": F("Extension triceps à la poulie", ["Coudes collés aux côtes ; extension complète."], ["Coudes qui avancent."]),
+  "skull-crusher": F("Barre au front", ["Descends derrière la tête, coudes pointés au plafond."], ["Coudes trop ouverts."]),
+  "smith-squat": F("Squat à la Smith", ["Pieds un peu devant la barre pour garder les tibias presque verticaux.", "Assieds-toi entre les talons ; pousse le sol."], ["Pieds directement sous la barre, genoux qui partent vers l’avant.", "Rebondir en bas."]),
+  "leg-extension": F("Extension des jambes", ["Genou aligné avec le pivot de la machine.", "Serre en haut une seconde."], ["Lancer la charge d’un coup de pied.", "Hanches qui décollent du siège."]),
+  "calf-raise-machine": F("Mollets à la machine", ["Étirement complet en bas, pause.", "Monte sur le gros orteil, pas sur l’extérieur du pied."], ["Rebondir en demi-reps."]),
+  "lying-leg-curl": F("Leg curl couché", ["Hanches collées au coussin toute la série.", "Descends lentement — la descente construit l’ischio."], ["Hanches qui lèvent pour finir la rep."]),
+  "seated-leg-curl": F("Leg curl assis", ["Coussin de cuisse bien ajusté ; penche-toi un peu pour plus d’étirement.", "Plie jusque sous le siège."], ["Amplitude courte.", "Laisser claquer les plaques."]),
+  "back-extension-machine": F("Extension du dos à la machine", ["Bouge à partir des hanches, colonne neutre.", "Arrête quand le corps est aligné — pas de cambrure au-delà."], ["Hyperextension en haut.", "Arracher la charge."]),
+  "glute-kickback-machine": F("Kickback fessier à la machine", ["Pousse vers l’arrière avec le talon.", "Arrête avant que le bas du dos se cambre."], ["Balancer la jambe.", "Cambrer au lieu d’étendre la hanche."]),
+  "hip-abductor": F("Abducteurs à la machine", ["Assis droit, pousse les coussins avec l’extérieur des genoux.", "Contrôle le retour."], ["Laisser les coussins claquer ensemble."]),
+  "hip-adductor": F("Adducteurs à la machine", ["Commence dans une amplitude que tu contrôles ; élargis-la au fil des semaines.", "Serre les coussins ensemble, pause."], ["Partir trop large, trop lourd."]),
+  "smith-bench-press": F("Développé couché à la Smith", ["Banc placé pour que la barre arrive au bas de la poitrine.", "Omoplates serrées vers l’arrière."], ["Trajectoire de barre au-dessus du cou.", "Coudes ouverts à 90°."]),
+  "incline-chest-press": F("Presse pectorale inclinée à la machine", ["Poignées à hauteur du haut de la poitrine.", "Pousse vers le haut et légèrement vers l’intérieur."], ["Épaules qui décollent du dossier vers l’avant."]),
+  "pec-deck": F("Pec deck", ["Coudes légèrement fléchis, fixes toute la rep.", "Serre un arbre dans tes bras ; contracte au centre."], ["Pousser au lieu d’enlacer.", "S’étirer plus loin que l’épaule le permet."]),
+  "cable-crossover": F("Écarté à la poulie vis-à-vis", ["Pieds décalés, légère inclinaison vers l’avant.", "Les mains se rejoignent devant le bas de la poitrine."], ["Plier les coudes pour bouger plus de poids."]),
+  "dumbbell-fly": F("Écarté aux haltères", ["Descends en grand arc jusqu’à sentir l’étirement des pecs.", "Remonte comme autour d’un baril."], ["Descendre plus bas que l’épaule l’accepte.", "En faire un développé."]),
+  "assisted-dip": F("Dips assistés", ["Plus d’assistance, ce n’est pas tricher : prends ce qui donne des reps propres.", "Coudes à 90°, poitrine un peu vers l’avant."], ["Descendre trop bas.", "Hausser les épaules en bas."]),
+  "bench-dip": F("Dips sur banc", ["Hanches proches du banc.", "Plie à environ 90° et remonte."], ["Descendre bien sous le banc — ça charge l’avant de l’épaule."]),
+  "shoulder-press-machine": F("Développé épaules à la machine", ["Règle le siège pour que les poignées partent à hauteur d’épaules.", "Dos contre le dossier ; pousse sans cambrer."], ["Cambrer en décollant du dossier.", "Demi-reps."]),
+  "dumbbell-front-raise": F("Élévation frontale aux haltères", ["Monte à hauteur des yeux, pouces un peu vers le haut.", "Côtes basses, pas de penché arrière."], ["Balancer le buste."]),
+  "dumbbell-tricep-extension": F("Extension triceps à l’haltère", ["Coudes pointés vers le haut, proches de la tête.", "Descends derrière la tête pour un étirement complet."], ["Coudes qui s’écartent.", "Cambrer le bas du dos."]),
+  "low-row": F("Rowing bas à la machine", ["Poitrine sur le coussin, tire les coudes au-delà des côtes.", "Pause, puis laisse les omoplates s’étirer vers l’avant."], ["Se pencher en arrière pour finir.", "Hausser les épaules."]),
+  "assisted-pull-up": F("Traction assistée", ["Pars suspendu bras tendus, épaules abaissées d’abord.", "Menton au-dessus de la barre, descends en deux secondes.", "Enlève un peu d’assistance chaque semaine."], ["Kipping sur le coussin.", "Demi-reps en haut."]),
+  "hammer-curl": F("Curl marteau", ["Paumes face à face toute la rep.", "Coudes collés au corps."], ["Se balancer.", "Coudes qui avancent."]),
+  "plank": F("Planche", ["Serre les fessiers, rentre les côtes, pousse le sol.", "La qualité avant la durée : 30 secondes intenses valent mieux que 3 minutes molles."], ["Hanches qui tombent ou qui montent."]),
+  "side-plank": F("Planche latérale", ["Coude sous l’épaule, hanches empilées et levées."], ["Hanches qui tombent."]),
+  "dead-bug": F("Dead bug", ["Bas du dos collé au sol tout du long.", "Bras et jambe opposés, lentement."], ["Dos qui se cambre."]),
+  "pallof-press": F("Pallof press", ["Pousse devant, résiste à la rotation, tiens deux secondes."], ["Tourner vers l’ancrage."]),
+  "hanging-knee-raise": F("Montée de genoux suspendu", ["Bascule le bassin d’abord, puis monte les genoux."], ["Se balancer."]),
+  "crunch": F("Crunch", ["Enroule les côtes vers le bassin ; le bas du dos reste au sol.", "Mains légères sur la tête — ne tire jamais sur le cou."], ["Tirer la tête vers l’avant.", "Remonter complètement assis."]),
+  "bicycle-crunch": F("Crunch vélo", ["Épaule vers le genou opposé, lentement.", "Allonge l’autre jambe, loin et bas."], ["Aller trop vite.", "Bouger seulement les coudes."]),
+  "russian-twist": F("Rotation russe", ["Penche-toi en arrière, colonne longue ; tourne à partir des côtes.", "Pieds au sol tant que la rotation n’est pas contrôlée."], ["Arrondir le bas du dos.", "Juste balancer les bras."]),
+  "ab-crunch-machine": F("Crunch à la machine", ["Enroule les côtes vers le bas ; les hanches ne bougent pas.", "Expire fort en bas."], ["Tirer avec les bras.", "Lourd et court."]),
+  "rotary-torso": F("Rotation du tronc à la machine", ["Poitrine contre le coussin ; tourne lentement des deux côtés.", "Assez léger pour t’arrêter n’importe quand."], ["Lancer la charge."]),
+  "farmers-carry": F("Marche du fermier", ["Grand, épaules basses, marche comme si tu n’avais rien dans les mains."], ["Pencher d’un côté."]),
+  "suitcase-carry": F("Marche valise", ["Un seul côté chargé ; ne te penche pas à l’opposé."], ["Flexion latérale."]),
+  "box-jump": F("Saut sur boîte", ["Atterris en douceur, tout le pied sur la boîte, redresse-toi.", "Redescends en marchant, pas en sautant."], ["Atterrir en squat profond."]),
+  "broad-jump": F("Saut en longueur", ["Élan des bras, atterrissage silencieux."], ["Atterrissage raide."]),
+  "burpee": F("Burpee", ["Un rythme régulier bat un sprint sur les dix premiers."], ["S’affaisser dans la pompe."]),
+  "mountain-climber": F("Grimpeur", ["Hanches à niveau, genoux qui montent sous la poitrine."], ["Hanches qui montent."]),
+  "run": F("Course", ["Zone 2 = tu peux dire des phrases complètes.", "Cadence autour de 170–180 pas par minute."], ["Chaque sortie au même rythme moyen-dur."]),
+  "bike": F("Vélo", ["Cadence de 85–95 tr/min pour l’endurance."], ["Écraser un braquet énorme."]),
+  "row": F("Rameur", ["Jambes, puis dos, puis bras. À l’inverse au retour.", "Damper à 4–6, pas à 10."], ["Bras qui tirent trop tôt."]),
+  "brisk-walk": F("Marche rapide / ruck", ["Assez vite pour que parler demande un effort."], ["Flâner."]),
+  "stair-sprints": F("Sprints dans les escaliers", ["Monte les genoux, redescends en marchant pour récupérer."], ["Sprinter la récupération."]),
+  "90-90-hip-switch": F("Bascule de hanches 90/90", ["Les deux genoux à 90°, tourne de l’autre côté sans les mains.", "Lentement ; expire dans le passage difficile."], ["Se pencher en arrière pour tricher la rotation."]),
+  "pigeon-stretch": F("Pigeon", ["Tibia avant aussi parallèle au tapis que la hanche le permet.", "Mets les hanches de face, puis penche-toi."], ["Douleur au genou avant : rapproche le pied."]),
+  "couch-stretch": F("Étirement du divan", ["Genou arrière dans le coin, serre ce fessier, reste grand."], ["Cambrer le bas du dos."]),
+  "deep-squat-hold": F("Squat profond tenu", ["Tiens-toi à quelque chose au besoin ; les coudes poussent les genoux vers l’extérieur.", "Talons au sol. S’ils lèvent, surélève-les sur un disque."], ["S’arrondir fort."]),
+  "ankle-rock": F("Bascule de cheville", ["Genou au-dessus du petit orteil, le talon reste au sol."], ["Talon qui lève."]),
+  "thoracic-rotation": F("Rotation thoracique", ["À quatre pattes, main derrière la tête, tourne le coude vers le plafond.", "Les hanches ne bougent pas."], ["Tourner à partir du bas du dos."]),
+  "cat-cow": F("Chat–vache", ["Vertèbre par vertèbre ; respire avec le mouvement."], ["Aller trop vite."]),
+  "shoulder-cars": F("CARs d’épaule", ["Cercle lent et contrôlé, le reste du corps verrouillé."], ["Hausser l’épaule en haut du cercle."]),
+  "hamstring-floss": F("Floss des ischios", ["Tends le genou, flexe le pied, respire."], ["Arrondir le dos."]),
+  "world-greatest-stretch": F("Meilleur étirement au monde", ["Fente, coude vers l’intérieur du pied, tourne vers le plafond."], ["Genou arrière qui s’effondre."]),
+};
+
+type Lang = "fr" | "en";
+
+/** Name, cues and faults in the reader's language (English is the source). */
+export function exText(ex: Pick<Exercise, "slug" | "name"> & Partial<Pick<Exercise, "cues" | "faults">>, lang: Lang): ExText {
+  const fr = lang === "fr" ? EXERCISE_FR[ex.slug] : undefined;
+  return { name: fr?.name ?? ex.name, cues: fr?.cues ?? ex.cues ?? [], faults: fr?.faults ?? ex.faults ?? [] };
+}
+export const exName = (ex: Pick<Exercise, "slug" | "name">, lang: Lang) => (lang === "fr" ? EXERCISE_FR[ex.slug]?.name : undefined) ?? ex.name;
+
+const MUSCLE_FR: Record<Muscle, string> = {
+  quads: "quadriceps", hamstrings: "ischios", glutes: "fessiers", calves: "mollets", chest: "pectoraux", back: "dos", lats: "dorsaux", traps: "trapèzes",
+  shoulders: "épaules", biceps: "biceps", triceps: "triceps", forearms: "avant-bras", core: "tronc", hips: "hanches", spine: "colonne", ankles: "chevilles",
+  cardio: "cardio", full_body: "corps entier",
+};
+const EQUIP_FR: Record<Equipment, string> = {
+  barbell: "barre", dumbbell: "haltères", kettlebell: "kettlebell", cable: "poulie", machine: "machine", bodyweight: "poids du corps",
+  band: "élastique", pullup_bar: "barre à traction", bench: "banc", rack: "support", rower: "rameur", bike: "vélo", treadmill: "tapis roulant", outdoor: "extérieur",
+};
+const PATTERN_FR: Record<Pattern, string> = {
+  squat: "squat", hinge: "charnière", push_h: "poussée horizontale", push_v: "poussée verticale", pull_h: "tirage horizontal", pull_v: "tirage vertical",
+  lunge: "fente", carry: "portage", core: "tronc", mobility: "mobilité", cardio: "cardio", power: "puissance",
+};
+const PAIN_FR: Record<PainArea, string> = { knee: "genou", back: "bas du dos", shoulder: "épaule", hip: "hanche", wrist: "poignet", ankle: "cheville", elbow: "coude" };
+
+/** Display labels. English keeps the raw key as the pages always showed it. */
+export const muscleLabel = (m: Muscle, lang: Lang) => (lang === "fr" ? MUSCLE_FR[m] ?? m : m);
+export const equipLabel = (e: Equipment, lang: Lang) => (lang === "fr" ? EQUIP_FR[e] ?? e : e);
+export const patternLabel = (p: Pattern, lang: Lang) => (lang === "fr" ? PATTERN_FR[p] ?? p : p.replace("_", " "));
+export const painAreaLabel = (a: PainArea, lang: Lang) => (lang === "fr" ? PAIN_FR[a] ?? a : a);

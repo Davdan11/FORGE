@@ -4,6 +4,7 @@ import { adaptationsFor, type InjuryAdaptation } from "./injury";
 import { carryAdded } from "./custom";
 import { db, getProfile, todayISO } from "../db";
 import { bestE1rmBySlug } from "../progress";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    The programme between blocks.
@@ -61,27 +62,27 @@ export function tuningFrom(r: Omit<BlockReview, "changes" | "tuning" | "at">): {
   if (r.sessionsPlanned && rate < 0.5) {
     tuning.accessorySets -= 1;
     tuning.loadMul *= 0.95;
-    changes.push(`You made ${r.sessionsDone} of ${r.sessionsPlanned} sessions. This block has shorter sessions and 5% lighter loads, so it fits your week and your body can catch up.`);
+    changes.push(tr(`Tu as fait ${r.sessionsDone} séance${r.sessionsDone > 1 ? "s" : ""} sur ${r.sessionsPlanned}. Ce bloc a des séances plus courtes et des charges 5 % plus légères, pour qu’il entre dans ta semaine et que ton corps rattrape.`, `You made ${r.sessionsDone} of ${r.sessionsPlanned} sessions. This block has shorter sessions and 5% lighter loads, so it fits your week and your body can catch up.`));
   } else if (r.sessionsPlanned && rate < 0.8) {
-    changes.push(`${r.sessionsDone} of ${r.sessionsPlanned} sessions. Loads keep climbing; showing up more often is now what will move them fastest.`);
+    changes.push(tr(`${r.sessionsDone} séance${r.sessionsDone > 1 ? "s" : ""} sur ${r.sessionsPlanned}. Les charges continuent de monter; venir plus souvent est maintenant ce qui les fera bouger le plus vite.`, `${r.sessionsDone} of ${r.sessionsPlanned} sessions. Loads keep climbing; showing up more often is now what will move them fastest.`));
   }
 
   if (r.rpeGap != null && r.sessionsDone >= 3) {
     if (r.rpeGap >= 1) {
       tuning.loadMul *= 0.95;
       tuning.rpe -= 0.5;
-      changes.push(`Sessions felt harder than planned (RPE +${r.rpeGap}). Loads are down 5% and the targets are eased by half a point.`);
+      changes.push(tr(`Les séances ont semblé plus dures que prévu (RPE +${r.rpeGap}). Charges −5 % et cibles allégées d’un demi-point.`, `Sessions felt harder than planned (RPE +${r.rpeGap}). Loads are down 5% and the targets are eased by half a point.`));
     } else if (r.rpeGap >= 0.5) {
       tuning.loadMul *= 0.975;
-      changes.push(`Sessions ran a little hot (RPE +${r.rpeGap}). Loads are down 2.5%.`);
+      changes.push(tr(`Les séances étaient un peu intenses (RPE +${r.rpeGap}). Charges −2,5 %.`, `Sessions ran a little hot (RPE +${r.rpeGap}). Loads are down 2.5%.`));
     } else if (r.rpeGap <= -1 && rate >= 0.8) {
       tuning.loadMul *= 1.03;
       if (r.sessionsDone >= 8) tuning.accessorySets += 1;
-      changes.push(`Sessions felt easier than planned (RPE ${r.rpeGap}). Loads are up 3%${r.sessionsDone >= 8 ? " and there is one more accessory set" : ""}.`);
+      changes.push(tr(`Les séances ont semblé plus faciles que prévu (RPE ${r.rpeGap}). Charges +3 %${r.sessionsDone >= 8 ? " et une série d’accessoire de plus" : ""}.`, `Sessions felt easier than planned (RPE ${r.rpeGap}). Loads are up 3%${r.sessionsDone >= 8 ? " and there is one more accessory set" : ""}.`));
     }
   }
 
-  if (!changes.length) changes.push(r.sessionsPlanned ? "On track. The loads follow the heaviest sets you logged." : "Nothing to review yet.");
+  if (!changes.length) changes.push(r.sessionsPlanned ? tr("Dans les temps. Les charges suivent tes séries les plus lourdes enregistrées.", "On track. The loads follow the heaviest sets you logged.") : tr("Rien à revoir pour l’instant.", "Nothing to review yet."));
   tuning.loadMul = Math.round(tuning.loadMul * 1000) / 1000;
   return { tuning, changes };
 }

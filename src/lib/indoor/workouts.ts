@@ -13,6 +13,8 @@
    target on screen, and the ride is scored as usual.
    ───────────────────────────────────────────────────────────── */
 
+import { tr } from "../i18n";
+
 export type WorkoutSport = "ride" | "run";
 
 export type Block =
@@ -42,10 +44,10 @@ export function flatten(w: Pick<StructuredWorkout, "blocks">): Step[] {
   };
   for (const b of w.blocks) {
     if (b.kind === "steady") push(b.sec, b.pct, b.pct, zoneLabel(b.pct));
-    else if (b.kind === "ramp") push(b.sec, b.from, b.to, b.to >= b.from ? "Ramp up" : "Ramp down");
+    else if (b.kind === "ramp") push(b.sec, b.from, b.to, b.to >= b.from ? tr("Rampe montante", "Ramp up") : tr("Rampe descendante", "Ramp down"));
     else for (let i = 0; i < b.repeat; i++) {
-      push(b.onSec, b.onPct, b.onPct, `Interval ${i + 1}/${b.repeat}`);
-      push(b.offSec, b.offPct, b.offPct, "Recover");
+      push(b.onSec, b.onPct, b.onPct, tr(`Intervalle ${i + 1}/${b.repeat}`, `Interval ${i + 1}/${b.repeat}`));
+      push(b.offSec, b.offPct, b.offPct, tr("Récup", "Recover"));
     }
   }
   return out;
@@ -75,7 +77,10 @@ export function zoneOfPct(pct: number): 1 | 2 | 3 | 4 | 5 | 6 {
 }
 export const ZONE_LABEL = ["", "Recovery", "Endurance", "Tempo", "Threshold", "VO2 max", "Anaerobic"] as const;
 export const ZONE_HEX = ["", "#9aa3ad", "#4aa3df", "#1fc76f", "#f2c14e", "#f08a3c", "#d9453d"] as const;
-const zoneLabel = (pct: number) => ZONE_LABEL[zoneOfPct(pct)];
+const ZONE_LABEL_FR = ["", "Récupération", "Endurance", "Tempo", "Seuil", "VO2 max", "Anaérobie"] as const;
+/** A zone's name in the app's language. */
+export const zoneName = (z: number) => tr(ZONE_LABEL_FR[z] ?? "", ZONE_LABEL[z] ?? "");
+const zoneLabel = (pct: number) => zoneName(zoneOfPct(pct));
 
 /** Training stress, the usual way: hours × intensity² × 100. */
 export function stressScore(steps: Step[]) {
@@ -94,7 +99,7 @@ export function sanitize(w: StructuredWorkout): StructuredWorkout {
   const sec = (v: number) => Math.min(4 * 3600, Math.max(10, Math.round(v)));
   return {
     ...w,
-    name: w.name.trim().slice(0, 60) || "My workout",
+    name: w.name.trim().slice(0, 60) || tr("Mon entraînement", "My workout"),
     blocks: w.blocks.slice(0, 40).map((b) =>
       b.kind === "steady" ? { ...b, sec: sec(b.sec), pct: pct(b.pct) }
         : b.kind === "ramp" ? { ...b, sec: sec(b.sec), from: pct(b.from), to: pct(b.to) }

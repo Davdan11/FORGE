@@ -12,6 +12,8 @@
    the hardware — the same reason the decoders live apart.
    ───────────────────────────────────────────────────────────── */
 
+import { getLang } from "../i18n";
+
 export const OP = {
   requestControl: 0x00,
   reset: 0x01,
@@ -83,6 +85,20 @@ export const RESULT_TEXT: Record<number, string> = {
   0x04: "refused",
   0x05: "control not granted",
 };
+
+const RESULT_TEXT_FR: Record<number, string> = {
+  0x01: "OK",
+  0x02: "pas pris en charge par cet appareil",
+  0x03: "valeur hors limites",
+  0x04: "refusé",
+  0x05: "contrôle non accordé",
+};
+
+/** A result code in words, in the app's language (or the one asked for). */
+export function resultText(code: number, en?: boolean): string | undefined {
+  const e = en ?? getLang() === "en";
+  return (e ? RESULT_TEXT : RESULT_TEXT_FR)[code];
+}
 
 /**
  * When to send the next grade. Trainers take roughly one command a second and

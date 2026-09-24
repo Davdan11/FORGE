@@ -17,6 +17,7 @@
    setTargetPower, start, stop) and never see bytes.
    ───────────────────────────────────────────────────────────── */
 
+import { getLang } from "../i18n";
 import { cmdRequestControl, cmdSimulation, cmdStart, cmdStop, cmdTargetPower } from "./ftms";
 import { FEC_SERVICE, fecTargetPower, fecTrackResistance, fecUserConfig } from "./fec";
 import { wahooErg, wahooGrade, wahooSimInit, wahooUnlock } from "./wahoo";
@@ -103,8 +104,16 @@ export const PROTOCOL_LABEL: Record<TrainerProtocol, string> = {
   "speed-only": "speed only",
 };
 
-/** "Tacx Neo 2T · FE-C". Display only. */
-export function trainerLabel(name: string | undefined | null, protocol: TrainerProtocol, labels: Record<TrainerProtocol, string> = PROTOCOL_LABEL): string {
+export const PROTOCOL_LABEL_FR: Record<TrainerProtocol, string> = {
+  ftms: "FTMS",
+  "tacx-fec": "FE-C",
+  "wahoo-legacy": "Wahoo",
+  "power-only": "puissance seule",
+  "speed-only": "vitesse seule",
+};
+
+/** "Tacx Neo 2T · FE-C". Display only. Labels follow the app's language unless given. */
+export function trainerLabel(name: string | undefined | null, protocol: TrainerProtocol, labels: Record<TrainerProtocol, string> = getLang() === "en" ? PROTOCOL_LABEL : PROTOCOL_LABEL_FR): string {
   const brand = guessBrand(name);
   const base = name ? cleanName(name) : "";
   const shown = !base ? brand ?? "Trainer" : brand && !base.toLowerCase().includes(brand.toLowerCase()) ? `${brand} ${base}` : base;
@@ -237,6 +246,18 @@ export const SPEED_CURVES: SpeedCurve[] = [
   { id: "generic-magnetic", name: "Generic magnetic", source: "FORGE approximation, not a manufacturer curve", watts: (mph) => 8 * mph + 0.12 * mph ** 2 },
   { id: "kurt-kinetic-road-machine", name: "Kinetic Road Machine", source: "Kurt Kinetic published formula", watts: (mph) => 5.244820 * mph + 0.019168 * mph ** 3 },
 ];
+
+const CURVE_NAME_FR: Partial<Record<SpeedCurveId, string>> = {
+  generic: "Générique",
+  "generic-fluid": "Générique fluide",
+  "generic-magnetic": "Générique magnétique",
+};
+
+/** A speed curve's name, in the app's language (or the one asked for). */
+export function curveName(c: SpeedCurve, en?: boolean): string {
+  const e = en ?? getLang() === "en";
+  return e ? c.name : CURVE_NAME_FR[c.id] ?? c.name;
+}
 
 /** Watts from wheel speed on a chosen curve. Always "estimated". */
 export function powerFromCurve(speedMs: number, id: SpeedCurveId): { watts: number; quality: "estimated" } {

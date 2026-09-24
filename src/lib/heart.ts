@@ -1,5 +1,6 @@
 import type { ActivityType, Profile, Sex } from "./types";
 import { sportSpec } from "./data/sports";
+import { getLang, type Lang } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Heart rate, zones and calories for a recorded activity.
@@ -24,6 +25,9 @@ export function zoneOf(hr: number, maxHr: number): 0 | 1 | 2 | 3 | 4 | 5 {
 }
 
 export const ZONE_NAME = ["Rest", "Easy", "Aerobic", "Tempo", "Threshold", "Max"] as const;
+export const ZONE_NAME_FR = ["Repos", "Facile", "Aérobie", "Tempo", "Seuil", "Max"] as const;
+/** A zone's name in the given language (the current one by default). */
+export const zoneName = (z: number, lang: Lang = getLang()) => (lang === "fr" ? ZONE_NAME_FR : ZONE_NAME)[z] ?? "";
 
 /** Average and max over a series. Readings outside what a heart can do are dropped. */
 export function hrSummary(series: HrSeries | undefined) {

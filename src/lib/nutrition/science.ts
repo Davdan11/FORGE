@@ -1,4 +1,5 @@
 import type { Goal, NutritionDay, Profile } from "../types";
+import { tr, locale } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    The numbers behind every plate, and the reason for each.
@@ -123,16 +124,25 @@ export function explainTargets(p: Profile, dayType: DayType) {
   const fiberMin = Math.round(Math.max(25, (kcal / 1000) * 14));
 
   const signed = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n)}`;
+  const n0 = (n: number) => Math.round(n).toLocaleString(locale());
+  const job = p.lifestyle?.work && p.lifestyle.work !== "desk" ? p.lifestyle.work : null;
   const steps: Step[] = [
-    { label: "Resting energy", value: `${Math.round(rest).toLocaleString("en-US")} kcal`, why: `What your body burns doing nothing, from your weight, height, age and sex (Mifflin-St Jeor, the equation dietitians use).` },
-    { label: "Your activity", value: `× ${factor.toFixed(2)}`, why: `${p.daysPerWeek} training days a week${p.lifestyle?.work && p.lifestyle.work !== "desk" ? `, and a ${p.lifestyle.work === "physical" ? "physical" : "on-your-feet"} job` : ""}. That gives your maintenance: ${Math.round(weeklyMaintenance).toLocaleString("en-US")} kcal a day on average.` },
-    { label: dayType === "rest" ? "Rest day" : dayType === "hard" ? "Hard training day" : "Training day", value: `× ${dayFactor(p, dayType).toFixed(2)}`, why: dayType === "rest" ? "Less moving today, so a little less food — mostly fewer carbs." : dayType === "hard" ? "More work today, so more fuel — mostly carbs, around the session." : "An average training day." },
-    { label: "Your goal", value: Math.abs(kcal - maintenance) < 15 ? "±0 kcal" : `${signed(Math.round((kcal - maintenance) / 10) * 10)} kcal`, why: goalWhy(p.goal, rate, p.weightKg, kcal <= floor + 5 && bounded < 0, p.units?.weight === "lb") },
-    { label: "Protein", value: `${protein} g`, why: `${proteinPerKg.toFixed(1)} g per kg of ${ref === p.weightKg ? "your bodyweight" : `a reference weight of ${ref} kg (extra fat mass needs no protein)`}. ${p.goal === "cut" ? "High in a deficit to keep the muscle you have." : "Enough to build and repair after training."}` },
-    { label: "Fat", value: `${fat} g`, why: `At least 0.8 g per kg and a quarter of your energy: hormones and vitamins need it.` },
-    { label: "Carbs", value: `${carbs} g`, why: keto ? "Keto: held under 50 g; fat supplies the rest." : "The rest of your energy. Carbs fuel hard training, so they rise and fall with the day." },
-    { label: "Sugar, max", value: `${sugarMax} g`, why: `Free sugar under ${p.goal === "cut" ? "6" : "10"} % of energy (WHO guideline${p.goal === "cut" ? ", tighter in a deficit" : ""}). Fruit counts, but whole fruit is fine.` },
-    { label: "Fibre, min", value: `${fiberMin} g`, why: "14 g per 1,000 kcal: fullness, digestion, steadier energy." },
+    { label: tr("Énergie au repos", "Resting energy"), value: `${n0(rest)} kcal`, why: tr("Ce que ton corps brûle à rien faire, selon ton poids, ta taille, ton âge et ton sexe (Mifflin-St Jeor, l’équation des nutritionnistes).", `What your body burns doing nothing, from your weight, height, age and sex (Mifflin-St Jeor, the equation dietitians use).`) },
+    { label: tr("Ton activité", "Your activity"), value: `× ${factor.toFixed(2)}`, why: tr(
+      `${p.daysPerWeek} jours d’entraînement par semaine${job ? `, et un job ${job === "physical" ? "physique" : "debout"}` : ""}. Ça donne ton maintien : ${n0(weeklyMaintenance)} kcal par jour en moyenne.`,
+      `${p.daysPerWeek} training days a week${job ? `, and a ${job === "physical" ? "physical" : "on-your-feet"} job` : ""}. That gives your maintenance: ${Math.round(weeklyMaintenance).toLocaleString(locale())} kcal a day on average.`) },
+    { label: dayType === "rest" ? tr("Jour de repos", "Rest day") : dayType === "hard" ? tr("Grosse journée d’entraînement", "Hard training day") : tr("Jour d’entraînement", "Training day"), value: `× ${dayFactor(p, dayType).toFixed(2)}`,
+      why: dayType === "rest" ? tr("Moins de mouvement aujourd’hui, donc un peu moins de bouffe — surtout moins de glucides.", "Less moving today, so a little less food — mostly fewer carbs.") : dayType === "hard" ? tr("Plus de travail aujourd’hui, donc plus de carburant — surtout des glucides, autour de la séance.", "More work today, so more fuel — mostly carbs, around the session.") : tr("Une journée d’entraînement moyenne.", "An average training day.") },
+    { label: tr("Ton objectif", "Your goal"), value: Math.abs(kcal - maintenance) < 15 ? "±0 kcal" : `${signed(Math.round((kcal - maintenance) / 10) * 10)} kcal`, why: goalWhy(p.goal, rate, p.weightKg, kcal <= floor + 5 && bounded < 0, p.units?.weight === "lb") },
+    { label: tr("Protéines", "Protein"), value: `${protein} g`, why: tr(
+      `${proteinPerKg.toFixed(1).replace(".", ",")} g par kg ${ref === p.weightKg ? "de ton poids" : `d’un poids de référence de ${String(ref).replace(".", ",")} kg (le surplus de gras n’a pas besoin de protéines)`}. ${p.goal === "cut" ? "Élevé en déficit pour garder le muscle que t’as." : "Assez pour bâtir et réparer après l’entraînement."}`,
+      `${proteinPerKg.toFixed(1)} g per kg of ${ref === p.weightKg ? "your bodyweight" : `a reference weight of ${ref} kg (extra fat mass needs no protein)`}. ${p.goal === "cut" ? "High in a deficit to keep the muscle you have." : "Enough to build and repair after training."}`) },
+    { label: tr("Lipides", "Fat"), value: `${fat} g`, why: tr("Au moins 0,8 g par kg et le quart de ton énergie : tes hormones et tes vitamines en ont besoin.", `At least 0.8 g per kg and a quarter of your energy: hormones and vitamins need it.`) },
+    { label: tr("Glucides", "Carbs"), value: `${carbs} g`, why: keto ? tr("Kéto : sous 50 g; les lipides fournissent le reste.", "Keto: held under 50 g; fat supplies the rest.") : tr("Le reste de ton énergie. Les glucides alimentent l’entraînement intense, donc ils montent et descendent avec la journée.", "The rest of your energy. Carbs fuel hard training, so they rise and fall with the day.") },
+    { label: tr("Sucre, max", "Sugar, max"), value: `${sugarMax} g`, why: tr(
+      `Sucres libres sous ${p.goal === "cut" ? "6" : "10"} % de l’énergie (recommandation de l’OMS${p.goal === "cut" ? ", plus serré en déficit" : ""}). Le fruit compte, mais le fruit entier, c’est correct.`,
+      `Free sugar under ${p.goal === "cut" ? "6" : "10"} % of energy (WHO guideline${p.goal === "cut" ? ", tighter in a deficit" : ""}). Fruit counts, but whole fruit is fine.`) },
+    { label: tr("Fibres, min", "Fibre, min"), value: `${fiberMin} g`, why: tr("14 g par 1 000 kcal : satiété, digestion, énergie plus stable.", "14 g per 1,000 kcal: fullness, digestion, steadier energy.") },
   ];
 
   return { kcal, protein, carbs, fat, sugarMax, fiberMin, maintenance: Math.round(maintenance), referenceKg: ref, steps };
@@ -142,13 +152,14 @@ function goalWhy(goal: Goal, rate: number, kg: number, atFloor: boolean, pounds 
   const perWeek = Math.abs(rate * kg);
   // In the rider's own unit, like every other weight on screen.
   const w = (k: number) => pounds ? `${(k * 2.20462).toFixed(1)} lb` : `${k.toFixed(1)} kg`;
-  if (atFloor) return "A deficit, held at your floor: eating less than this costs muscle, not fat. To lose faster, move more — daily walks and a third training day do more than cutting food further.";
+  const wFr = (k: number) => w(k).replace(".", ",");
+  if (atFloor) return tr("Un déficit, tenu à ton plancher : manger moins que ça coûte du muscle, pas du gras. Pour perdre plus vite, bouge plus — des marches chaque jour et une troisième séance font plus que couper encore dans la bouffe.", "A deficit, held at your floor: eating less than this costs muscle, not fat. To lose faster, move more — daily walks and a third training day do more than cutting food further.");
   switch (goal) {
-    case "cut": return `A deficit for about ${w(perWeek)} a week (0.75 % of your weight) — fast enough to see, slow enough to keep your muscle.`;
-    case "recomp": return "A small deficit: lose fat slowly while your strength keeps climbing.";
-    case "build": return `A small surplus for about ${w(perWeek * 4.3)} a month — mostly muscle, not fat.`;
-    case "strength": return "About maintenance, a touch over: eat to lift, not to gain.";
-    default: return "Maintenance: fuel the training, keep your weight steady.";
+    case "cut": return tr(`Un déficit pour environ ${wFr(perWeek)} par semaine (0,75 % de ton poids) — assez vite pour le voir, assez lent pour garder ton muscle.`, `A deficit for about ${w(perWeek)} a week (0.75 % of your weight) — fast enough to see, slow enough to keep your muscle.`);
+    case "recomp": return tr("Un petit déficit : perdre du gras lentement pendant que ta force continue de monter.", "A small deficit: lose fat slowly while your strength keeps climbing.");
+    case "build": return tr(`Un petit surplus pour environ ${wFr(perWeek * 4.3)} par mois — surtout du muscle, pas du gras.`, `A small surplus for about ${w(perWeek * 4.3)} a month — mostly muscle, not fat.`);
+    case "strength": return tr("Autour du maintien, un poil au-dessus : manger pour soulever, pas pour prendre du poids.", "About maintenance, a touch over: eat to lift, not to gain.");
+    default: return tr("Maintien : nourrir l’entraînement, garder ton poids stable.", "Maintenance: fuel the training, keep your weight steady.");
   }
 }
 

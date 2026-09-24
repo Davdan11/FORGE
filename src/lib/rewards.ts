@@ -1,5 +1,6 @@
 import { supabase } from "./supabase/client";
-import { LEVELS_PER_TIER, SUB_RANKS, TIERS, levelFromXp, rankFor, subRankFor, tierForLevel } from "./gamification";
+import { BADGES, LEVELS_PER_TIER, SUB_RANKS, TIERS, badgeName, levelFromXp, rankFor, subRankFor, tierForLevel, tierName } from "./gamification";
+import { getLang, tr } from "./i18n";
 import type { Activity, LoggedSet, Profile, Session, Stats, WeighIn } from "./types";
 
 /* ─────────────────────────────────────────────────────────────
@@ -65,13 +66,18 @@ export function qualifies(rule_type: RuleType, rule_value: string, s: Standing):
     case "rank": {
       const need = rankRuleLevel(rule_value) ?? 999;
       const t = tierForLevel(need);
-      return { ok: s.level >= need, have: Math.min(s.level, need), need, label: `Reach ${t.name} ${subRankFor(need)}` };
+      return { ok: s.level >= need, have: Math.min(s.level, need), need, label: tr(`Atteins ${tierName(t, "fr")} ${subRankFor(need)}`, `Reach ${t.name} ${subRankFor(need)}`) };
     }
-    case "level": { const need = Number(rule_value) || 999; return { ok: s.level >= need, have: Math.min(s.level, need), need, label: `Reach level ${need}` }; }
-    case "badge": { const ok = s.badges.includes(rule_value); return { ok, have: ok ? 1 : 0, need: 1, label: `Earn the "${rule_value.replace(/_/g, " ")}" badge` }; }
-    case "streak": { const need = Number(rule_value) || 999; return { ok: s.streakWeeks >= need, have: Math.min(s.streakWeeks, need), need, label: `${need}-week streak` }; }
-    case "sessions_month": { const need = Number(rule_value) || 999; return { ok: s.sessionsThisMonth >= need, have: Math.min(s.sessionsThisMonth, need), need, label: `${need} sessions this month` }; }
+    case "level": { const need = Number(rule_value) || 999; return { ok: s.level >= need, have: Math.min(s.level, need), need, label: tr(`Atteins le niveau ${need}`, `Reach level ${need}`) }; }
+    case "badge": { const ok = s.badges.includes(rule_value); return { ok, have: ok ? 1 : 0, need: 1, label: tr(`Obtiens le badge « ${frBadge(rule_value)} »`, `Earn the "${rule_value.replace(/_/g, " ")}" badge`) }; }
+    case "streak": { const need = Number(rule_value) || 999; return { ok: s.streakWeeks >= need, have: Math.min(s.streakWeeks, need), need, label: tr(`Série de ${need} semaine${need > 1 ? "s" : ""}`, `${need}-week streak`) }; }
+    case "sessions_month": { const need = Number(rule_value) || 999; return { ok: s.sessionsThisMonth >= need, have: Math.min(s.sessionsThisMonth, need), need, label: tr(`${need} séance${need > 1 ? "s" : ""} ce mois-ci`, `${need} sessions this month`) }; }
   }
+}
+
+function frBadge(id: string) {
+  const b = BADGES.find((x) => x.id === id);
+  return b ? badgeName(b, "fr") : id.replace(/_/g, " ");
 }
 
 /** A campaign is open now when it is active, started, not ended. */
@@ -128,7 +134,7 @@ export function buildReport(input: { profile: Profile; stats: Stats; sessions: S
 
   return {
     at: now.toISOString(), name: input.profile.name, accountAgeDays: ageDays,
-    level: lvl.level, xp: input.stats.xp, rank: `${rankFor(lvl.level)}`, xpPerDay,
+    level: lvl.level, xp: input.stats.xp, rank: `${rankFor(lvl.level, "en")}`, xpPerDay,
     sessionsDone: done.length, setsLogged: input.sets.length,
     activities: input.activities.length, gpsActivities: gps,
     distanceKm: Math.round(input.activities.reduce((a, x) => a + x.distanceM, 0) / 100) / 10,
@@ -140,7 +146,7 @@ export function buildReport(input: { profile: Profile; stats: Stats; sessions: S
 
 /* ── Talking to the server ─────────────────────────────────── */
 
-const need = () => { if (!supabase) throw new Error("Accounts aren't set up in this build."); return supabase; };
+const need = () => { if (!supabase) throw new Error(tr("Les comptes sont pas configurés dans cette version.", "Accounts aren't set up in this build.")); return supabase; };
 const clean = (e: { message: string } | null) => { if (e) throw new Error(e.message); };
 
 export async function openCampaigns(): Promise<Campaign[]> {
@@ -161,9 +167,9 @@ export async function myClaims(): Promise<Claim[]> {
 export async function claimReward(campaignId: string, address: Address, report: ClaimReport) {
   const sb = need();
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) throw new Error("Sign in to claim a reward: it needs an account to ship to.");
+  if (!user) throw new Error(tr("Connecte-toi pour réclamer une récompense : il faut un compte pour l’expédier.", "Sign in to claim a reward: it needs an account to ship to."));
   const { error } = await sb.from("reward_claims").insert({ campaign_id: campaignId, user_id: user.id, ...address, report });
-  if (error) throw new Error(error.message.includes("duplicate") ? "You have already claimed this one." : error.message);
+  if (error) throw new Error(error.message.includes("duplicate") ? tr("Tu as déjà réclamé celle-ci.", "You have already claimed this one.") : error.message);
 }
 
 export async function amAdmin(): Promise<boolean> {
@@ -206,7 +212,9 @@ export async function purgeOldAddresses(): Promise<number> {
 export function claimsCsv(claims: Claim[], campaigns: Campaign[]) {
   const title = (id: string) => campaigns.find((c) => c.id === id)?.title ?? id;
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["Reward", "Status", "Name", "Address line 1", "Address line 2", "City", "Region", "Postal code", "Country", "Phone", "Claimed", "Tracking"];
+  const head = getLang() === "fr"
+    ? ["Récompense", "Statut", "Nom", "Adresse ligne 1", "Adresse ligne 2", "Ville", "Région", "Code postal", "Pays", "Téléphone", "Réclamée", "Suivi"]
+    : ["Reward", "Status", "Name", "Address line 1", "Address line 2", "City", "Region", "Postal code", "Country", "Phone", "Claimed", "Tracking"];
   const rows = claims.map((c) => [title(c.campaign_id), c.status, c.ship_name, c.ship_line1, c.ship_line2, c.ship_city, c.ship_region, c.ship_postal, c.ship_country, c.ship_phone, c.created_at.slice(0, 10), c.tracking]);
   return [head, ...rows].map((r) => r.map(esc).join(",")).join("\n");
 }
@@ -214,3 +222,8 @@ export function claimsCsv(claims: Claim[], campaigns: Campaign[]) {
 export const RULE_LABEL: Record<RuleType, string> = {
   rank: "Reach a rank", level: "Reach a level", badge: "Earn a badge", streak: "Hold a week streak", sessions_month: "Sessions this month",
 };
+const RULE_LABEL_FR: Record<RuleType, string> = {
+  rank: "Atteindre un rang", level: "Atteindre un niveau", badge: "Obtenir un badge", streak: "Garder une série de semaines", sessions_month: "Séances ce mois-ci",
+};
+/** A rule's label in the current language. */
+export const ruleLabel = (r: RuleType) => tr(RULE_LABEL_FR[r], RULE_LABEL[r]);

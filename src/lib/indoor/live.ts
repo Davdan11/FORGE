@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "../supabase/client";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Riding with people who are really there.
@@ -114,14 +115,14 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
       // Bounds, because this is another client's word: nobody rides 30 m/s.
       if (!Number.isFinite(p.d) || p.d < 0 || p.v < 0 || p.v > 30) return;
       const had = peers.has(p.id);
-      peers.set(p.id, { id: p.id, name: (p.n ?? "Rider").slice(0, 24), distanceM: p.d, speedMs: p.v, at: Date.now(), look: lookCode(p.lk), color: hexColor(p.c), quality: p.q === "m" || p.q === "e" || p.q === "d" ? p.q : undefined, category: typeof p.cat === "string" && /^[ABCD]$/.test(p.cat) ? p.cat : undefined, voice: p.vo === 1 });
+      peers.set(p.id, { id: p.id, name: (p.n ?? tr("Cycliste", "Rider")).slice(0, 24), distanceM: p.d, speedMs: p.v, at: Date.now(), look: lookCode(p.lk), color: hexColor(p.c), quality: p.q === "m" || p.q === "e" || p.q === "d" ? p.q : undefined, category: typeof p.cat === "string" && /^[ABCD]$/.test(p.cat) ? p.cat : undefined, voice: p.vo === 1 });
       if (!had) onChange();
     })
     .on("broadcast", { event: "kudos" }, ({ payload }) => {
       const k = payload as { to?: string; from?: string; n?: string };
       // Only the one it is for, and only from someone actually in the room.
       if (k?.to !== me || !k.from || !peers.has(k.from)) return;
-      onKudos?.((k.n ?? "Rider").slice(0, 24));
+      onKudos?.((k.n ?? tr("Cycliste", "Rider")).slice(0, 24));
     })
     .on("broadcast", { event: "rtc" }, ({ payload }) => {
       const m = payload as { to?: string; from?: string; s?: unknown };

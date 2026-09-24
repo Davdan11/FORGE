@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { isEmail, normalisePhone, sendCode, signInWith, verifyCode, type Provider } from "@/lib/auth";
 import { Press } from "./motion";
+import { tr, useT } from "@/lib/i18n";
 
 export const AUTH_ERROR_EVENT = "forge:autherror";
 
@@ -16,6 +17,7 @@ type Step = { kind: "choose" } | { kind: "email" } | { kind: "phone" } | { kind:
    or the native deep link caught by AuthBridge). */
 export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { onSignedIn: (u: User) => void; compact?: boolean }) {
   // A code sign-in both returns the user and fires SIGNED_IN; report it once.
+  const t = useT();
   const fired = useRef(false);
   const onSignedIn = useCallback((u: User) => { if (fired.current) return; fired.current = true; onSignedInProp(u); }, [onSignedInProp]);
   const [step, setStep] = useState<Step>({ kind: "choose" });
@@ -47,16 +49,16 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
     return (
       <div className="grid gap-4">
         <p className="text-sm text-smoke">{"email" in step.to
-          ? <>Check your email at <strong className="text-ink">{where}</strong>. Tap the sign-in link in it — or, if it shows a six-digit code, type it here.</>
-          : <>We sent a six-digit code to <strong className="text-ink">{where}</strong>.</>}</p>
-        <label className="field"><span className="meta">Code</span>
+          ? <>{t("Regarde tes courriels à", "Check your email at")} <strong className="text-ink">{where}</strong>. {t("Touche le lien de connexion qu’il contient — ou, s’il affiche un code à six chiffres, tape-le ici.", "Tap the sign-in link in it — or, if it shows a six-digit code, type it here.")}</>
+          : <>{t("On a envoyé un code à six chiffres au", "We sent a six-digit code to")} <strong className="text-ink">{where}</strong>.</>}</p>
+        <label className="field"><span className="meta">{t("Code", "Code")}</span>
           <input className="input tnum text-center text-2xl tracking-[.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="••••••" />
         </label>
         {error && <p className="text-sm text-[#b42318]" role="alert">{error}</p>}
-        <Press><button type="button" className="pill pill--volt pill--block" disabled={code.length !== 6 || !!busy} onClick={() => run("verify", async () => { onSignedIn(await verifyCode(step.to, code)); })}>{busy === "verify" ? "Checking…" : "Continue"}</button></Press>
+        <Press><button type="button" className="pill pill--volt pill--block" disabled={code.length !== 6 || !!busy} onClick={() => run("verify", async () => { onSignedIn(await verifyCode(step.to, code)); })}>{busy === "verify" ? t("Vérification…", "Checking…") : t("Continuer", "Continue")}</button></Press>
         <div className="flex justify-between text-sm">
-          <button type="button" className="text-smoke underline" onClick={() => { setCode(""); setStep({ kind: "email" in step.to ? "email" : "phone" }); }}>Change {"email" in step.to ? "email" : "number"}</button>
-          <button type="button" className="text-smoke underline" disabled={!!busy} onClick={() => run("resend", () => sendCode(step.to))}>{busy === "resend" ? "Sending…" : "Send a new code"}</button>
+          <button type="button" className="text-smoke underline" onClick={() => { setCode(""); setStep({ kind: "email" in step.to ? "email" : "phone" }); }}>{"email" in step.to ? t("Changer de courriel", "Change email") : t("Changer de numéro", "Change number")}</button>
+          <button type="button" className="text-smoke underline" disabled={!!busy} onClick={() => run("resend", () => sendCode(step.to))}>{busy === "resend" ? t("Envoi…", "Sending…") : t("Envoyer un nouveau code", "Send a new code")}</button>
         </div>
       </div>
     );
@@ -68,22 +70,22 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
     return (
       <div className="grid gap-4">
         {isMail
-          ? <label className="field"><span className="meta">Email</span><input className="input" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
-          : <label className="field"><span className="meta">Mobile number</span><input className="input tnum" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="514 555 1234" /><span className="text-xs text-smoke">Outside North America, start with + and your country code.</span></label>}
+          ? <label className="field"><span className="meta">{t("Courriel", "Email")}</span><input className="input" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("toi@exemple.com", "you@example.com")} /></label>
+          : <label className="field"><span className="meta">{t("Numéro de cellulaire", "Mobile number")}</span><input className="input tnum" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="514 555 1234" /><span className="text-xs text-smoke">{t("Hors de l’Amérique du Nord, commence par + et l’indicatif de ton pays.", "Outside North America, start with + and your country code.")}</span></label>}
         {error && <p className="text-sm text-[#b42318]" role="alert">{error}</p>}
-        <Press><button type="button" className="pill pill--volt pill--block" disabled={!target || !!busy} onClick={() => target && run("send", async () => { await sendCode(target); setCode(""); setStep({ kind: "code", to: target }); })}>{busy === "send" ? "Sending…" : "Send me a code"}</button></Press>
-        <button type="button" className="text-sm text-smoke underline justify-self-start" onClick={() => { setError(null); setStep({ kind: "choose" }); }}>← Other ways to sign in</button>
+        <Press><button type="button" className="pill pill--volt pill--block" disabled={!target || !!busy} onClick={() => target && run("send", async () => { await sendCode(target); setCode(""); setStep({ kind: "code", to: target }); })}>{busy === "send" ? t("Envoi…", "Sending…") : t("Envoie-moi un code", "Send me a code")}</button></Press>
+        <button type="button" className="text-sm text-smoke underline justify-self-start" onClick={() => { setError(null); setStep({ kind: "choose" }); }}>← {t("Autres façons de se connecter", "Other ways to sign in")}</button>
       </div>
     );
   }
 
   return (
     <div className={`grid ${compact ? "gap-2" : "gap-3"}`}>
-      <button type="button" className="pill pill--block !bg-ink !text-bone !border-ink gap-3" disabled={!!busy} onClick={() => provider("apple")}><AppleMark />{busy === "apple" ? "Opening Apple…" : "Continue with Apple"}</button>
-      <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? "Opening Google…" : "Continue with Google"}</button>
+      <button type="button" className="pill pill--block !bg-ink !text-bone !border-ink gap-3" disabled={!!busy} onClick={() => provider("apple")}><AppleMark />{busy === "apple" ? t("Ouverture d’Apple…", "Opening Apple…") : t("Continuer avec Apple", "Continue with Apple")}</button>
+      <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button>
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "phone" }); }}>Phone number</button>
-        <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "email" }); }}>Email</button>
+        <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "phone" }); }}>{t("Numéro de téléphone", "Phone number")}</button>
+        <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "email" }); }}>{t("Courriel", "Email")}</button>
       </div>
       {error && <p className="text-sm text-[#b42318]" role="alert">{error}</p>}
     </div>
@@ -93,11 +95,11 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
 /* Supabase's messages are written for developers; these are for people. */
 function friendly(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e);
-  if (/expired|invalid.*(otp|token)|token.*(expired|invalid)/i.test(m)) return "That code is wrong or has expired. Ask for a new one.";
-  if (/rate limit|too many/i.test(m)) return "Too many tries. Wait a minute, then ask for a new code.";
-  if (/provider is not enabled|unsupported provider/i.test(m)) return "That sign-in method isn’t switched on yet.";
-  if (/phone.*(provider|sms)|sms.*(provider|not)/i.test(m)) return "Text messages aren’t set up yet. Use email for now.";
-  if (/failed to fetch|network/i.test(m)) return "No connection. Check your network and try again.";
+  if (/expired|invalid.*(otp|token)|token.*(expired|invalid)/i.test(m)) return tr("Ce code est erroné ou expiré. Demandes-en un nouveau.", "That code is wrong or has expired. Ask for a new one.");
+  if (/rate limit|too many/i.test(m)) return tr("Trop d’essais. Attends une minute, puis demande un nouveau code.", "Too many tries. Wait a minute, then ask for a new code.");
+  if (/provider is not enabled|unsupported provider/i.test(m)) return tr("Cette méthode de connexion n’est pas encore activée.", "That sign-in method isn’t switched on yet.");
+  if (/phone.*(provider|sms)|sms.*(provider|not)/i.test(m)) return tr("Les textos ne sont pas encore configurés. Utilise le courriel pour l’instant.", "Text messages aren’t set up yet. Use email for now.");
+  if (/failed to fetch|network/i.test(m)) return tr("Pas de connexion. Vérifie ton réseau et réessaie.", "No connection. Check your network and try again.");
   return m;
 }
 

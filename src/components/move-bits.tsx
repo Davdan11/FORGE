@@ -7,12 +7,14 @@ import {
   ClimbIcon, BoulderIcon, SoccerIcon, FootballIcon, HockeyIcon, BasketballIcon, TennisIcon, CombatIcon,
   SkydiveIcon, ParaglideIcon,
 } from "./sport-icons";
-import { SPORTS } from "@/lib/data/sports";
+import { SPORTS, sportLabel } from "@/lib/data/sports";
+import { segmentLabel } from "@/lib/data/workouts";
 import type { SVGProps } from "react";
 
 type SportIcon = (p: SVGProps<SVGSVGElement> & { strokeWidth?: number }) => React.ReactElement;
 import type { Activity, ActivityType, TrackPoint, WorkoutSegment, UnitPrefs } from "@/lib/types";
 import { fmtDist, fmtDuration } from "@/lib/units";
+import { tr, useLang, type Lang } from "@/lib/i18n";
 
 /** Icon per sport; the catalogue in lib/data/sports.ts is the source of truth
  *  for which sports exist, what they measure and how fast is plausible. */
@@ -33,25 +35,34 @@ export const sportIcon = (t: ActivityType): SportIcon => ICON[t] ?? OtherIcon;
 export const TYPES: { v: ActivityType; label: string; icon: SportIcon }[] =
   SPORTS.map((s) => ({ v: s.v, label: s.label, icon: sportIcon(s.v) }));
 
+/** A sport's name in the reader's language. */
+export const sportName = (t: ActivityType, lang: Lang) => sportLabel(t, lang);
+
+/* Zone words: ZONE_LABEL / ZONE_TALK (workouts) in French. Heart zones: zoneName in lib/heart. */
+export const ZONE_LABEL_FR: Record<number, string> = { 1: "Récup", 2: "Facile", 3: "Soutenu", 4: "Seuil", 5: "Max" };
+export const ZONE_TALK_FR: Record<number, string> = { 1: "Conversation complète", 2: "Phrases complètes", 3: "Phrases courtes", 4: "Quelques mots", 5: "Pas un mot" };
+export const WORKOUT_KIND_FR: Record<string, string> = { easy: "facile", fartlek: "fartlek", hills: "côtes", intervals: "intervalles", long: "sortie longue", recovery: "récup", tempo: "tempo", test: "test" };
+
 /** Sports where speed reads better than pace. */
 export const SPEED_SPORTS: ActivityType[] = ["ride", "ski", "row"];
 export const isSpeedSport = (t: ActivityType) => SPEED_SPORTS.includes(t);
 /** Primary rate metric for a sport: pace per km/mi, pace per 100 m (swim) or speed. */
 export function rateFor(a: { type: ActivityType; distanceM: number; durationSec: number }, units: UnitPrefs): { label: string; value: string; sub: string } {
-  if (a.distanceM < 10 || a.durationSec < 5) return { label: "Pace", value: "—", sub: "" };
-  if (a.type === "swim") { const s = a.durationSec / (a.distanceM / 100); return { label: "Pace", value: `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`, sub: "per 100 m" }; }
-  if (isSpeedSport(a.type)) { const kmh = (a.distanceM / a.durationSec) * 3.6; return { label: "Avg speed", value: units.distance === "mi" ? (kmh / 1.609).toFixed(1) : kmh.toFixed(1), sub: units.distance === "mi" ? "mph" : "km/h" }; }
+  if (a.distanceM < 10 || a.durationSec < 5) return { label: tr("Allure", "Pace"), value: "—", sub: "" };
+  if (a.type === "swim") { const s = a.durationSec / (a.distanceM / 100); return { label: tr("Allure", "Pace"), value: `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`, sub: tr("par 100 m", "per 100 m") }; }
+  if (isSpeedSport(a.type)) { const kmh = (a.distanceM / a.durationSec) * 3.6; return { label: tr("Vitesse moy.", "Avg speed"), value: units.distance === "mi" ? (kmh / 1.609).toFixed(1) : kmh.toFixed(1), sub: units.distance === "mi" ? "mph" : "km/h" }; }
   const secKm = a.durationSec / (a.distanceM / 1000); const s = units.distance === "mi" ? secKm * 1.609344 : secKm;
-  return { label: "Avg pace", value: `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`, sub: units.distance === "mi" ? "per mile" : "per km" };
+  return { label: tr("Allure moy.", "Avg pace"), value: `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`, sub: units.distance === "mi" ? tr("par mille", "per mile") : tr("par km", "per km") };
 }
 
 /** Segment timeline coloured by zone (single hue, opacity steps). */
 export function SegmentBar({ segments }: { segments: WorkoutSegment[] }) {
+  const lang = useLang();
   const total = segments.reduce((a, s) => a + s.seconds, 0) || 1;
   const op = { 1: 0.25, 2: 0.45, 3: 0.65, 4: 0.85, 5: 1 } as Record<number, number>;
   return (
     <div className="flex gap-[2px] h-4 rounded-md overflow-hidden">
-      {segments.map((s, i) => <span key={i} title={`${s.label} · ${Math.round(s.seconds / 60)} min · Z${s.zone}`} style={{ width: `${(s.seconds / total) * 100}%`, background: `rgba(31,199,111,${op[s.zone]})` }} />)}
+      {segments.map((s, i) => <span key={i} title={`${segmentLabel(s.label, lang)} · ${Math.round(s.seconds / 60)} min · Z${s.zone}`} style={{ width: `${(s.seconds / total) * 100}%`, background: `rgba(31,199,111,${op[s.zone]})` }} />)}
     </div>
   );
 }
@@ -68,10 +79,11 @@ export function MiniRoute({ points, size = 56 }: { points: TrackPoint[]; size?: 
 }
 
 export function ActivityRow({ a, units }: { a: Activity; units: UnitPrefs }) {
+  const lang = useLang();
   return (
     <Link href={`/move/activity?id=${a.id}`} className="card p-2 flex items-center gap-3">
       <MiniRoute points={a.points} />
-      <span className="flex-1 min-w-0"><span className="block font-medium truncate">{a.title}</span><span className="text-xs text-smoke">{a.startedAt.slice(0, 10)} · <span className="capitalize">{a.type}</span>{a.shared ? " · shared" : ""} · <span className="text-volt">+{a.xp} XP</span></span></span>
+      <span className="flex-1 min-w-0"><span className="block font-medium truncate">{a.title}</span><span className="text-xs text-smoke">{a.startedAt.slice(0, 10)} · <span className="capitalize">{lang === "fr" ? sportName(a.type, lang).toLowerCase() : a.type}</span>{a.shared ? (lang === "fr" ? " · partagée" : " · shared") : ""} · <span className="text-volt">+{a.xp} XP</span></span></span>
       <span className="text-right tnum"><span className="block font-semibold">{fmtDist(a.distanceM, units)}</span><span className="text-xs text-smoke">{fmtDuration(a.durationSec)} · ↑{Math.round(a.elevGainM)} m</span></span>
     </Link>
   );

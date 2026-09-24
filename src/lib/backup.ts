@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { locale, tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Local backup: one JSON file holding every table.
@@ -40,15 +41,16 @@ export async function downloadBackup(): Promise<string> {
   a.remove();
   // Revoke on the next tick: Safari needs the URL alive through the click.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  return `Exported ${count.toLocaleString("en-US")} record${count === 1 ? "" : "s"}.`;
+  const n = count.toLocaleString(locale());
+  return tr(`${n} enregistrement${count > 1 ? "s" : ""} exporté${count > 1 ? "s" : ""}.`, `Exported ${n} record${count === 1 ? "" : "s"}.`);
 }
 
 export function parseBackup(text: string): Backup {
   let parsed: unknown;
-  try { parsed = JSON.parse(text); } catch { throw new Error("That file isn’t valid JSON."); }
+  try { parsed = JSON.parse(text); } catch { throw new Error(tr("Ce fichier n’est pas un JSON valide.", "That file isn’t valid JSON.")); }
   const b = parsed as Partial<Backup>;
-  if (!b || b.app !== "forge" || !b.tables) throw new Error("That isn’t a FORGE backup.");
-  if (typeof b.version !== "number" || b.version > BACKUP_VERSION) throw new Error("That backup comes from a newer version of FORGE.");
+  if (!b || b.app !== "forge" || !b.tables) throw new Error(tr("Ce n’est pas une sauvegarde FORGE.", "That isn’t a FORGE backup."));
+  if (typeof b.version !== "number" || b.version > BACKUP_VERSION) throw new Error(tr("Cette sauvegarde vient d’une version plus récente de FORGE.", "That backup comes from a newer version of FORGE."));
   return b as Backup;
 }
 
@@ -67,5 +69,6 @@ export async function restoreBackup(text: string): Promise<string> {
       restored += rows.length;
     }
   }
-  return `Restored ${restored.toLocaleString("en-US")} record${restored === 1 ? "" : "s"}.`;
+  const n = restored.toLocaleString(locale());
+  return tr(`${n} enregistrement${restored > 1 ? "s" : ""} restauré${restored > 1 ? "s" : ""}.`, `Restored ${n} record${restored === 1 ? "" : "s"}.`);
 }

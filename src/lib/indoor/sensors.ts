@@ -1,9 +1,10 @@
 "use client";
 
 import type { Reading } from "./ble-parse";
+import { tr } from "../i18n";
 import { transport, type Availability, type ConnectOptions, type Sensor, type SensorKind } from "./transport";
 
-export { SENSOR_LABEL, type Availability, type ConnectOptions, type Sensor, type SensorKind } from "./transport";
+export { SENSOR_LABEL, SENSOR_LABEL_FR, sensorName, type Availability, type ConnectOptions, type Sensor, type SensorKind } from "./transport";
 
 /* ─────────────────────────────────────────────────────────────
    What the ride reads from.
@@ -36,7 +37,7 @@ export async function connectSensor(
   return Promise.race([
     transport().connect(kind, onReading, onDisconnect, opts),
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("No answer from Bluetooth. Check it is on, the sensor is awake, and no other app is holding it.")), CONNECT_TIMEOUT_MS),
+      setTimeout(() => reject(new Error(tr("Pas de réponse du Bluetooth. Vérifie qu’il est allumé, que le capteur est réveillé et qu’aucune autre appli ne l’utilise.", "No answer from Bluetooth. Check it is on, the sensor is awake, and no other app is holding it."))), CONNECT_TIMEOUT_MS),
     ),
   ]);
 }

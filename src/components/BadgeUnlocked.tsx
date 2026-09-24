@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BADGES } from "@/lib/gamification";
+import { BADGES, badgeDesc, badgeName } from "@/lib/gamification";
+import { useLang, useT } from "@/lib/i18n";
 import { BADGES_EVENT } from "@/lib/progress";
 import { BadgeEmblem } from "./BadgeEmblem";
 import { AnimatePresence, motion } from "@/components/motion";
@@ -14,6 +15,8 @@ import { AnimatePresence, motion } from "@/components/motion";
  */
 export function BadgeUnlocked() {
   const [queue, setQueue] = useState<string[]>([]);
+  const t = useT();
+  const lang = useLang();
 
   useEffect(() => {
     const on = (e: Event) => {
@@ -44,9 +47,9 @@ export function BadgeUnlocked() {
               <BadgeEmblem id={badge.id} pillar={badge.pillar} earned size={56} />
             </motion.span>
             <span className="min-w-0 grid">
-              <span className="meta text-volt font-bold">Badge unlocked</span>
-              <strong className="display text-lg leading-tight truncate">{badge.name}</strong>
-              <span className="text-xs text-smoke">{badge.desc}</span>
+              <span className="meta text-volt font-bold">{t("Badge débloqué", "Badge unlocked")}</span>
+              <strong className="display text-lg leading-tight truncate">{badgeName(badge, lang)}</strong>
+              <span className="text-xs text-smoke">{badgeDesc(badge, lang)}</span>
             </span>
           </motion.button>
         )}

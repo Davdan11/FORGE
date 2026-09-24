@@ -3,6 +3,7 @@ import { db } from "../db";
 import { verifyActivity } from "../verify";
 import { cellOf, cellsAround, publishableRoute, type PublicRoute } from "./privacy";
 import type { Activity, ActivityType } from "../types";
+import { tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    The feed.
@@ -46,7 +47,7 @@ type Row = {
 
 export type Outcome<T> = { ok: true; value: T } | { ok: false; reason: string };
 
-const off = (): Outcome<never> => ({ ok: false, reason: "Sign in to use the feed." });
+const off = (): Outcome<never> => ({ ok: false, reason: tr("Connecte-toi pour utiliser le fil.", "Sign in to use the feed.") });
 
 async function me() {
   if (!supabase) return null;
@@ -64,9 +65,9 @@ const HANDLE_RE = /^[a-z0-9_]{3,20}$/;
 
 export function handleProblem(handle: string): string | null {
   const h = handle.trim().toLowerCase();
-  if (h.length < 3) return "Three characters or more.";
-  if (h.length > 20) return "Twenty characters at most.";
-  if (!HANDLE_RE.test(h)) return "Lowercase letters, numbers and underscore only.";
+  if (h.length < 3) return tr("Trois caractères ou plus.", "Three characters or more.");
+  if (h.length > 20) return tr("Vingt caractères maximum.", "Twenty characters at most.");
+  if (!HANDLE_RE.test(h)) return tr("Lettres minuscules, chiffres et tiret bas seulement.", "Lowercase letters, numbers and underscore only.");
   return null;
 }
 
@@ -86,7 +87,7 @@ export async function setHandle(handle: string): Promise<Outcome<string>> {
 
   const { error } = await supabase.from("handles").upsert({ user_id: user.id, handle: h }, { onConflict: "user_id" });
   // 23505 is Postgres' unique violation: somebody already answers to this.
-  if (error) return { ok: false, reason: error.code === "23505" ? "That handle is taken." : error.message };
+  if (error) return { ok: false, reason: error.code === "23505" ? tr("Ce pseudo est déjà pris.", "That handle is taken.") : error.message };
 
   // Posts carry the handle so the feed is one query. Renaming has to catch up
   // with them, or old posts keep a name their author has abandoned.
@@ -112,7 +113,7 @@ export async function publish(a: Activity): Promise<Outcome<string>> {
   if (!user || !supabase) return off();
 
   const handle = await getHandle();
-  if (!handle) return { ok: false, reason: "Choose a handle before your first post." };
+  if (!handle) return { ok: false, reason: tr("Choisis un pseudo avant ta première publication.", "Choose a handle before your first post.") };
 
   const v = verifyActivity(a.points, a.type, a.durationSec);
   const { route, cell } = publishableRoute(a.points);
@@ -122,7 +123,7 @@ export async function publish(a: Activity): Promise<Outcome<string>> {
   // appear in a local feed, because we do not know where it happened without
   // looking at the part we deliberately threw away.
   const fallbackCell = cell ?? (await lastKnownCell());
-  if (!fallbackCell) return { ok: false, reason: "This route is too short to place on a map without revealing where it started." };
+  if (!fallbackCell) return { ok: false, reason: tr("Ce parcours est trop court pour être placé sur une carte sans révéler où il a commencé.", "This route is too short to place on a map without revealing where it started.") };
 
   const row = {
     id: a.id,
@@ -179,7 +180,7 @@ export async function lastKnownCell(): Promise<string | null> {
 export async function nearby(cell: string, limit = 40): Promise<Outcome<FeedPost[]>> {
   if (!supabase) return off();
   const [la, ln] = cell.split(":").map(Number);
-  if (!Number.isFinite(la) || !Number.isFinite(ln)) return { ok: false, reason: "Unknown area." };
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return { ok: false, reason: tr("Zone inconnue.", "Unknown area.") };
 
   // cellsAround takes coordinates, so step back into the middle of this cell.
   const cells = cellsAround((la + 0.5) * 0.1, (ln + 0.5) * 0.1);

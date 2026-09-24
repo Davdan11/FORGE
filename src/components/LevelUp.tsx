@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { rankFor, subRankFor, tierForLevel, xpForLevel } from "@/lib/gamification";
+import { locale, useLang, useT } from "@/lib/i18n";
 import { RankEmblem } from "./RankEmblem";
 import { LEVEL_UP_EVENT } from "@/lib/progress";
 
@@ -38,6 +39,8 @@ const COLORS = ["#c6f432", "#c6f432", "#ffffff", "#1fc76f", "#c6f432", "#f6f3ec"
 
 export function LevelUpCard({ level, onClose }: { level: number; onClose: () => void }) {
   const reduce = useReducedMotion();
+  const t = useT();
+  const lang = useLang();
   const need = xpForLevel(level);
 
   // The level number rolls from the previous one to the new one.
@@ -64,7 +67,7 @@ export function LevelUpCard({ level, onClose }: { level: number; onClose: () => 
 
   return (
     <motion.div
-      role="dialog" aria-modal="true" aria-label={`Level ${level} reached`}
+      role="dialog" aria-modal="true" aria-label={t(`Niveau ${level} atteint`, `Level ${level} reached`)}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
       className="on-photo fixed inset-0 z-[60] grid place-items-center px-6 text-bone overflow-hidden"
       style={{ background: "#08090a" }}
@@ -85,7 +88,7 @@ export function LevelUpCard({ level, onClose }: { level: number; onClose: () => 
         transition={{ duration: 0.45, delay: 0.62 }}>
 
         <motion.p initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="eyebrow mb-2">Level up</motion.p>
+          className="eyebrow mb-2">{t("Niveau supérieur", "Level up")}</motion.p>
 
         <motion.span initial={reduce ? false : { opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
           className="numeral !text-[6.5rem] leading-none tnum" style={{ color: "#c6f432" }}>{shown}</motion.span>
@@ -106,16 +109,19 @@ export function LevelUpCard({ level, onClose }: { level: number; onClose: () => 
         </div>
 
         <motion.p initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.95, duration: 0.5 }}
-          className="display text-3xl mt-7">You are <em>{rankFor(level)}.</em></motion.p>
+          className="display text-3xl mt-7">{t("Tu es", "You are")} <em>{rankFor(level, lang)}.</em></motion.p>
 
         <motion.p initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}
           className="text-sm text-smoke mt-3 max-w-[34ch] tnum">
-          {need.toLocaleString("en-US")} XP to level {level + 1}. Every set, route and honest check-in counts toward it.
+          {t(
+            `${need.toLocaleString(locale())} XP jusqu’au niveau ${level + 1}. Chaque série, chaque parcours et chaque check-in honnête compte.`,
+            `${need.toLocaleString("en-US")} XP to level ${level + 1}. Every set, route and honest check-in counts toward it.`,
+          )}
         </motion.p>
 
         <motion.button type="button" onClick={onClose}
           initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.25 }}
-          className="pill pill--volt pill--lg mt-8">Keep going</motion.button>
+          className="pill pill--volt pill--lg mt-8">{t("On continue", "Keep going")}</motion.button>
       </motion.div>
     </motion.div>
   );

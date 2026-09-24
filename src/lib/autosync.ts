@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { supabase } from "./supabase/client";
-import { SYNCED_TABLES, syncNow } from "./sync";
+import { SYNCED_TABLES, syncNowResult } from "./sync";
+import { tr } from "./i18n";
 import { isNativeShell } from "./native";
 
 /* ─────────────────────────────────────────────────────────────
@@ -70,14 +71,14 @@ async function run() {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   running = true;
   try {
-    const message = await syncNow();
+    const { kind, message } = await syncNowResult();
     // "Sign in first" is not a failure: there is simply no account yet.
-    if (message !== "Sign in first." && message !== "Supabase not configured.") {
-      const ok = !message.startsWith("Sync failed");
+    if (kind !== "off") {
+      const ok = kind === "ok";
       try { localStorage.setItem(STATUS, JSON.stringify({ at: new Date().toISOString(), ok, message } satisfies SyncStatus)); } catch { /* status only */ }
     }
   } catch (e) {
-    try { localStorage.setItem(STATUS, JSON.stringify({ at: new Date().toISOString(), ok: false, message: e instanceof Error ? e.message : "Sync failed." })); } catch { /* status only */ }
+    try { localStorage.setItem(STATUS, JSON.stringify({ at: new Date().toISOString(), ok: false, message: e instanceof Error ? e.message : tr("Échec de la synchro.", "Sync failed.") })); } catch { /* status only */ }
   } finally {
     running = false;
     if (again) { again = false; scheduleSync(1000); }

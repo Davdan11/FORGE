@@ -57,7 +57,13 @@ export const LEGAL = {
 };
 
 /** Shown before the first plan is built, and in Settings. */
-export const HEALTH_NOTICE =
-  `${APP_NAME} gives general fitness and nutrition guidance. It is not medical advice and does not diagnose or treat anything. ` +
-  "Check with a doctor before starting a new program — especially if you have a health condition, an injury, are pregnant, or haven’t exercised in a while. " +
-  "Stop and get help if you feel chest pain, dizziness or sharp pain.";
+export const HEALTH_NOTICE: { fr: string; en: string } = {
+  fr:
+    `${APP_NAME} donne des conseils généraux d’entraînement et de nutrition. Ce n’est pas un avis médical : l’app ne pose aucun diagnostic et ne traite rien. ` +
+    "Parles-en à un médecin avant de commencer un nouveau programme — surtout si tu as un problème de santé, une blessure, si tu es enceinte ou si ça fait longtemps que tu ne t’es pas entraîné·e. " +
+    "Arrête et va chercher de l’aide si tu ressens une douleur à la poitrine, un étourdissement ou une douleur vive.",
+  en:
+    `${APP_NAME} gives general fitness and nutrition guidance. It is not medical advice and does not diagnose or treat anything. ` +
+    "Check with a doctor before starting a new program — especially if you have a health condition, an injury, are pregnant, or haven’t exercised in a while. " +
+    "Stop and get help if you feel chest pain, dizziness or sharp pain.",
+};
