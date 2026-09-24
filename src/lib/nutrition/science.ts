@@ -127,7 +127,7 @@ export function explainTargets(p: Profile, dayType: DayType) {
     { label: "Resting energy", value: `${Math.round(rest).toLocaleString("en-US")} kcal`, why: `What your body burns doing nothing, from your weight, height, age and sex (Mifflin-St Jeor, the equation dietitians use).` },
     { label: "Your activity", value: `× ${factor.toFixed(2)}`, why: `${p.daysPerWeek} training days a week${p.lifestyle?.work && p.lifestyle.work !== "desk" ? `, and a ${p.lifestyle.work === "physical" ? "physical" : "on-your-feet"} job` : ""}. That gives your maintenance: ${Math.round(weeklyMaintenance).toLocaleString("en-US")} kcal a day on average.` },
     { label: dayType === "rest" ? "Rest day" : dayType === "hard" ? "Hard training day" : "Training day", value: `× ${dayFactor(p, dayType).toFixed(2)}`, why: dayType === "rest" ? "Less moving today, so a little less food — mostly fewer carbs." : dayType === "hard" ? "More work today, so more fuel — mostly carbs, around the session." : "An average training day." },
-    { label: "Your goal", value: Math.abs(kcal - maintenance) < 15 ? "±0 kcal" : `${signed(Math.round((kcal - maintenance) / 10) * 10)} kcal`, why: goalWhy(p.goal, rate, p.weightKg, kcal <= floor + 5 && bounded < 0) },
+    { label: "Your goal", value: Math.abs(kcal - maintenance) < 15 ? "±0 kcal" : `${signed(Math.round((kcal - maintenance) / 10) * 10)} kcal`, why: goalWhy(p.goal, rate, p.weightKg, kcal <= floor + 5 && bounded < 0, p.units?.weight === "lb") },
     { label: "Protein", value: `${protein} g`, why: `${proteinPerKg.toFixed(1)} g per kg of ${ref === p.weightKg ? "your bodyweight" : `a reference weight of ${ref} kg (extra fat mass needs no protein)`}. ${p.goal === "cut" ? "High in a deficit to keep the muscle you have." : "Enough to build and repair after training."}` },
     { label: "Fat", value: `${fat} g`, why: `At least 0.8 g per kg and a quarter of your energy: hormones and vitamins need it.` },
     { label: "Carbs", value: `${carbs} g`, why: keto ? "Keto: held under 50 g; fat supplies the rest." : "The rest of your energy. Carbs fuel hard training, so they rise and fall with the day." },
@@ -138,13 +138,15 @@ export function explainTargets(p: Profile, dayType: DayType) {
   return { kcal, protein, carbs, fat, sugarMax, fiberMin, maintenance: Math.round(maintenance), referenceKg: ref, steps };
 }
 
-function goalWhy(goal: Goal, rate: number, kg: number, atFloor: boolean) {
+function goalWhy(goal: Goal, rate: number, kg: number, atFloor: boolean, pounds = false) {
   const perWeek = Math.abs(rate * kg);
+  // In the rider's own unit, like every other weight on screen.
+  const w = (k: number) => pounds ? `${(k * 2.20462).toFixed(1)} lb` : `${k.toFixed(1)} kg`;
   if (atFloor) return "A deficit, held at your floor: eating less than this costs muscle, not fat. To lose faster, move more — daily walks and a third training day do more than cutting food further.";
   switch (goal) {
-    case "cut": return `A deficit for about ${perWeek.toFixed(1)} kg a week (0.75 % of your weight) — fast enough to see, slow enough to keep your muscle.`;
+    case "cut": return `A deficit for about ${w(perWeek)} a week (0.75 % of your weight) — fast enough to see, slow enough to keep your muscle.`;
     case "recomp": return "A small deficit: lose fat slowly while your strength keeps climbing.";
-    case "build": return `A small surplus for about ${(perWeek * 4.3).toFixed(1)} kg a month — mostly muscle, not fat.`;
+    case "build": return `A small surplus for about ${w(perWeek * 4.3)} a month — mostly muscle, not fat.`;
     case "strength": return "About maintenance, a touch over: eat to lift, not to gain.";
     default: return "Maintenance: fuel the training, keep your weight steady.";
   }

@@ -158,7 +158,7 @@ export default function IndoorPage() {
                   <span className="inline-flex items-center gap-3"><Play className="w-7 h-7 fill-white" strokeWidth={0} />{t("Jouer", "Ride now")}</span>
                 </button>
               </Press>
-              <a href="#worlds" className="inline-flex items-center gap-1 text-sm font-semibold text-bone/80 hover:text-bone">{t("Voir les 9 mondes", "See the 9 worlds")}<ChevronRight className="w-4 h-4" /></a>
+              <a href="#worlds" className="inline-flex items-center gap-1 text-sm font-semibold text-bone/80 hover:text-bone">{t(`Voir les ${GAME_ROUTES.length} parcours`, `See the ${GAME_ROUTES.length} routes`)}<ChevronRight className="w-4 h-4" /></a>
             </div>
           </div>
 
@@ -173,11 +173,13 @@ export default function IndoorPage() {
             <Stat label={t("Sorties", "Rides")} value={String(rides.length)} />
             <Stat label={t("Kilomètres", "Kilometres")} value={km.toLocaleString(locale, { maximumFractionDigits: 0 })} />
             <Stat label={t("Heures en selle", "Hours in the saddle")} value={hours.toLocaleString(locale, { maximumFractionDigits: 1 })} />
-            <Stat label={t("XP gagnée", "XP earned")} value={xp.toLocaleString(locale)} accent />
+            <Stat label={t("XP gagnée", "XP earned")} value={xp.toLocaleString(locale)} accent
+              note={rides.length > 0 && xp === 0 ? t("Sans capteur, une sortie ne donne pas d'XP : branche un trainer, un capteur de puissance ou un cardio.", "Without a sensor a ride earns no XP: connect a trainer, a power meter or a heart-rate strap.") : undefined} />
           </section>
 
           {/* ── WORLDS ───────────────────────────────────────────── */}
-          <SectionHead id="worlds" kicker={t("6 pays · 3 défis", "6 countries · 3 challenges")} title={t("Neuf mondes à rouler", "Nine worlds to ride")} />
+          <SectionHead id="worlds" kicker={t(`${GAME_ROUTES.filter((r) => r.real).length} routes réelles · ${GAME_ROUTES.filter((r) => r.loop).length} circuits · ${GAME_ROUTES.filter((r) => r.challenge).length} défis`, `${GAME_ROUTES.filter((r) => r.real).length} real roads · ${GAME_ROUTES.filter((r) => r.loop).length} circuits · ${GAME_ROUTES.filter((r) => r.challenge).length} challenges`)}
+            title={t(`${GAME_ROUTES.length} parcours à rouler`, `${GAME_ROUTES.length} routes to ride`)} />
           <div className="fr-scroll -mx-5 md:-mx-12 px-5 md:px-12 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 mb-16">
             {GAME_ROUTES.map((r) => (
               <button key={r.key} type="button" onClick={ride} className="snap-start shrink-0 w-[270px] md:w-[320px] text-left rounded-2xl overflow-hidden bg-white/[.04] border border-white/10 hover:border-white/30 transition group">
@@ -218,8 +220,8 @@ export default function IndoorPage() {
               text={t("Ton temps devient un code. Ton ami roule contre ton fantôme, sur la même route.", "Your time becomes a code. Your friend races your ghost on the same road.")} />
             <Feature image="/indoor/pine.jpg" icon={<Timer className="w-5 h-5" />} title={t("Entraînements et test FTP", "Workouts and FTP test")}
               text={t("Dix séances guidées : le trainer tient les watts pour toi. Test de 20 minutes ou rampe, et ton FTP se met à jour.", "Ten guided sessions: the trainer holds the watts for you. 20-minute or ramp test, and your FTP updates.")} />
-            <Feature image="/indoor/garage.jpg" icon={<Shirt className="w-5 h-5" />} title={t("Ton vestiaire", "Your garage")}
-              text={t("Maillots de pays, logos, dossard, couleurs du vélo — à débloquer en roulant.", "Country kits, logos, race number, bike colours — unlocked by riding.")} />
+            <Feature image="/indoor/garage.jpg" icon={<Shirt className="w-5 h-5" />} title={t("Ton garage", "Your garage")}
+              text={t("Tenues, casques, souliers, cadres et roues — du commun au légendaire, à débloquer en roulant.", "Kits, helmets, shoes, frames and wheels — common to legendary, unlocked by riding.")} />
           </div>
 
           {/* ── NEXT STARTS ──────────────────────────────────────── */}
@@ -304,11 +306,12 @@ function Chip({ children, accent }: { children: React.ReactNode; accent?: boolea
   return <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 h-9 text-xs font-bold backdrop-blur-md ${accent ? "bg-[#FF2E78]/85 text-white" : "bg-white/10 text-bone border border-white/15"}`}>{children}</span>;
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({ label, value, accent, note }: { label: string; value: string; accent?: boolean; note?: string }) {
   return (
     <div className="rounded-2xl bg-white/[.05] border border-white/10 p-4 md:p-5">
       <p className="text-[11px] tracking-[.16em] uppercase font-semibold text-bone/55">{label}</p>
       <p className={`mt-1 text-3xl md:text-4xl font-black italic tabular-nums ${accent ? "text-[#FFD23F]" : ""}`}>{value}</p>
+      {note && <p className="mt-2 text-[11px] leading-snug text-bone/60">{note}</p>}
     </div>
   );
 }

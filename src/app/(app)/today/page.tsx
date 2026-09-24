@@ -83,7 +83,9 @@ export default function Today() {
             ...(readiness ? [{ label: "Readiness", value: readiness.score }] : []),
           ]}>
           <div className="flex gap-1.5 flex-wrap lg:hidden">
-            <span className="chip chip--live backdrop-blur-md tnum">{doneThisWeek}/{weekSessions.length} this week</span>
+            <span className="chip chip--live backdrop-blur-md tnum">{weekSessions.length === 0 && plan && plan.startDate > todayISO()
+              ? `Plan starts ${new Date(plan.startDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" })}`
+              : `${doneThisWeek}/${weekSessions.length} this week`}</span>
             {nutrition && <span className="chip chip--live backdrop-blur-md tnum">{nutrition.targets.kcal.toLocaleString("en-US")} kcal</span>}
             {readiness && <span className="chip chip--volt tnum">Readiness {readiness.score}</span>}
           </div>

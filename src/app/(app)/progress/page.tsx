@@ -50,6 +50,8 @@ export default function ProgressPage() {
   const weeksWithData = weekly.filter((x) => x.value > 0).length;
   const lifts = Object.entries(best).filter(([slug]) => getExercise(slug)?.loadable).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const trend = (slug: string) => sets.filter((s) => s.slug === slug && s.loadKg && s.reps).map((s) => e1rm(s.loadKg!, s.reps!));
+  // "Outside" counts what was ridden or run outdoors, like the distance beside it (indoor rides have their own page).
+  const outside = activities.filter((a) => a.meta?.discipline !== "indoor");
   const shared = activities.filter((a) => a.shared).sort((a, b) => (b.sharedAt ?? b.startedAt).localeCompare(a.sharedAt ?? a.startedAt));
   const readySeries = readiness.slice(-14);
   const wSeries = weights.slice(-30);
@@ -155,7 +157,7 @@ export default function ProgressPage() {
               <Item>
                 <Section title="Outside" aside={<Link href="/move" className="text-xs text-smoke underline">Move</Link>}>
                   <div className="card grid grid-cols-2 divide-x divide-line text-center tnum">
-                    <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none">{fmtDist(stats.totals.distanceM, units)}</strong><span className="meta">{activities.length} activit{activities.length === 1 ? "y" : "ies"}</span></span>
+                    <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none">{fmtDist(stats.totals.distanceM, units)}</strong><span className="meta">{outside.length} activit{outside.length === 1 ? "y" : "ies"}</span></span>
                     <span className="py-4 grid gap-1.5"><strong className="numeral !text-[1.9rem] leading-none"><CountUp value={Math.round(stats.totals.elevGainM ?? 0)} suffix=" m" /></strong><span className="meta">climbed · {Math.round(((stats.totals.elevGainM ?? 0) / 8849) * 100)}% of Everest</span></span>
                   </div>
                 </Section>

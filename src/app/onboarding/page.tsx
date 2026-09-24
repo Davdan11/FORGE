@@ -119,8 +119,11 @@ export default function Onboarding() {
     // Cinematic build: staged messages while the engine works.
     for (let i = 0; i < 4; i++) { setStage(i); await new Promise((r) => setTimeout(r, 650)); }
     const equipment = equipmentFor(place, homeKit);
+    // Doing the setup again replaces the rider (same id, so their history stays theirs) instead of adding a second
+    // profile that the app would never show.
+    const existing = await db.profile.toArray();
     const profile: Profile = {
-      id: uid(), name: name.trim(), sex, age, units, goal, level,
+      id: existing[0]?.id ?? uid(), name: name.trim(), sex, age, units, goal, level,
       heightCm: units.weight === "lb" ? height * 2.54 : height, weightKg: units.weight === "lb" ? lbToKg(weight) : weight,
       daysPerWeek: days, sessionMinutes: minutes, trainingPlace: place, equipment,
       pain: injured.filter((a) => !healed.includes(a)), injuryHistory: injured.filter((a) => healed.includes(a)),
@@ -133,6 +136,13 @@ export default function Onboarding() {
     };
     const { plan, sessions } = generatePlan(profile, todayISO(), {}, adaptationsFor(await db.injuries.toArray(), todayISO()));
     await db.transaction("rw", db.profile, db.plans, db.sessions, db.nutrition, async () => {
+      // One rider, one plan: the old plan and the sessions it still had planned make way for the new ones.
+      await db.profile.clear();
+      const oldPlans = (await db.plans.toArray()).map((p) => p.id);
+      if (oldPlans.length) {
+        await db.sessions.where("planId").anyOf(oldPlans).filter((x) => x.status === "planned").delete();
+        await db.plans.bulkDelete(oldPlans);
+      }
       await db.profile.put({ ...profile, dirty: 1, updatedAt: new Date().toISOString() });
       await db.plans.put({ ...plan, dirty: 1 });
       await db.sessions.bulkPut(sessions.map((s) => ({ ...s, dirty: 1 })));
@@ -169,7 +179,7 @@ export default function Onboarding() {
             {ready.blocks.map((b, i) => (
               <li key={b.name} className="p-4 grid grid-cols-[34px_minmax(0,1fr)] gap-x-2">
                 <span className="meta text-volt font-bold pt-0.5">{String(i + 1).padStart(2, "0")}</span>
-                <span className="grid gap-0.5"><strong className="text-sm">Weeks {i * 4 + 1}–{i * 4 + 4} · {b.name}</strong><span className="text-xs text-smoke leading-relaxed">{b.intent} Week 4 is lighter so the work can pay off.</span></span>
+                <span className="grid gap-0.5"><strong className="text-sm">Weeks {i * 4 + 1}–{i * 4 + 4} · {b.name}</strong><span className="text-xs text-smoke leading-relaxed">{b.intent} Its last week (week {i * 4 + 4}) is lighter so the work can pay off.</span></span>
               </li>
             ))}
           </ol>
