@@ -314,6 +314,8 @@ export interface Activity {
     poolM?: 25 | 50; laps?: number; discipline?: string; bike?: string;
     /** Indoor sessions: the virtual course, what measured the effort, and the workout followed. */
     indoor?: { course: string; quality: "measured" | "estimated" | "declared"; avgW?: number; workout?: string; workoutDone?: boolean; with?: number };
+    /** A ride imported from another platform's file (Zwift, MyWhoosh, Rouvy…): kept apart, per platform. */
+    imported?: { platform: string; file: string; avgW?: number; maxW?: number; normalizedW?: number; avgCadence?: number; best5min?: number; best20min?: number };
   };
   /** [seconds since start, bpm] from a Bluetooth strap or watch, every ~5 s. */
   hrSeries?: [number, number][];

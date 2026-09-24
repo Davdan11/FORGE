@@ -14,6 +14,7 @@ import { isConfigured } from "@/lib/supabase/client";
 import { ScreenSkeleton, Toast } from "@/components/ui";
 import { Page, Press } from "@/components/motion";
 import { UnityRide } from "@/components/indoor/UnityRide";
+import { Platforms } from "@/components/indoor/Platforms";
 import type { Profile as AthleteProfile } from "@/lib/types";
 
 /* Indoor is FORGE Ride, the Unity game, presented like a game launch: a
@@ -203,6 +204,9 @@ export default function IndoorPage() {
             <div className="col-span-2 md:col-span-1"><Stat label={t("Étincelles", "Sparks")} value={(stats ? sparks(stats) : 0).toLocaleString(locale)} accent
               note={t("1 par XP gagnée dans l'app, +100 par badge. Dépense-les au garage du jeu.", "1 per XP earned in the app, +100 per badge. Spend them in the game's garage.")} /></div>
           </section>
+
+          {/* ── YOUR OTHER PLATFORMS (imported .fit rides, one card each) ── */}
+          <Platforms forge={{ rides: rides.length, km, hours, climbM: rides.reduce((s, a) => s + a.elevGainM, 0) }} say={say} />
 
           {/* ── WORLDS ───────────────────────────────────────────── */}
           <SectionHead id="worlds" kicker={t(`${GAME_ROUTES.filter((r) => r.real).length} routes réelles · ${GAME_ROUTES.filter((r) => r.loop).length} circuits · ${GAME_ROUTES.filter((r) => r.challenge).length} défis`, `${GAME_ROUTES.filter((r) => r.real).length} real roads · ${GAME_ROUTES.filter((r) => r.loop).length} circuits · ${GAME_ROUTES.filter((r) => r.challenge).length} challenges`)}
