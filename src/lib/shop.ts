@@ -44,6 +44,7 @@ const ROWS: Record<SkinSlot, Row[]> = {
     ["WADOO CIEL", "WADOO SKY", "common", 0], ["ROUGE CORSA", "CORSA RED", "common", 2], ["MENTHE", "MINT", "common", 3],
     ["ORANGE FLUO", "FLUO ORANGE", "rare", 5], ["VIOLET", "VIOLET", "rare", 7], ["NOIR TOTAL", "ALL BLACK", "epic", 10],
     ["BLANC PUR", "PURE WHITE", "epic", 12], ["OR", "GOLD", "legendary", 18, 5],
+    ["AÉRO ROUGE", "AERO RED", "legendary", 20, 5],
   ],
   wheels: [
     ["CARBONE", "CARBON", "common", 0], ["LOGOS ROUGES", "RED DECALS", "common", 2], ["LOGOS BLEUS", "BLUE DECALS", "rare", 4],
