@@ -27,6 +27,11 @@ describe("the Unity game, seen from the app", () => {
     expect(p.rank.length).toBeGreaterThan(0);
   });
 
+  it("tells the game when the FTP is only a guess, so it can find the real one", () => {
+    expect(profileMessage({ name: "A", weightKg: 70, ftpW: 203, ftpGuessed: true }, 0)).toMatchObject({ ftpGuessed: true });
+    expect("ftpGuessed" in profileMessage({ name: "A", weightKg: 70, ftpW: 330 }, 0)).toBe(false);
+  });
+
   it("says when a ride crossed into a new level", () => {
     const edge = xpToReach(5) - 10;
     expect(rewardMessage(20, edge).levelUp).toBe(true);

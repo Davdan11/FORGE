@@ -326,7 +326,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           if (m.gfx) writePref("forge.gfx", m.gfx);
           if (m.lang === "en" || m.lang === "fr") setEn(m.lang === "en");
           g.route = m.route;
-          getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW }, s.xp), lang: navigator.language }));
+          getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW, ftpGuessed: profile.ftpW == null }, s.xp), lang: navigator.language }));
           if (profile.indoorGame?.look) send({ type: "look", look: profile.indoorGame.look });
           keepWorn(profile.indoorGame?.look).then(sendWallet);
           if (profile.indoorGame?.palmares) send({ type: "palmares", data: JSON.parse(profile.indoorGame.palmares) });

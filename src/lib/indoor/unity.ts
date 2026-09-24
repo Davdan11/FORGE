@@ -99,7 +99,7 @@ export function ridersMessage(peers: Iterable<Peer>, now: number) {
 }
 
 /** Who the rider is, for the game: weight and FTP for the physics, and the progression the app counts. */
-export function profileMessage(p: { name: string; weightKg: number; ftpW: number }, totalXp: number) {
+export function profileMessage(p: { name: string; weightKg: number; ftpW: number; ftpGuessed?: boolean }, totalXp: number) {
   const lv = levelFromXp(totalXp);
   return {
     type: "profile",
@@ -111,6 +111,8 @@ export function profileMessage(p: { name: string; weightKg: number; ftpW: number
     levelNeed: lv.need,
     totalXp: Math.round(totalXp),
     rank: rankFor(lv.level),
+    // Only estimated from a level: the game may raise it from the first minutes of measured power.
+    ...(p.ftpGuessed ? { ftpGuessed: true } : {}),
   };
 }
 
