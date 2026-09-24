@@ -52,11 +52,12 @@ export type UnityMessage =
   | { type: "checkpoint"; number: number; distance: number }
   | { type: "segment"; key: string; length: number; name: string; kind: string; seconds: number; medal: string }
   | { type: "kudos"; to: string }
+  | { type: "chat"; key: string }
   | UnitySummary
   | { type: "profileUpdate"; weightKg: number; ftp: number }
   | { type: "look"; look: string }
   | { type: "palmares"; data: unknown }
-  | { type: "event"; action: "join" | "leave" | "start"; id: string; route: string; start: number; kind: "group" | "race"; category: string }
+  | { type: "event"; action: "join" | "leave" | "start"; id: string; route: string; start: number; kind: "group" | "race" | "tt"; category: string }
   | { type: "challenge"; action: string; code: string; route?: string; routeName?: string; seconds?: number; won?: boolean }
   | { type: "buy"; item: string };
 

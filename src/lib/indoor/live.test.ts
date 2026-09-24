@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../supabase/client", () => ({ supabase: null }));
-import { extrapolate, prune, roomName, joinRoom, type Peer } from "./live";
+import { extrapolate, prune, roomName, joinRoom, quickLine, QUICK_LINES, type Peer } from "./live";
 
 describe("live riders", () => {
   const p: Peer = { id: "a", name: "Ana", distanceM: 1000, speedMs: 10, at: 0 };
@@ -26,5 +26,14 @@ describe("live riders", () => {
 
   it("does not join without an account", async () => {
     expect(await joinRoom("vallee", "ride", "Ana", () => {})).toBeNull();
+  });
+});
+
+describe("quick messages", () => {
+  it("lets only the game's ready-made lines through, never free text", () => {
+    for (const k of QUICK_LINES) expect(quickLine(k)).toBe(k);
+    expect(quickLine("hello <script>")).toBeUndefined();
+    expect(quickLine(42)).toBeUndefined();
+    expect(quickLine(undefined)).toBeUndefined();
   });
 });

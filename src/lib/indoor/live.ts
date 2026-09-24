@@ -87,6 +87,8 @@ export interface Room {
   signal: (toId: string, data: unknown) => void;
   /** Send a "bravo" to one person in the room. */
   kudos: (toId: string) => void;
+  /** Say one of the game's ready-made lines to everyone in the room (see QUICK_LINES). */
+  chat: (key: string) => void;
   leave: () => void;
 }
 
@@ -95,7 +97,17 @@ export interface Room {
  * anonymous rider would be a name nobody can report, so riding with others
  * needs a sign-in. Riding alone never does.
  */
-export async function joinRoom(courseId: string, sport: "ride" | "run", name: string, onChange: () => void, onKudos?: (fromName: string) => void, onSignal?: (fromId: string, data: unknown) => void): Promise<Room | null> {
+/**
+ * The quick messages riders can send each other in the game. Only these keys
+ * travel, never free text: each client shows the line in its own language, and
+ * there is nothing to moderate.
+ */
+export const QUICK_LINES = ["go", "bravo", "together", "attack", "wait", "thanks", "goodrace", "gg"] as const;
+export function quickLine(v: unknown): string | undefined {
+  return typeof v === "string" && (QUICK_LINES as readonly string[]).includes(v) ? v : undefined;
+}
+
+export async function joinRoom(courseId: string, sport: "ride" | "run", name: string, onChange: () => void, onKudos?: (fromName: string) => void, onSignal?: (fromId: string, data: unknown) => void, onChat?: (fromId: string, fromName: string, key: string) => void): Promise<Room | null> {
   if (!supabase) return null;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -124,6 +136,13 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
       if (k?.to !== me || !k.from || !peers.has(k.from)) return;
       onKudos?.((k.n ?? tr("Cycliste", "Rider")).slice(0, 24));
     })
+    .on("broadcast", { event: "chat" }, ({ payload }) => {
+      const c = payload as { from?: string; n?: string; k?: unknown };
+      // Only from someone riding in the room, and only a known line.
+      const key = quickLine(c?.k);
+      if (!c?.from || c.from === me || !peers.has(c.from) || !key) return;
+      onChat?.(c.from, (c.n ?? tr("Cycliste", "Rider")).slice(0, 24), key);
+    })
     .on("broadcast", { event: "rtc" }, ({ payload }) => {
       const m = payload as { to?: string; from?: string; s?: unknown };
       // Only for me, and only from someone riding in the room.
@@ -148,6 +167,7 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
   });
 
   const firstName = name.trim().split(/\s+/)[0]?.slice(0, 24) || "Rider";
+  let lastChat = 0;
   return {
     me,
     peers,
@@ -155,6 +175,13 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
     send: (d, v, extra) => { channel.send({ type: "broadcast", event: "pos", payload: { id: me, n: firstName, d: Math.round(d * 10) / 10, v: Math.round(v * 100) / 100, lk: extra?.look, c: extra?.color, q: extra?.quality, cat: extra?.category, vo: extra?.voice ? 1 : undefined } }); },
     signal: (to, data) => { if (peers.has(to)) channel.send({ type: "broadcast", event: "rtc", payload: { to, from: me, s: data } }); },
     kudos: (to) => { if (peers.has(to)) channel.send({ type: "broadcast", event: "kudos", payload: { to, from: me, n: firstName } }); },
+    chat: (key) => {
+      // One line every 2 s at most, whatever the game asks.
+      const k = quickLine(key), now = Date.now();
+      if (!k || now - lastChat < 2000) return;
+      lastChat = now;
+      channel.send({ type: "broadcast", event: "chat", payload: { from: me, n: firstName, k } });
+    },
     leave: () => { channel.untrack().catch(() => {}); supabase?.removeChannel(channel); },
   };
 }

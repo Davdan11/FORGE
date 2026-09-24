@@ -169,7 +169,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     }, (from) => send({ type: "kudos", from }), (from, data) => {
       const sig = voiceSignal(data);
       if (sig) void voice.current?.receive(from, sig);
-    });
+    }, (from, name, key) => send({ type: "chat", id: `p-${from}`, from: name, key }));
     if (roomKey.current !== key) { r?.leave(); return; }
     room.current = r; setInRoom(!!r);
     voice.current?.setRoom(r?.me ?? "", r ? (to, sig) => r.signal(to, sig) : null);
@@ -348,6 +348,9 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           g.event = m.action === "leave" ? null : m.id;
           g.eventRoom = m.action !== "leave" && m.kind === "race" ? m.category : null;
           enterRoom(unityRoom(g.route, g.event, g.eventRoom));
+          break;
+        case "chat":
+          room.current?.chat(m.key);
           break;
         case "kudos":
           room.current?.kudos(m.to.replace(/^p-/, ""));
