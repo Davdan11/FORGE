@@ -45,6 +45,10 @@ describe("the Unity game, seen from the app", () => {
 
   it("accepts only a real outfit code and a real colour from another client", () => {
     expect(lookCode("3.7.0.0.1.0.2.6.1.0.0.1.21.-1")).toBeDefined();
+    // With the garage skins, then with the rider (1 = the female cyclist).
+    expect(lookCode("3.7.0.0.1.0.2.6.1.0.0.1.21.-1.1.0.0.0.0.0")).toBeDefined();
+    expect(lookCode("3.7.0.0.1.0.2.6.1.0.0.1.21.-1.1.0.0.0.0.0.1")).toBeDefined();
+    expect(lookCode("3.7.0.0.1.0.2.6.1.0.0.1.21.-1.1.0.0.0.0.0.7")).toBeUndefined();
     expect(lookCode("3.7.0.0.1.0.2.6.1.0.0.1.21.-1.4.1.3.2.1.6")).toBeDefined(); // with the garage skins
     expect(lookCode("3.7.0.0.1.0.2.6.1.0.0.1.21.-1.4.1")).toBeUndefined();
     expect(lookCode("<script>")).toBeUndefined();

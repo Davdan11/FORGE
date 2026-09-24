@@ -159,10 +159,10 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
   };
 }
 
-/** Another client's word again: an outfit code is 14 (or 20) small numbers, nothing else. */
+/** Another client's word again: an outfit code is 14, 20 or 21 small numbers, nothing else. */
 export function lookCode(v: unknown): string | undefined {
-  // 14 numbers, or 20 since the garage skins (outfit, helmet, shoes, glasses, frame, wheels).
-  return typeof v === "string" && /^-?\d{1,3}(\.-?\d{1,3}){13}((\.-?\d{1,3}){6})?$/.test(v) ? v : undefined;
+  // 14 numbers, 20 since the garage skins (outfit, helmet, shoes, glasses, frame, wheels), 21 with the rider (0 male, 1 female).
+  return typeof v === "string" && /^-?\d{1,3}(\.-?\d{1,3}){13}((\.-?\d{1,3}){6}(\.[01])?)?$/.test(v) ? v : undefined;
 }
 export function hexColor(v: unknown): string | undefined {
   return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : undefined;
