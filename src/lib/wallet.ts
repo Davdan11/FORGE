@@ -6,7 +6,8 @@ import { lookItems, ownedKeys, sparks, tryBuy, type BuyResult } from "./shop";
 
 export async function wallet() {
   const stats = await getStats();
-  return { sparks: sparks(stats), owned: ownedKeys(stats) };
+  // test: TEMPORARY owner's test bonus in place (the game then ignores level and medal locks).
+  return { sparks: sparks(stats), owned: ownedKeys(stats), test: !!stats.testSparks };
 }
 
 export async function buy(key: string): Promise<BuyResult> {

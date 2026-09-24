@@ -85,11 +85,12 @@ export function lookItems(code: string | undefined): string[] {
 export type BuyResult = { ok: true; item: ShopItem; price: number } | { ok: false; reason: "unknown" | "owned" | "level" | "sparks"; need?: number };
 
 /** Checks a purchase against the level and the balance. Pure: the caller saves the change. */
-export function tryBuy(stats: Pick<Stats, "xp" | "badges" | "coinsSpent" | "owned">, level: number, key: string): BuyResult {
+export function tryBuy(stats: Pick<Stats, "xp" | "badges" | "coinsSpent" | "owned" | "testSparks">, level: number, key: string): BuyResult {
   const item = findItem(key);
   if (!item) return { ok: false, reason: "unknown" };
   if (ownedKeys(stats).includes(key)) return { ok: false, reason: "owned" };
-  if (level < item.level) return { ok: false, reason: "level", need: item.level };
+  // TEMPORARY: the owner's test bonus also lifts the level requirement (remove with TEST_BONUS).
+  if (level < item.level && !stats.testSparks) return { ok: false, reason: "level", need: item.level };
   const price = priceOf(item);
   if (sparks(stats) < price) return { ok: false, reason: "sparks", need: price - sparks(stats) };
   return { ok: true, item, price };
@@ -97,6 +98,7 @@ export function tryBuy(stats: Pick<Stats, "xp" | "badges" | "coinsSpent" | "owne
 
 /**
  * TEMPORARY, remove before launch: a test bonus for the owner to try the garage before earning the sparks.
- * Opening /indoor?bonus=<code> once adds it to this device's stats.
+ * Opening /indoor?bonus=<code> once adds it to this device's stats; while it is there, levels and medals do not lock
+ * anything (the game is told with "wallet".test).
  */
 export const TEST_BONUS = { code: "forge-garage-test", sparks: 20000 } as const;

@@ -114,7 +114,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
 
   const send = (msg: object) => unity.current?.SendMessage("ForgeBridge", "Receive", JSON.stringify(msg));
   /** The garage balance and what is owned (the game shows prices, locks and the buy button from it). */
-  const sendWallet = () => wallet().then((w) => { send({ type: "wallet", sparks: w.sparks }); send({ type: "unlocks", items: w.owned }); });
+  const sendWallet = () => wallet().then((w) => { send({ type: "wallet", sparks: w.sparks, test: w.test }); send({ type: "unlocks", items: w.owned }); });
 
   useEffect(() => {
     let alive = true;
