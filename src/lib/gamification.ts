@@ -198,7 +198,7 @@ const medals = <K extends keyof NonNullable<BadgeContext["medals"]>>(k: K): Metr
 const outdoor = <K extends keyof NonNullable<BadgeContext["outdoor"]>>(k: K): Metric => (_s, c) => c.outdoor?.[k] ?? 0;
 const routeDone = (key: string) => (s: Stats) => (s.routesDone ?? []).includes(key);
 /** Keys of the routes that must all be finished for a "complete the set" badge. */
-const REAL_ROUTES = GAME_ROUTES.filter((r) => r.real).map((r) => r.key);
+const REAL_ROUTES = GAME_ROUTES.filter((r) => r.real && r.country.fr === "France").map((r) => r.key); // "La vraie France": its cols and stages
 const WORLD_ROUTES = GAME_ROUTES.filter((r) => !r.real && !r.free).map((r) => r.key);
 const routesOf = (keys: string[]): Metric => (s) => keys.filter((k) => (s.routesDone ?? []).includes(k)).length;
 
@@ -252,6 +252,7 @@ const RIDE_BADGES: Badge[] = [
   once("ride", "col_madeleine", "endurance", ["Madeleine", "Col de la Madeleine from La Chambre, finished."], ["Madeleine", "Le col de la Madeleine depuis La Chambre, terminé."], routeDone("c19")),
   once("ride", "stage_alps", "endurance", ["Queen stage", "The 112 km queen stage of the Alps, finished."], ["Étape reine", "L’étape reine des Alpes, 112 km, terminée."], routeDone("c20")),
   once("ride", "stage_tourmalet", "endurance", ["Lourdes to the Tourmalet", "The 49 km Tourmalet stage, finished."], ["De Lourdes au Tourmalet", "L’étape du Tourmalet, 49 km, terminée."], routeDone("c21")),
+  once("ride", "tour_montreal", "endurance", ["Tour of Montréal", "Old Port to the Olympic Stadium over Mount Royal, finished."], ["Tour de Montréal", "Du Vieux-Port au Stade olympique par le mont Royal, terminé."], routeDone("c22")),
   count("ride", "real_all", "endurance", routesOf(REAL_ROUTES), REAL_ROUTES.length, ["Real France", "Every real climb and stage finished."], ["La vraie France", "Tous les cols et étapes réels terminés."]),
   count("ride", "worlds_all", "endurance", routesOf(WORLD_ROUTES), WORLD_ROUTES.length, ["World tour", "Every FORGE Ride world, circuit and challenge finished."], ["Tour du monde", "Tous les mondes, circuits et défis de FORGE Ride terminés."]),
   count("ride", "medal_gold", "endurance", medals("gold"), 1, ["Top step", "First gold medal on a segment."], ["Plus haute marche", "Première médaille d’or sur un segment."]),

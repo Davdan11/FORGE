@@ -64,6 +64,8 @@ GAME_ROUTES.push(
   real(20, ["Étape reine des Alpes", "Queen stage of the Alps"], ["Étape réelle · 112 km", "Real stage · 112 km"], ["Modane, Télégraphe, Galibier, La Grave, Alpe d'Huez", "Modane, Télégraphe, Galibier, La Grave, Alpe d'Huez"], 111.6, 3901, "#FF4D66", "giant"),
   real(21, ["Étape du Tourmalet", "Tourmalet stage"], ["Étape réelle · 49 km", "Real stage · 49 km"], ["De Lourdes au sommet du Tourmalet", "From Lourdes to the top of the Tourmalet"], 48.6, 2054, "#FFCC40", "alpine"),
 );
+// Home: Montréal, from the Old Port over mount Royal (Camillien-Houde) to the Olympic Stadium.
+GAME_ROUTES.push({ ...r(22, ["Tour de Montréal", "Tour of Montréal"], ["Québec", "Québec"], ["Route réelle · mont Royal", "Real road · Mount Royal"], ["Vieux-Port, canal Lachine, mont Royal, Plateau, Stade olympique", "Old Port, Lachine canal, Mount Royal, the Plateau, Olympic Stadium"], 28.4, 271, "#4A8CFF", "montreal"), real: true });
 
 export interface GameEvent { id: string; race: boolean; kind: "group" | "race" | "tt"; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 
