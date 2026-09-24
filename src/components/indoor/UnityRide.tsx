@@ -494,16 +494,36 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
         </div>
       )}
 
-      {/* The app's own controls: small, at the bottom centre where the game's HUD leaves room. */}
-      <div className="absolute inset-x-0 bottom-0 pb-[calc(var(--safe-bottom)+8px)] flex flex-col items-center gap-2 pointer-events-none">
-        {voiceOn && (heard.some((h) => h.speaking) || talking) && (
-          <div className="flex gap-1.5 flex-wrap justify-center" aria-live="polite">
-            {talking && <span className="chip chip--volt h-8"><Mic className="w-3.5 h-3.5" strokeWidth={2.4} />{t("Tu parles", "You're talking")}</span>}
-            {heard.filter((h) => h.speaking).map((h) => <span key={h.id} className="chip chip--live backdrop-blur-md h-8 !text-ink"><Mic className="w-3.5 h-3.5 text-volt-deep" strokeWidth={2.4} />{h.name}</span>)}
-          </div>
-        )}
+      {/* The app's own controls: a column of round buttons at the left edge, halfway down, where the game's HUD has
+          nothing (its map, grade, profile and power gauge fill the bottom, even more so on a phone). Panels open beside it. */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 pl-[calc(env(safe-area-inset-left,0px)+8px)] flex items-center gap-2 pointer-events-none">
+        <div className="flex flex-col items-start gap-2 pointer-events-auto">
+          {voiceOn && !openMic && voiceMic && (
+            <button type="button" className={`${ROUND} !h-14 !w-14 select-none touch-none ${held ? "!bg-volt !border-volt" : ""}`}
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setHeld(true); }} onPointerUp={() => setHeld(false)} onPointerCancel={() => setHeld(false)} onLostPointerCapture={() => setHeld(false)}
+              onContextMenu={(e) => e.preventDefault()} aria-pressed={held} aria-label={t("Maintenir pour parler (B)", "Hold to talk (B)")} title={t("Maintenir pour parler (B)", "Hold to talk (B)")}>
+              <Mic className="w-6 h-6" strokeWidth={2.2} />
+            </button>
+          )}
+          <button type="button" onClick={() => { setVoicePanel((v) => !v); setPanel(false); }} className={`${ROUND} ${voicePanel ? "!border-volt" : ""}`} aria-expanded={voicePanel} aria-label={t("Voix", "Voice")} title={t("Voix", "Voice")}>
+            {voiceOn ? <Mic className="w-5 h-5 text-volt-deep" strokeWidth={2.2} /> : <MicOff className="w-5 h-5" strokeWidth={2.2} />}
+            {voiceOn && heard.length > 0 && <span className={BADGE}>{heard.length}</span>}
+          </button>
+          <button type="button" onClick={() => { setPanel((v) => !v); setVoicePanel(false); }} className={`${ROUND} ${panel ? "!border-volt" : ""}`} aria-expanded={panel} aria-label={t("Capteurs", "Sensors")} title={t("Capteurs", "Sensors")}>
+            <SlidersHorizontal className="w-5 h-5" strokeWidth={2.2} />
+            {sensors.length > 0 && <span className={BADGE}>{sensors.length}</span>}
+          </button>
+          {people > 0 && <span className={`${ROUND} cursor-default`} role="status" aria-label={`${people} ${t("en ligne", "online")}`} title={`${people} ${t("en ligne", "online")}`}><Users className="w-5 h-5" strokeWidth={2.2} /><span className={BADGE}>{people}</span></span>}
+          <button type="button" onClick={quit} className={ROUND} aria-label={t("Quitter", "Quit")} title={t("Quitter", "Quit")}><X className="w-5 h-5" strokeWidth={2.2} /></button>
+          {voiceOn && (heard.some((h) => h.speaking) || talking) && (
+            <div className="grid gap-1 max-w-[40vw]" aria-live="polite">
+              {talking && <span className="chip chip--volt h-8"><Mic className="w-3.5 h-3.5" strokeWidth={2.4} />{t("Tu parles", "You're talking")}</span>}
+              {heard.filter((h) => h.speaking).map((h) => <span key={h.id} className="chip chip--live backdrop-blur-md h-8 !text-ink truncate"><Mic className="w-3.5 h-3.5 text-volt-deep shrink-0" strokeWidth={2.4} />{h.name}</span>)}
+            </div>
+          )}
+        </div>
         {voicePanel && (
-          <div className="card p-3 grid gap-3 w-[min(94vw,520px)] max-h-[60vh] overflow-y-auto backdrop-blur-xl !bg-[rgba(255,255,255,.94)] pointer-events-auto">
+          <div className={PANEL}>
             {!voiceOn ? (
               <>
                 <p className="text-sm">{t("Parle aux coureurs proches de toi : fort à moins de 20 m, de moins en moins jusqu'à 100 m, puis plus rien. Rien n'est enregistré.", "Talk to the riders around you: clear within 20 m, fading out by 100 m. Nothing is recorded.")}</p>
@@ -549,7 +569,7 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           </div>
         )}
         {panel && (
-          <div className="card p-3 grid gap-3 w-[min(94vw,520px)] backdrop-blur-xl !bg-[rgba(255,255,255,.94)] pointer-events-auto">
+          <div className={PANEL}>
             {availability && (availability.ok ? (
               <div className="flex gap-1.5 flex-wrap">
                 {SENSORS.map((k) => {
@@ -592,23 +612,6 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
             )}
           </div>
         )}
-        <div className="flex gap-2 pointer-events-auto">
-          {voiceOn && !openMic && voiceMic && (
-            <button type="button" className={`chip backdrop-blur-md h-9 select-none touch-none ${held ? "chip--volt" : "chip--live"}`}
-              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setHeld(true); }} onPointerUp={() => setHeld(false)} onPointerCancel={() => setHeld(false)} onLostPointerCapture={() => setHeld(false)}
-              onContextMenu={(e) => e.preventDefault()} aria-pressed={held}>
-              <Mic className="w-3.5 h-3.5" strokeWidth={2.2} />{t("Maintenir pour parler", "Hold to talk")}
-            </button>
-          )}
-          <button type="button" onClick={() => { setVoicePanel((v) => !v); setPanel(false); }} className="chip chip--live backdrop-blur-md h-9" aria-expanded={voicePanel}>
-            {voiceOn ? <Mic className="w-3.5 h-3.5 text-volt-deep" strokeWidth={2.2} /> : <MicOff className="w-3.5 h-3.5" strokeWidth={2.2} />}{t("Voix", "Voice")}{voiceOn && heard.length ? ` · ${heard.length}` : ""}
-          </button>
-          <button type="button" onClick={() => { setPanel((v) => !v); setVoicePanel(false); }} className="chip chip--live backdrop-blur-md h-9">
-            <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={2.2} />{t("Capteurs", "Sensors")}{sensors.length ? ` · ${sensors.length}` : ""}
-          </button>
-          {people > 0 && <span className="chip chip--live backdrop-blur-md h-9 tnum"><Users className="w-3.5 h-3.5" strokeWidth={2.2} />{people} {t("en ligne", "online")}</span>}
-          <button type="button" onClick={quit} className="chip chip--live backdrop-blur-md h-9"><X className="w-3.5 h-3.5" strokeWidth={2.2} />{t("Quitter", "Quit")}</button>
-        </div>
       </div>
     </div>
   );
@@ -617,6 +620,11 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
 /** A trainer's label with its protocol in the overlay's language; any other sensor's name. */
 const sensorLabel = (s: Sensor | undefined, en: boolean) =>
   s?.trainer ? trainerLabel(s.trainer.deviceName, s.trainer.protocol, en ? PROTOCOL_LABEL : PROTOCOL_FR) : s?.name;
+
+/* The overlay's round buttons, their count badge, and the panels that open beside them. */
+const ROUND = "relative h-11 w-11 grid place-items-center rounded-full border border-line-strong bg-[rgba(255,255,255,.9)] text-ink shadow-[0_6px_18px_-8px_rgba(0,0,0,.5)] backdrop-blur-md";
+const BADGE = "absolute -top-1 -right-1 min-w-5 h-5 px-1 grid place-items-center rounded-full bg-ink text-bone text-[11px] font-semibold tnum";
+const PANEL = "card p-3 grid gap-3 w-[min(calc(100vw-80px),440px)] max-h-[80vh] overflow-y-auto backdrop-blur-xl !bg-[rgba(255,255,255,.94)] pointer-events-auto";
 
 interface Heard { id: string; name: string; gap: number; gain: number; linked: boolean; speaking: boolean }
 /* Per-device conveniences (mic mode, who is muted): storage may be blocked, and that is fine. */
