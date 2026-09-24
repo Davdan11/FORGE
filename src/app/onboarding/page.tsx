@@ -22,7 +22,7 @@ import { AccountPanel } from "@/components/AccountPanel";
 import { isConfigured } from "@/lib/supabase/client";
 import { currentUser, firstName, restoreAccount } from "@/lib/auth";
 import { syncNow } from "@/lib/sync";
-import { locale, useLang, useT } from "@/lib/i18n";
+import { bilingual, loc, locale, useLang, useT } from "@/lib/i18n";
 
 /* Remembered when someone chooses to start without an account, so the
    question is not asked again on this device. Settings can still sign in. */
@@ -154,7 +154,8 @@ export default function Onboarding() {
       dietary, avoidFoods, mealsPerDay, wakeTime, trainTime, notifications: false, healthNoticeAt: new Date().toISOString(), consentAt: new Date().toISOString(), createdAt: new Date().toISOString(),
       startWeightKg: units.weight === "lb" ? lbToKg(weight) : weight,
     };
-    const { plan, sessions } = generatePlan(profile, todayISO(), {}, adaptationsFor(await db.injuries.toArray(), todayISO()));
+    const injuries = adaptationsFor(await db.injuries.toArray(), todayISO());
+    const { plan, sessions } = bilingual(() => generatePlan(profile, todayISO(), {}, injuries));
     await db.transaction("rw", db.profile, db.plans, db.sessions, db.nutrition, async () => {
       // One rider, one plan: the old plan and the sessions it still had planned make way for the new ones.
       await db.profile.clear();
@@ -172,7 +173,7 @@ export default function Onboarding() {
     // Put the new profile and block on the account straight away.
     if (signedIn) await syncNow().catch(() => {});
     setBusy(false);
-    setReady({ profile, blocks: plan.blocks.slice(0, 3).map((b) => ({ name: b.name, intent: b.intent })) });
+    setReady({ profile, blocks: plan.blocks.slice(0, 3).map((b) => ({ name: loc(b.name), intent: loc(b.intent) })) });
   }
 
   const unitW = units.weight;

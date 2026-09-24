@@ -1,6 +1,6 @@
 import { supabase } from "./supabase/client";
 import { BADGES, LEVELS_PER_TIER, SUB_RANKS, TIERS, badgeName, levelFromXp, rankFor, subRankFor, tierForLevel, tierName } from "./gamification";
-import { getLang, tr } from "./i18n";
+import { getLang, loc, tr } from "./i18n";
 import type { Activity, LoggedSet, Profile, Session, Stats, WeighIn } from "./types";
 
 /* ─────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ export function buildReport(input: { profile: Profile; stats: Stats; sessions: S
   if (input.activities.length >= 5 && gps === 0 && indoorTotal === 0) flags.push("Activities without GPS tracks.");
 
   const recent = [
-    ...done.map((s) => ({ d: s.date, t: `Session · ${s.title}` })),
+    ...done.map((s) => ({ d: s.date, t: `Session · ${loc(s.title, "en")}` })),
     ...input.activities.map((a) => ({ d: a.startedAt.slice(0, 10), t: `${a.meta?.indoor ? "Indoor" : "Activity"} · ${a.title} · ${(a.distanceM / 1000).toFixed(1)} km` })),
   ].sort((a, b) => b.d.localeCompare(a.d)).slice(0, 12).map((x) => `${x.d} — ${x.t}`);
 

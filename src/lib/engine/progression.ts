@@ -4,7 +4,7 @@ import { adaptationsFor, type InjuryAdaptation } from "./injury";
 import { carryAdded } from "./custom";
 import { db, getProfile, todayISO } from "../db";
 import { bestE1rmBySlug } from "../progress";
-import { tr } from "../i18n";
+import { bilingual, tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    The programme between blocks.
@@ -142,7 +142,7 @@ export async function advanceProgramme(): Promise<boolean> {
   const [sessions, logs, measured, injuryRows] = await Promise.all([
     db.sessions.where("planId").equals(plan.id).toArray(), db.logs.toArray(), bestE1rmBySlug(), db.injuries.toArray(),
   ]);
-  const next = advance(plan, sessions, logs, profile, today, measured, adaptationsFor(injuryRows, today));
+  const next = bilingual(() => advance(plan, sessions, logs, profile, today, measured, adaptationsFor(injuryRows, today)));
   if (!next) return false;
   const now = new Date().toISOString();
   await db.transaction("rw", db.plans, db.sessions, async () => {

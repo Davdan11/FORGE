@@ -1,7 +1,7 @@
 import type { NutritionDay, Profile, Readiness, Session } from "./types";
 import { nudgesFor } from "./nutrition/engine";
 import { sessionTitle } from "./engine/plan";
-import { tr } from "./i18n";
+import { loc, tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Which reminders the athlete gets, and when.
@@ -45,7 +45,7 @@ export function remindersFor(profile: Profile, days: Day[], now: Date): Reminder
     if (!d.readiness) {
       out.push({
         key: `checkin:${d.date}`, at: at(d.date, profile.wakeTime || "07:00", 30),
-        title: tr("Bilan du matin", "Morning check-in"), body: d.session ? tr(`20 secondes, et ta séance ${sessionTitle(d.session.kind).toLowerCase()} d’aujourd’hui s’ajuste à ton sommeil.`, `20 seconds, and today's ${d.session.title.toLowerCase()} is tuned to how you slept.`) : tr("20 secondes : sommeil, courbatures, stress. +20 XP.", "20 seconds: sleep, soreness, stress. +20 XP."), url: "/today",
+        title: tr("Bilan du matin", "Morning check-in"), body: d.session ? tr(`20 secondes, et ta séance ${sessionTitle(d.session.kind).toLowerCase()} d’aujourd’hui s’ajuste à ton sommeil.`, `20 seconds, and today's ${loc(d.session.title, "en").toLowerCase()} is tuned to how you slept.`) : tr("20 secondes : sommeil, courbatures, stress. +20 XP.", "20 seconds: sleep, soreness, stress. +20 XP."), url: "/today",
       });
     }
     // An hour before a session that is still to do.
@@ -54,7 +54,7 @@ export function remindersFor(profile: Profile, days: Day[], now: Date): Reminder
       const start = at(d.date, profile.trainTime || "18:00");
       out.push({
         key: `session:${s.id}`, at: new Date(start.getTime() - 60 * 60000),
-        title: tr(`${sessionTitle(s.kind)} à ${hhmm(start)}`, `${s.title} at ${hhmm(start)}`),
+        title: tr(`${sessionTitle(s.kind)} à ${hhmm(start)}`, `${loc(s.title, "en")} at ${hhmm(start)}`),
         // The pre-workout meal nudge already says what to eat; don't say it twice.
         body: tr(`${s.minutes} min · ${s.exercises.length} mouvement${s.exercises.length > 1 ? "s" : ""}.${d.nutrition?.meals.some((m) => m.slot === "pre") ? "" : " Mange quelque chose maintenant si ce n’est pas fait."}`, `${s.minutes} min · ${s.exercises.length} movements.${d.nutrition?.meals.some((m) => m.slot === "pre") ? "" : " Eat something now if you haven't."}`),
         url: `/session?id=${s.id}`,

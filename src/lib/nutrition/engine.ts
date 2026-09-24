@@ -4,7 +4,7 @@ import { fitScore, getMeal, sampleIds, searchRecipes } from "./recipes";
 import { MEALS as CURATED } from "../data/meals";
 import type { Diet } from "./ingredients";
 import { explainTargets, type DayType as SciDayType } from "./science";
-import { tr } from "../i18n";
+import { loc, tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    NUTRITION ENGINE v3
@@ -352,7 +352,7 @@ export function nudgesFor(day: NutritionDay, session: Session | null, tomorrow?:
   const out: { time: string; title: string; body: string }[] = [];
   const pre = day.meals.find((m) => m.slot === "pre");
   const post = day.meals.find((m) => m.slot === "post");
-  if (pre && session) out.push({ time: pre.time, title: tr(`${session.title} dans 90 min`, `${session.title} in 90 min`), body: tr(`Mange maintenant : ${getMeal(pre.mealId)?.name}. Des glucides avant, des protéines après.`, `Eat now: ${getMeal(pre.mealId)?.name}. Carbs before, protein after.`) });
+  if (pre && session) out.push({ time: pre.time, title: tr(`${loc(session.title, "fr")} dans 90 min`, `${loc(session.title, "en")} in 90 min`), body: tr(`Mange maintenant : ${getMeal(pre.mealId)?.name}. Des glucides avant, des protéines après.`, `Eat now: ${getMeal(pre.mealId)?.name}. Carbs before, protein after.`) });
   if (post && session) out.push({ time: post.time, title: tr("Séance finie — fenêtre protéines", "Session done — protein window"), body: tr(`${getMeal(post.mealId)?.name} : ~30 g de protéines dans l’heure.`, `${getMeal(post.mealId)?.name}: ~30 g protein within the hour.`) });
   const lunch = day.meals.find((m) => m.slot === "lunch");
   if (lunch) out.push({ time: lunch.time, title: tr("Dîner", "Lunch"), body: `${getMeal(lunch.mealId)?.name} · ${Math.round((getMeal(lunch.mealId)?.kcal ?? 0) * lunch.scale)} kcal` });

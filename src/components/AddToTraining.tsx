@@ -8,7 +8,7 @@ import { motion, AnimatePresence, Press } from "./motion";
 import { Toast } from "./ui";
 import type { Exercise } from "@/lib/types";
 import { exName } from "@/lib/data/exercises";
-import { locale, tr, useLang, useT } from "@/lib/i18n";
+import { loc, locale, tr, useLang, useT } from "@/lib/i18n";
 
 /* "Add to training" for a library movement: pick one of the next two weeks'
    sessions and the engine prescribes it there like anything it chose itself
@@ -56,11 +56,11 @@ export function AddToTraining({ ex }: { ex: Pick<Exercise, "slug" | "name"> }) {
                   const inIt = s.exercises.some((e) => e.slug === ex.slug);
                   return (
                     <li key={s.id}>
-                      <button type="button" disabled={inIt} onClick={() => add(s.id, `${day(s.date)} · ${s.title}`)}
+                      <button type="button" disabled={inIt} onClick={() => add(s.id, `${day(s.date)} · ${loc(s.title)}`)}
                         className="w-full card p-3.5 flex items-center gap-3 text-left disabled:opacity-60">
                         <span className="grid min-w-0 flex-1">
                           <span className="text-sm font-medium">{day(s.date)}</span>
-                          <span className="text-xs text-smoke truncate">{s.title} · {s.minutes} min · {lang === "fr" ? `${s.exercises.length} mouvement${s.exercises.length <= 1 ? "" : "s"}` : `${s.exercises.length} movements`}</span>
+                          <span className="text-xs text-smoke truncate">{loc(s.title)} · {s.minutes} min · {lang === "fr" ? `${s.exercises.length} mouvement${s.exercises.length <= 1 ? "" : "s"}` : `${s.exercises.length} movements`}</span>
                         </span>
                         <span className={`chip shrink-0 ${inIt ? "" : "chip--volt"}`}>{inIt ? t("Déjà là", "Already in") : t("Ajouter", "Add")}</span>
                       </button>

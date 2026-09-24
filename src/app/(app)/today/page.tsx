@@ -25,7 +25,7 @@ import { Sparkline } from "@/components/charts";
 import { ensureNotificationPermission } from "@/lib/notify";
 import { syncReminders } from "@/lib/remindersSync";
 import { sessionTitle } from "@/lib/engine/plan";
-import { useT, useLang, locale } from "@/lib/i18n";
+import { useT, useLang, locale, bilingual, loc } from "@/lib/i18n";
 import type { MealSlot, NutritionDay, PainArea, PrescribedExercise, Readiness, Session, UnitPrefs } from "@/lib/types";
 
 /* Labels for data keys that reach the screen. English shows the key itself, as before. */
@@ -177,7 +177,7 @@ export default function Today() {
                         <Ring value={readiness.score / 100} size={92} stroke={8} color={readiness.score >= 40 ? "grad" : "var(--danger)"}><strong className="display text-3xl"><CountUp value={readiness.score} /></strong></Ring>
                         <div className="grid gap-1 text-sm">
                           <span>{t("Sommeil", "Sleep")} {readiness.sleepHours} h · {t("courbatures", "soreness")} {readiness.soreness}/5 · stress {readiness.stress}/5</span>
-                          <span className="text-smoke text-xs">{session?.adjustment?.reason ?? t("Entraîne-toi comme prévu. Vise le RPE cible, pas un chiffre.", "Train as planned. Chase the target RPE, not a number.")}</span>
+                          <span className="text-smoke text-xs">{loc(session?.adjustment?.reason) ?? t("Entraîne-toi comme prévu. Vise le RPE cible, pas un chiffre.", "Train as planned. Chase the target RPE, not a number.")}</span>
                           {sleepDebt > 0 && <span className="text-xs"><span className="chip mr-1">{t("Dette de sommeil", "Sleep debt")}</span>{t(`${sleepDebt} h sous les 8 h ${readinessWeek.length > 1 ? `sur les ${readinessWeek.length} derniers jours` : "sur la dernière journée"}.`, `${sleepDebt} h under 8 h over the last ${readinessWeek.length} day${readinessWeek.length > 1 ? "s" : ""}.`)}</span>}
                         </div>
                       </div>
@@ -272,8 +272,8 @@ function SessionCard({ session, units, best }: { session: Session; units: UnitPr
           </div>
         )}
         <div className="px-4 pt-3 flex flex-wrap items-center gap-1.5"><span className="meta mr-1">{t("Muscles", "Muscles")}</span>{muscles.map((m) => <span key={m} className="chip">{m.replace("_", " ")}</span>)}<span className="chip chip--live tnum ml-auto">{Math.round(plannedVolume).toLocaleString(locale())} {t("kg prévus", "kg planned")}</span></div>
-        {session.adjustment && <div className="px-4 pt-3"><span className="chip chip--volt">{t("Ajustée aujourd’hui", "Adjusted today")}</span><ul className="grid gap-1 text-xs text-smoke mt-2">{session.adjustment.changes.map((c) => <li key={c}>· {c}</li>)}</ul></div>}
-        {session.cardio && <div className="px-4 pt-3 flex items-center justify-between gap-3"><div><span className="meta">Cardio · {t("zone", "Zone")} {session.cardio.zone}</span><p className="display text-xl">{session.cardio.minutes} min{session.cardio.structure ? ` · ${session.cardio.structure}` : ""}</p></div><Link href="/move" className="pill pill--sm">{t("Enregistrer", "Record")}</Link></div>}
+        {session.adjustment && <div className="px-4 pt-3"><span className="chip chip--volt">{t("Ajustée aujourd’hui", "Adjusted today")}</span><ul className="grid gap-1 text-xs text-smoke mt-2">{session.adjustment.changes.map((x) => loc(x)).map((c) => <li key={c}>· {c}</li>)}</ul></div>}
+        {session.cardio && <div className="px-4 pt-3 flex items-center justify-between gap-3"><div><span className="meta">Cardio · {t("zone", "Zone")} {session.cardio.zone}</span><p className="display text-xl">{session.cardio.minutes} min{session.cardio.structure ? ` · ${loc(session.cardio.structure)}` : ""}</p></div><Link href="/move" className="pill pill--sm">{t("Enregistrer", "Record")}</Link></div>}
         <ul className="grid divide-y divide-line mt-3 border-t border-line">
           {session.exercises.map((ex) => {
             const meta = getExercise(ex.slug); if (!meta) return null;
@@ -290,7 +290,7 @@ function SessionCard({ session, units, best }: { session: Session; units: UnitPr
           })}
         </ul>
         <div className="p-4 grid gap-3 border-t border-line">
-          <p className="text-xs text-smoke">{session.why}</p>
+          <p className="text-xs text-smoke">{loc(session.why)}</p>
           <Press><Link href={`/session?id=${session.id}`} className="pill pill--volt pill--block pill--lg">{session.status === "done" ? t("Revoir la séance", "Review session") : t("Commencer la séance", "Start session")}</Link></Press>
         </div>
       </div>
@@ -345,7 +345,7 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
     const base = { sleepHours: sleep, sleepQuality: quality, soreness, stress, mood, hrv: hrv ? Number(hrv) : undefined, minutesAvailable: minutes, equipmentToday: gear, painToday: pain };
     const r: Readiness = { id: todayISO(), date: todayISO(), ...base, score: readinessScore(base) };
     await db.readiness.put({ ...r, dirty: 1 });
-    if (session && session.status === "planned") { const adj = autoRegulate(profile, session, r, await bestE1rmBySlug(), adaptationsFor(await db.injuries.toArray(), todayISO())); await db.sessions.put({ ...adj.session, dirty: 1 }); }
+    if (session && session.status === "planned") { const measured = await bestE1rmBySlug(), injuries = adaptationsFor(await db.injuries.toArray(), todayISO()); const adj = bilingual(() => autoRegulate(profile, session, r, measured, injuries)); await db.sessions.put({ ...adj.session, dirty: 1 }); }
     onDone(r);
     syncReminders().catch(() => {}); // today's check-in reminder is no longer needed
   }

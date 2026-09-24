@@ -1,3 +1,4 @@
+import { bilingual } from "../i18n";
 import { db, getProfile, todayISO } from "../db";
 import { bestE1rmBySlug } from "../progress";
 import { generatePlan } from "./plan";
@@ -22,7 +23,7 @@ export async function rebuildRemaining(patch: Partial<Profile> = {}): Promise<nu
 
   const [measured, injuryRows] = await Promise.all([bestE1rmBySlug(), db.injuries.toArray()]);
   const injuries = adaptationsFor(injuryRows, today);
-  const { plan, sessions: built } = generatePlan(profile, today, measured, injuries);
+  const { plan, sessions: built } = bilingual(() => generatePlan(profile, today, measured, injuries));
   // Movements the athlete added by hand stay on their day.
   const sessions = carryAdded(built, await db.sessions.where("status").equals("planned").toArray());
 

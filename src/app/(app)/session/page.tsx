@@ -18,7 +18,7 @@ import { Page, Ring, CountUp, Press, motion, AnimatePresence } from "@/component
 import type { LoggedSet, PrescribedExercise, PrescribedSet, Session, UnitPrefs } from "@/lib/types";
 import { ChevronDown } from "lucide-react";
 import { phaseOf, sessionTitle } from "@/lib/engine/plan";
-import { useT, useLang, locale } from "@/lib/i18n";
+import { useT, useLang, locale, bilingual, loc } from "@/lib/i18n";
 import { BADGES, badgeName } from "@/lib/gamification";
 
 /* Labels for data keys that reach the screen. English shows the key itself, as before. */
@@ -88,7 +88,7 @@ function SessionDetail() {
     const nextIdx = setIndex + 1;
     let why: string | null = null;
     if (nextIdx < exercise.sets.length) {
-      const out = nextSetFromRpe(prev, values, exercise.sets[nextIdx], profile!.units);
+      const out = bilingual(() => nextSetFromRpe(prev, values, exercise.sets[nextIdx], profile!.units));
       why = out.why;
       const sets = exercise.sets.slice(); sets[nextIdx] = out.next;
       await db.sessions.update(session.id, { exercises: session.exercises.map((e) => (e.id === exercise.id ? { ...e, sets } : e)), dirty: 1 });
@@ -96,7 +96,7 @@ function SessionDetail() {
     }
     await db.sets.put({ ...entry, dirty: 1 });
     if (navigator.vibrate) navigator.vibrate(12);
-    if (why) { setToast(why); setTimeout(() => setToast(null), 5000); }
+    if (why) { setToast(loc(why)); setTimeout(() => setToast(null), 5000); }
     if (prev.restSec > 0 && nextIdx < exercise.sets.length) { setRestTotal(prev.restSec); setRest(prev.restSec); }
     if (nextIdx >= exercise.sets.length && active < session.exercises.length - 1) setTimeout(() => setActive(active + 1), 500);
   }
@@ -139,11 +139,11 @@ function SessionDetail() {
         </Hero>
 
         <SessionWhy session={session} />
-        {session.adjustment && <div className="card p-4 mb-5 grid gap-2"><span className="chip chip--volt justify-self-start">{t("Ajustée aujourd’hui", "Adjusted today")}</span><p className="text-sm">{session.adjustment.reason}</p></div>}
+        {session.adjustment && <div className="card p-4 mb-5 grid gap-2"><span className="chip chip--volt justify-self-start">{t("Ajustée aujourd’hui", "Adjusted today")}</span><p className="text-sm">{loc(session.adjustment.reason)}</p></div>}
         {session.cardio && (
           <div className="card p-4 mb-5 grid gap-1">
             <span className="meta">Cardio · {t("zone", "Zone")} {session.cardio.zone}</span>
-            <p className="display text-2xl">{session.cardio.minutes} min{session.cardio.structure ? ` · ${session.cardio.structure}` : ""}</p>
+            <p className="display text-2xl">{session.cardio.minutes} min{session.cardio.structure ? ` · ${loc(session.cardio.structure)}` : ""}</p>
             <p className="text-xs text-smoke">{t("Enregistre-le dans l’onglet Bouger avec le GPS — ça ferme cette séance automatiquement.", "Record it on the Move tab with GPS — it closes this session automatically.")}</p>
             <Link href="/move" className="pill pill--sm justify-self-start mt-1">{t("Ouvrir Bouger", "Open Move")}</Link>
           </div>
@@ -296,7 +296,7 @@ function ExerciseCard({ ex, logged, units, disabled, sessionId, onLog, onSwap, o
         <div className="grid gap-1.5 min-w-0">
           <span className="text-xs"><span className="text-danger font-medium">{meta.primary.join(", ")}</span>{meta.secondary.length ? <span className="text-smoke"> · {meta.secondary.join(", ")}</span> : null}</span>
         <button type="button" className="text-left text-xs text-smoke underline" onClick={() => setShowWhy(!showWhy)}>{t("Pourquoi ça?", "Why this?")}</button>
-        <AnimatePresence>{showWhy && <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-sm overflow-hidden">{ex.why}</motion.p>}</AnimatePresence>
+        <AnimatePresence>{showWhy && <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-sm overflow-hidden">{loc(ex.why)}</motion.p>}</AnimatePresence>
         <p className="text-xs text-smoke">{meta.cues[0]}</p>
         </div>
       </div>
@@ -401,8 +401,8 @@ function SessionWhy({ session }: { session: Session }) {
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <ol className="border-t border-line divide-y divide-line text-sm">
-              {block && <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">01 · {t("Le bloc", "The block")}</span><span>{phase?.intent ?? block.intent}{inBlock === block.weeks.length ? t(" C’est la semaine plus légère : moins de séries, effort plus facile, pour que le travail des trois dernières semaines paraisse.", " This is the lighter week: fewer sets, easier effort, so the work of the last three weeks can show.") : ""}</span>{block.review && block.review.changes.length > 0 && <span className="text-xs text-smoke">{t("Changé depuis le dernier bloc :", "Changed from the last block:")} {block.review.changes.join(" · ")}</span>}</li>}
-              <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">{block ? "02" : "01"} · {t("Aujourd’hui", "Today")}</span><span>{session.why}</span></li>
+              {block && <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">01 · {t("Le bloc", "The block")}</span><span>{phase?.intent ?? loc(block.intent)}{inBlock === block.weeks.length ? t(" C’est la semaine plus légère : moins de séries, effort plus facile, pour que le travail des trois dernières semaines paraisse.", " This is the lighter week: fewer sets, easier effort, so the work of the last three weeks can show.") : ""}</span>{block.review && block.review.changes.length > 0 && <span className="text-xs text-smoke">{t("Changé depuis le dernier bloc :", "Changed from the last block:")} {block.review.changes.map((x) => loc(x)).join(" · ")}</span>}</li>}
+              <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">{block ? "02" : "01"} · {t("Aujourd’hui", "Today")}</span><span>{loc(session.why)}</span></li>
               <li className="p-4 grid gap-1"><span className="meta text-volt font-bold">{block ? "03" : "02"} · {t("Lire les chiffres", "Reading the numbers")}</span>
                 <span><strong>RPE</strong> {t("c’est la difficulté ressentie d’une série, sur 10. RPE 8 veut dire que tu aurais pu faire 2 reps de plus; 7, 3 de plus. Arrête-toi là — le plan est bâti là-dessus.", "is how hard a set feels, out of 10. RPE 8 means you could have done 2 more reps; 7 means 3. Stop there — the plan is built on it.")}</span>
                 <span className="text-xs text-smoke">{t("Les charges viennent de ce que tu as enregistré : ta meilleure série récente donne un max estimé, et chaque série en est une part, arrondie aux plaques que tu peux charger. Pas encore d’historique? Ça part léger, selon ton poids et ton expérience, et ça se corrige en une semaine.", "Loads come from what you have logged: your best recent set gives an estimated max, and each set is a share of it, rounded to plates you can load. No history yet? It starts light, from your bodyweight and experience, and corrects itself within a week.")}</span>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, todayISO, type SessionRow } from "@/lib/db";
 import { goalLabel, phaseOf, sessionTitle } from "@/lib/engine/plan";
-import { useT, locale } from "@/lib/i18n";
+import { useT, locale, loc } from "@/lib/i18n";
 import { blockOfWeek, firstWeekOf, weekOf } from "@/lib/engine/progression";
 import { getExercise } from "@/lib/data/exercises";
 import { sessionImage } from "@/lib/data/images";
@@ -95,7 +95,7 @@ export default function PlanPage() {
                   {currentBlock?.review && (
                     <div className="grid gap-1.5 border-t border-line pt-3">
                       <span className="meta">{t("Ce qui a changé ce bloc-ci", "What changed this block")}</span>
-                      {currentBlock.review.changes.map((c) => <p key={c} className="text-sm">{c}</p>)}
+                      {currentBlock.review.changes.map((x) => loc(x)).map((c) => <p key={c} className="text-sm">{c}</p>)}
                     </div>
                   )}
                   <ul className="grid divide-y divide-line border-t border-line">
@@ -111,7 +111,7 @@ export default function PlanPage() {
             {plan.season && (
               <Item>
                 <Section title={t(`Saison → ${plan.season.eventName}`, `Season → ${plan.season.eventName}`)} aside={<span className="text-xs text-smoke tnum">{plan.season.eventDate}</span>}>
-                  <ul className="card divide-y divide-line px-4">{plan.season.phases.map((p) => <li key={p.name} className="py-3 flex justify-between text-sm"><span>{p.name}</span><span className="text-smoke tnum text-xs">{p.from} → {p.to}</span></li>)}</ul>
+                  <ul className="card divide-y divide-line px-4">{plan.season.phases.map((p) => <li key={p.name} className="py-3 flex justify-between text-sm"><span>{loc(p.name)}</span><span className="text-smoke tnum text-xs">{p.from} → {p.to}</span></li>)}</ul>
                 </Section>
               </Item>
             )}

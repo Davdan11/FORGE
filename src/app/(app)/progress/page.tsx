@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, getStats, todayISO } from "@/lib/db";
 import { BADGES, TIERS, badgeDesc, badgeName, levelFromXp, rankFor, subRankFor, tierForLevel, tierName } from "@/lib/gamification";
-import { useLang, useT } from "@/lib/i18n";
+import { loc as savedText, useLang, useT } from "@/lib/i18n";
 import { RankEmblem } from "@/components/RankEmblem";
 import { BadgeEmblem } from "@/components/BadgeEmblem";
 import { bestE1rmBySlug, logWeighIn } from "@/lib/progress";
@@ -129,7 +129,7 @@ export default function ProgressPage() {
                   {recent.length === 0 ? <p className="text-sm text-smoke">{t("Rien encore : ta première séance enregistrée va arriver ici.", "Nothing yet — your first logged session lands here.")}</p> : (
                     <ul className="grid gap-2 sm:grid-cols-2">{recent.map(({ l, s }) => (
                       <li key={l.id}><Link href={s ? `/session?id=${s.id}` : "/today"} className="card overflow-hidden block">
-                        <div className="relative h-24"><Photo src={sessionImage(s?.kind ?? "full", 600, 300)} veil className="absolute inset-0" /><div className="on-photo absolute inset-x-0 bottom-0 p-3 flex items-end justify-between"><span className="display text-lg leading-none">{s?.title ?? t("Séance", "Session")}</span><span className="chip chip--volt tnum">+{l.xp} XP</span></div></div>
+                        <div className="relative h-24"><Photo src={sessionImage(s?.kind ?? "full", 600, 300)} veil className="absolute inset-0" /><div className="on-photo absolute inset-x-0 bottom-0 p-3 flex items-end justify-between"><span className="display text-lg leading-none">{savedText(s?.title) ?? t("Séance", "Session")}</span><span className="chip chip--volt tnum">+{l.xp} XP</span></div></div>
                         <div className="px-3 py-2 flex justify-between text-xs text-smoke tnum"><span>{l.startedAt.slice(0, 10)}</span><span>{Math.round((l.durationSec ?? 0) / 60)} min · {Math.round(l.volumeKg ?? 0).toLocaleString(loc)} kg{l.avgRpe ? ` · RPE ${l.avgRpe.toFixed(1)}` : ""}</span></div>
                       </Link></li>))}</ul>
                   )}

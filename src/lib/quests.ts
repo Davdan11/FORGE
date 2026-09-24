@@ -1,5 +1,5 @@
 import { XP } from "./gamification";
-import { locale, tr } from "./i18n";
+import { loc, locale, tr } from "./i18n";
 import type { Activity, NutritionDay, Readiness, Session } from "./types";
 
 /* ─────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ export function dailyQuests(input: { date: string; readiness?: Readiness | null;
   const q: Quest[] = [];
   q.push({ id: "checkin", label: tr("Check-in du matin", "Morning check-in"), detail: tr("Sommeil, courbatures, stress : ça ajuste la charge du jour.", "Sleep, soreness, stress — it tunes today’s load."), xp: XP.readinessCheckIn, done: !!readiness, href: "#readiness" });
   if (session) {
-    q.push({ id: "session", label: session.title, detail: `${session.minutes} min · ${session.exercises.length} ${session.exercises.length === 1 ? tr("mouvement", "movements") : tr("mouvements", "movements")}`, xp: session.status === "adjusted" ? XP.sessionAdjustedDone : XP.sessionDone, done: session.status === "done", href: `/session?id=${session.id}` });
+    q.push({ id: "session", label: loc(session.title), detail: `${session.minutes} min · ${session.exercises.length} ${session.exercises.length === 1 ? tr("mouvement", "movements") : tr("mouvements", "movements")}`, xp: session.status === "adjusted" ? XP.sessionAdjustedDone : XP.sessionDone, done: session.status === "done", href: `/session?id=${session.id}` });
   } else {
     const min = activitiesToday.reduce((a, b) => a + b.durationSec / 60, 0);
     q.push({ id: "move", label: tr("Bouge 20 minutes", "Move 20 minutes"), detail: tr("N’importe quel sport, GPS activé. Un rythme facile suffit.", "Any sport, GPS on. An easy pace is enough."), xp: XP.activityBase, done: min >= 20, progress: [Math.min(20, Math.round(min)), 20], href: "/move" });

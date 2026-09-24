@@ -1,3 +1,4 @@
+import { bilingual } from "../i18n";
 import type { PrescribedExercise, Session } from "../types";
 import { db, getProfile } from "../db";
 import { getExercise } from "../data/exercises";
@@ -42,7 +43,8 @@ export async function addToSession(sessionId: string, slug: string): Promise<"ad
   const [session, profile, ex] = [await db.sessions.get(sessionId), await getProfile(), getExercise(slug)];
   if (!session || !profile || !ex) return "missing";
   if (session.exercises.some((e) => e.slug === slug)) return "already";
-  const added = prescribeAdded(ex, profile, session.week, session.minutes, await bestE1rmBySlug());
+  const measured = await bestE1rmBySlug();
+  const added = bilingual(() => prescribeAdded(ex, profile, session.week, session.minutes, measured));
   await db.sessions.update(sessionId, { exercises: insertAdded(session.exercises, [added]), dirty: 1, updatedAt: new Date().toISOString() });
   return "added";
 }

@@ -1,7 +1,7 @@
 import type { Plan, Session } from "../types";
 import { addDays, db, getProfile, todayISO } from "../db";
 import { roundLoad } from "../units";
-import { tr } from "../i18n";
+import { bilingual, tr } from "../i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Coming back after a break.
@@ -85,7 +85,7 @@ export async function applyComeback(today = todayISO()): Promise<Comeback | null
   const c = comebackFor(last, today);
   if (!c || plan.comeback?.lastTrained === last) return null;
   const sessions = await db.sessions.where("planId").equals(plan.id).toArray();
-  const eased = easeSessions(sessions, today, c, profile.units.weight);
+  const eased = bilingual(() => easeSessions(sessions, today, c, profile.units.weight));
   const now = new Date().toISOString();
   const marker: NonNullable<Plan["comeback"]> = { lastTrained: last!, at: today, daysAway: c.daysAway, until: addDays(today, c.easeDays - 1), loadMul: c.loadMul };
   await db.transaction("rw", db.plans, db.sessions, async () => {

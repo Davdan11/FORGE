@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { equipLabel, exName, exText, getExercise, muscleLabel, painAreaLabel, patternLabel } from "@/lib/data/exercises";
-import { locale, useLang, useT } from "@/lib/i18n";
+import { loc, locale, useLang, useT } from "@/lib/i18n";
 import { exerciseImage } from "@/lib/data/images";
 import { MoveMedia } from "@/components/MoveMedia";
 import { db, getProfile } from "@/lib/db";
@@ -49,7 +49,7 @@ export function ExerciseDetail() {
               <div className="mb-4"><AddToTraining ex={ex} /></div>
               {upcoming.length === 0 ? <p className="text-sm text-smoke mb-6">{t("Pas encore dans tes prochaines séances.", "Not in your coming sessions yet.")}</p> : (
                 <ul className="card divide-y divide-line px-4 mb-6">{upcoming.slice(0, 4).map((x) => { const e = x.exercises.find((e) => e.slug === slug)!; const f = e.sets[0]; return (
-                  <li key={x.id}><Link href={`/session?id=${x.id}`} className="py-3 flex items-center justify-between gap-3 text-sm"><span><span className="block font-medium">{x.title}</span><span className="text-xs text-smoke">{t("Semaine", "Week")} {x.week} · {new Date(x.date + "T00:00:00").toLocaleDateString(locale(), { weekday: "short", month: "short", day: "numeric" })}</span></span><span className="tnum text-xs text-smoke">{e.sets.length} × {f.reps ?? `${f.seconds}s`}{f.loadKg && profile ? ` · ${fmtLoad(f.loadKg, profile.units)}` : ""}</span></Link></li>); })}</ul>
+                  <li key={x.id}><Link href={`/session?id=${x.id}`} className="py-3 flex items-center justify-between gap-3 text-sm"><span><span className="block font-medium">{loc(x.title)}</span><span className="text-xs text-smoke">{t("Semaine", "Week")} {x.week} · {new Date(x.date + "T00:00:00").toLocaleDateString(locale(), { weekday: "short", month: "short", day: "numeric" })}</span></span><span className="tnum text-xs text-smoke">{e.sets.length} × {f.reps ?? `${f.seconds}s`}{f.loadKg && profile ? ` · ${fmtLoad(f.loadKg, profile.units)}` : ""}</span></Link></li>); })}</ul>
               )}
             </Section>
             <Section title={t("Muscles", "Muscles")} aside={<span className="text-xs text-smoke">{t("principaux · secondaires", "primary · secondary")}</span>}>
