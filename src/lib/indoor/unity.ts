@@ -41,6 +41,8 @@ export interface UnitySummary {
   workout?: string | null;
   workoutDone?: boolean;
   event: string | null;
+  /** A race ridden to the line: where the rider finished, of how many, in which category. */
+  race?: { place: number; of: number; category: string; id: string } | null;
 }
 
 export type UnityMessage =
@@ -100,7 +102,7 @@ export function ridersMessage(peers: Iterable<Peer>, now: number) {
 }
 
 /** Who the rider is, for the game: weight and FTP for the physics, and the progression the app counts. */
-export function profileMessage(p: { name: string; weightKg: number; ftpW: number; ftpGuessed?: boolean }, totalXp: number) {
+export function profileMessage(p: { name: string; weightKg: number; ftpW: number; ftpGuessed?: boolean; rating?: number }, totalXp: number) {
   const lv = levelFromXp(totalXp);
   return {
     type: "profile",
@@ -114,6 +116,7 @@ export function profileMessage(p: { name: string; weightKg: number; ftpW: number
     rank: rankFor(lv.level),
     // Only estimated from a level: the game may raise it from the first minutes of measured power.
     ...(p.ftpGuessed ? { ftpGuessed: true } : {}),
+    ...(p.rating ? { rating: Math.round(p.rating) } : {}),
   };
 }
 

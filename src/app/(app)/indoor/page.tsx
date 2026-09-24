@@ -50,6 +50,17 @@ export default function IndoorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // /indoor?ride=<route key>: straight into the game on that road (a friend's "Join" on the Social page).
+  const [startRoute, setStartRoute] = useState<string | null>(null);
+  useEffect(() => {
+    const url = new URL(window.location.href), key = url.searchParams.get("ride");
+    if (!key || !/^[cg][\w-]{0,40}$/.test(key)) return;
+    url.searchParams.delete("ride");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    setStartRoute(key); setPlaying(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Live: the next events (from the game's own schedule) and the people riding now.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(id); }, []);
@@ -90,7 +101,7 @@ export default function IndoorPage() {
   if (playing) {
     return (
       <Page>
-        <UnityRide profile={profile} ftpW={ftpW} say={say} onExit={(msg) => { setPlaying(false); if (msg) say(msg); }} />
+        <UnityRide profile={profile} ftpW={ftpW} startRoute={startRoute} say={say} onExit={(msg) => { setPlaying(false); if (msg) say(msg); }} />
         <Toast text={toast} />
       </Page>
     );
@@ -252,11 +263,11 @@ export default function IndoorPage() {
                 </div>
                 <div className="py-4 min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="fr-skew px-2.5 py-0.5 text-[11px] font-black italic uppercase whitespace-nowrap" style={{ background: e.race ? PINK : "#2EF0DE", color: e.race ? "#fff" : "#07090d" }}><span>{e.title[lang]}</span></span>
+                    <span className="fr-skew px-2.5 py-0.5 text-[11px] font-black italic uppercase whitespace-nowrap" style={{ background: e.race ? PINK : e.kind === "tt" ? "#A875FF" : "#2EF0DE", color: e.race || e.kind === "tt" ? "#fff" : "#07090d" }}><span>{e.title[lang]}</span></span>
                     {i === 0 && <span className="text-[11px] font-semibold text-[#74EB8A]">{t("prochain", "next up")}</span>}
                   </div>
                   <p className="mt-2 text-xl font-black italic uppercase tracking-tight truncate">{e.route.name[lang]}</p>
-                  <p className="text-xs text-bone/60 mt-0.5 truncate">{e.route.km} km · {e.race ? t(`catégorie ${cat} pour toi`, `category ${cat} for you`) : t(`meneur à ${e.wkg.toFixed(1).replace(".", ",")} W/kg`, `leader at ${e.wkg.toFixed(1)} W/kg`)}</p>
+                  <p className="text-xs text-bone/60 mt-0.5 truncate">{e.route.km} km · {e.race ? t(`catégorie ${cat} pour toi`, `category ${cat} for you`) : e.kind === "tt" ? t("seul contre le chrono, position aéro", "alone against the clock, aero position") : t(`meneur à ${e.wkg.toFixed(1).replace(".", ",")} W/kg`, `leader at ${e.wkg.toFixed(1)} W/kg`)}</p>
                 </div>
                 <div className="py-4 pr-5 text-right shrink-0">
                   <p className="text-2xl font-black italic tabular-nums leading-none">{clock(e.start)}</p>

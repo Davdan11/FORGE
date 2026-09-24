@@ -65,13 +65,14 @@ GAME_ROUTES.push(
   real(21, ["Étape du Tourmalet", "Tourmalet stage"], ["Étape réelle · 49 km", "Real stage · 49 km"], ["De Lourdes au sommet du Tourmalet", "From Lourdes to the top of the Tourmalet"], 48.6, 2054, "#FFCC40", "alpine"),
 );
 
-export interface GameEvent { id: string; race: boolean; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
+export interface GameEvent { id: string; race: boolean; kind: "group" | "race" | "tt"; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 
-const FORMATS = [
-  { race: false, wkg: 2.0, title: { fr: "Sortie de groupe", en: "Group ride" } },
-  { race: true, wkg: 0, title: { fr: "Course", en: "Race" } },
-  { race: false, wkg: 2.8, title: { fr: "Groupe rapide", en: "Fast group" } },
-  { race: false, wkg: 1.6, title: { fr: "Sortie découverte", en: "Social ride" } },
+const FORMATS: { kind: GameEvent["kind"]; wkg: number; title: Record<Lang, string> }[] = [
+  { kind: "group", wkg: 2.0, title: { fr: "Sortie de groupe", en: "Group ride" } },
+  { kind: "race", wkg: 0, title: { fr: "Course", en: "Race" } },
+  { kind: "group", wkg: 2.8, title: { fr: "Groupe rapide", en: "Fast group" } },
+  { kind: "group", wkg: 1.6, title: { fr: "Sortie découverte", en: "Social ride" } },
+  { kind: "tt", wkg: 0, title: { fr: "Contre-la-montre", en: "Time trial" } },
 ];
 const GROUP_ROUTES = [0, 1, 2, 7, 3], RACE_ROUTES = [7, 6, 1, 0, 8];
 const SLOT_MIN = 30;
@@ -79,9 +80,9 @@ const SLOT_MIN = 30;
 /** The event of one 30-minute slot, exactly as the game schedules it. */
 export function scheduled(slot: number): GameEvent {
   const f = FORMATS[slot % FORMATS.length], turn = Math.floor(slot / FORMATS.length);
-  const groupIndex = turn * 3 + (slot % 4 === 0 ? 0 : (slot % 4) - 1);
-  const route = f.race ? RACE_ROUTES[turn % RACE_ROUTES.length] : GROUP_ROUTES[groupIndex % GROUP_ROUTES.length];
-  return { id: `forge-${slot}`, race: f.race, wkg: f.wkg, title: f.title, route: GAME_ROUTES[route], start: new Date(slot * SLOT_MIN * 60_000) };
+  const n = FORMATS.length, groupIndex = turn * 3 + (slot % n === 0 ? 0 : (slot % n) - 1);
+  const route = f.kind !== "group" ? RACE_ROUTES[turn % RACE_ROUTES.length] : GROUP_ROUTES[groupIndex % GROUP_ROUTES.length];
+  return { id: `forge-${slot}`, race: f.kind === "race", kind: f.kind, wkg: f.wkg, title: f.title, route: GAME_ROUTES[route], start: new Date(slot * SLOT_MIN * 60_000) };
 }
 
 /** The next events; the one that started less than 5 minutes ago can still be joined. */

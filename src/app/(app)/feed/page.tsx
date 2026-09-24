@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Heart, ShieldCheck, ShieldAlert, MapPinOff } from "lucide-react";
+import { Heart, ShieldCheck, ShieldAlert, MapPinOff, Users } from "lucide-react";
 import { getProfile } from "@/lib/db";
 import { isConfigured } from "@/lib/supabase/client";
 import { lastKnownCell, mine, nearby, toggleLike, getHandle, type FeedPost } from "@/lib/social/feed";
@@ -94,6 +95,15 @@ export default function FeedPage() {
             {t("Du travail terminé dans ton coin. Les parcours apparaissent une fois l’activité enregistrée, les bouts coupés, jamais pendant que quelqu’un est dehors.", "Finished work from your area. Routes appear once an activity is logged, with the ends cut off — never while anyone is out there.")}
           </p>
         </header>
+
+        {/* Social has no tab of its own on a phone (the bar holds six); this is its door. */}
+        <Press className="mb-6">
+          <Link href="/social" className="card p-4 flex items-center gap-3">
+            <span className="w-10 h-10 rounded-full bg-[rgba(31,199,111,.14)] grid place-items-center shrink-0"><Users className="w-5 h-5" /></span>
+            <span className="grid min-w-0 flex-1"><span className="font-medium">{t("Social", "Social")}</span><span className="text-xs text-smoke truncate">{t("Amis en selle, clubs et classement FORGE", "Friends riding, clubs and the FORGE ranking")}</span></span>
+            <span aria-hidden className="text-smoke">→</span>
+          </Link>
+        </Press>
 
         {!isConfigured ? (
           <Offline />

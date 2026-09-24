@@ -3,8 +3,9 @@ import { GAME_ROUTES, categoryFor, scheduled, upcomingEvents } from "./forgeRide
 
 describe("FORGE Ride, as the Indoor page shows it", () => {
   it("schedules the same events as the game (values computed by RideEvents.Scheduled)", () => {
-    const got = [995000, 995001, 995002, 995003, 995004, 995007].map((s) => { const e = scheduled(s); return `${s}:${e.race ? "Race" : "Group"}:${e.route.key}:${e.wkg}`; });
-    expect(got).toEqual(["995000:Group:c0:2", "995001:Race:c7:0", "995002:Group:c1:2.8", "995003:Group:c2:1.6", "995004:Group:c7:2", "995007:Group:c0:1.6"]);
+    const kind = { group: "Group", race: "Race", tt: "TimeTrial" };
+    const got = [995000, 995001, 995002, 995003, 995004, 995005, 995007, 995009].map((s) => { const e = scheduled(s); return `${s}:${kind[e.kind]}:${e.route.key}:${e.wkg}`; });
+    expect(got).toEqual(["995000:Group:c0:2", "995001:Race:c7:0", "995002:Group:c1:2.8", "995003:Group:c2:1.6", "995004:TimeTrial:c7:0", "995005:Group:c7:2", "995007:Group:c3:2.8", "995009:TimeTrial:c6:0"]);
   });
 
   it("keeps an event that started less than 5 minutes ago, then moves on", () => {

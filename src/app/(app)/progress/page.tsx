@@ -19,6 +19,7 @@ import { Page, Stagger, Item , CountUp, Reveal, Press } from "@/components/motio
 import { Bars, Sparkline, Heatmap } from "@/components/charts";
 import { MiniRoute } from "@/components/move-bits";
 import { FeedIcon } from "@/components/NavIcons";
+import { Users } from "lucide-react";
 
 export default function ProgressPage() {
   const profile = useLiveQuery(() => getProfile(), []);
@@ -187,6 +188,13 @@ export default function ProgressPage() {
               <Link href="/feed" className="card p-4 flex items-center gap-3">
                 <span className="w-10 h-10 rounded-full bg-[rgba(31,199,111,.14)] grid place-items-center shrink-0"><FeedIcon className="w-5 h-5" /></span>
                 <span className="grid min-w-0 flex-1"><span className="font-medium">{t("Communauté", "Community")}</span><span className="text-xs text-smoke">{t("Qui d’autre s’est présenté aujourd’hui", "Who else showed up today")}</span></span>
+                <span aria-hidden className="text-smoke">→</span>
+              </Link>
+            </Item>
+            <Item className="lg:col-span-2">
+              <Link href="/social" className="card p-4 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-full bg-[rgba(31,199,111,.14)] grid place-items-center shrink-0"><Users className="w-5 h-5" /></span>
+                <span className="grid min-w-0 flex-1"><span className="font-medium">{t("Social", "Social")}</span><span className="text-xs text-smoke">{t("Amis en selle, clubs et classement FORGE", "Friends riding, clubs and the FORGE ranking")}</span></span>
                 <span aria-hidden className="text-smoke">→</span>
               </Link>
             </Item>

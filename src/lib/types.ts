@@ -147,6 +147,8 @@ export interface Profile {
   /** The Unity indoor game's state that follows the account: the trophy case
    *  (JSON the game writes) and the outfit code. Opaque to the app. */
   indoorGame?: { palmares?: string; look?: string };
+  /** The FORGE rating: races in the game move it (src/lib/indoor/rating.ts). */
+  rating?: import("./indoor/rating").Rating;
   createdAt: string;
   supabaseUserId?: string;
 }

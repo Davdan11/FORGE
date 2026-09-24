@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "motion/react";
-import { CalendarDays, Settings } from "lucide-react";
+import { CalendarDays, Settings, Users } from "lucide-react";
 import { FeedIcon, FoodIcon, IndoorIcon, LibraryIcon, MoveIcon, ProfileIcon, TodayIcon, type NavIcon } from "./NavIcons";
 import { locale, useT } from "@/lib/i18n";
 import { getProfile, getStats } from "@/lib/db";
@@ -21,6 +21,7 @@ const ITEMS: { href: string; label: string; fr: string; icon: NavIcon }[] = [
   { href: "/food", label: "Food", fr: "Bouffe", icon: FoodIcon },
   { href: "/progress", label: "Profile", fr: "Profil", icon: ProfileIcon },
   { href: "/feed", label: "Feed", fr: "Fil", icon: FeedIcon },
+  { href: "/social", label: "Social", fr: "Social", icon: Users },
   { href: "/plan", label: "Block", fr: "Bloc", icon: CalendarDays },
   { href: "/settings", label: "Settings", fr: "Réglages", icon: Settings },
 ];

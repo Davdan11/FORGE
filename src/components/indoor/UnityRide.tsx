@@ -18,6 +18,11 @@ import { awardChallenges, awardIndoor, awardRouteBadge } from "@/lib/progress";
 import { db, getStats, uid } from "@/lib/db";
 import { buy, keepWorn, wallet } from "@/lib/wallet";
 import type { Activity, Profile } from "@/lib/types";
+import { rateRace, type RaceCategory } from "@/lib/indoor/rating";
+import { postRating } from "@/lib/social/ratings";
+import { announceRiding } from "@/lib/social/online";
+import { myClub } from "@/lib/social/clubs";
+import { getHandle } from "@/lib/social/feed";
 import { getLang } from "@/lib/i18n";
 
 /* The Unity Web build lives in public/unity (built from the FORGE-Unity repo,
@@ -50,9 +55,11 @@ const PROTOCOL_FR: Record<TrainerProtocol, string> = PROTOCOL_LABEL_FR;
  * and ERG targets, puts the rider in the room with the people on the same road,
  * and saves the ride with its XP when the game says it is over.
  */
-export function UnityRide({ profile, ftpW, onExit, say }: {
+export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   profile: Profile;
   ftpW: number;
+  /** Open on this road (a route key from the Social page's "Join"). */
+  startRoute?: string | null;
   onExit: (message?: string) => void;
   say: (m: string) => void;
 }) {
@@ -262,6 +269,16 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     if (a.saved) return;
     a.saved = true;
     if (s.distance < 50 || a.moving < 30) { send(rewardMessage(0, (await getStats()).xp)); return; }
+    // A race ridden to the line moves the FORGE rating (only with a real power reading: typed watts don't race).
+    const race = s.race;
+    if (race && /^[ABCD]$/.test(race.category) && race.of >= 2 && race.place >= 1 && race.place <= race.of && game.current.quality !== "declared") {
+      const cat = race.category as RaceCategory;
+      const next = rateRace(profile.rating, cat, race.place, race.of);
+      const delta = next.history[0]?.delta ?? 0;
+      await db.profile.update(profile.id, { rating: next, dirty: 1, updatedAt: new Date().toISOString() } as Partial<Profile>);
+      send({ type: "rating", rating: next.value, delta, place: race.place, of: race.of });
+      void myClub().then((c) => postRating(next, cat, c?.tag ?? null));
+    }
     const credit = a.moving > 0 ? Math.round((a.creditSec / a.moving) * 100) / 100 : 0;
     const quality = credit >= 0.95 ? "measured" : credit > 0 ? "estimated" : "declared";
     const hrs = hrSummary(a.hr);
@@ -293,6 +310,8 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
     exitRef.current?.();
   }
   const routeNames = useRef<Record<string, string>>({});
+  const onlineRoute = useRef(""), onlineStop = useRef<(() => void) | null>(null), handle = useRef<Promise<string | null> | null>(null);
+  useEffect(() => () => onlineStop.current?.(), []);
   const routeLengths = useRef<Record<string, number>>({});
   // Catalog routes come with the game's "ready"; a generated route's key carries its km ("g2-40-1-123456").
   const routeKm = (key: string) => {
@@ -326,13 +345,21 @@ export function UnityRide({ profile, ftpW, onExit, say }: {
           if (m.gfx) writePref("forge.gfx", m.gfx);
           if (m.lang === "en" || m.lang === "fr") setEn(m.lang === "en");
           g.route = m.route;
-          getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW, ftpGuessed: profile.ftpW == null }, s.xp), lang: navigator.language }));
+          getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW, ftpGuessed: profile.ftpW == null, rating: profile.rating?.value }, s.xp), lang: navigator.language }));
           if (profile.indoorGame?.look) send({ type: "look", look: profile.indoorGame.look });
+          // Joining a friend: onto their road (catalog routes only; a generated one can't be rebuilt from its key here).
+          { const id = startRoute ? m.routes.find((r) => r.key === startRoute)?.id : undefined; if (id != null && id !== m.routeId) send({ type: "command", action: "route", value: String(id) }); }
           keepWorn(profile.indoorGame?.look).then(sendWallet);
           if (profile.indoorGame?.palmares) send({ type: "palmares", data: JSON.parse(profile.indoorGame.palmares) });
           enterRoom(unityRoom(g.route, g.event));
           break;
         case "position":
+          // Friends see where I ride (Social page): announced once pedalling, again on a new road.
+          if (!m.paused && m.speedKph > 1 && m.route !== onlineRoute.current) {
+            onlineRoute.current = m.route; onlineStop.current?.(); onlineStop.current = null;
+            const key = m.route, name = routeTitle(m.route);
+            void (handle.current ??= getHandle()).then((h) => { if (h && onlineRoute.current === key) onlineStop.current = announceRiding({ handle: h, routeKey: key, routeName: name }); });
+          }
           // Another route, or the same one restarted: a new ride to count and save.
           if (m.route !== g.route || m.elapsed + 1 < g.elapsed) { g.route = m.route; acc.current = freshRide(); }
           g.distance = m.distance; g.speedKph = m.speedKph; g.elapsed = m.elapsed;

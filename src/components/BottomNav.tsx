@@ -8,7 +8,7 @@ import { FoodIcon, IndoorIcon, LibraryIcon, MoveIcon, ProfileIcon, TodayIcon, ty
 
 /* Six tabs, not seven: at seven the labels shrank to 10 px and the targets
    to a sliver. Indoor (the ride game) has its own tab so it can be found on a
-   phone; the feed lives inside Profile (its "Feed" tab) and keeps that tab lit.
+   phone; the feed and Social live inside Profile (its "Feed" tab) and keep that tab lit.
    The desktop side nav still lists everything. */
 const ITEMS: { href: string; label: string; fr: string; icon: NavIcon; also: string[] }[] = [
   { href: "/today", label: "Today", fr: "Auj.", icon: TodayIcon, also: ["/session", "/plan"] },
@@ -16,7 +16,7 @@ const ITEMS: { href: string; label: string; fr: string; icon: NavIcon; also: str
   { href: "/move", label: "Move", fr: "Bouge", icon: MoveIcon, also: [] },
   { href: "/indoor", label: "Indoor", fr: "Indoor", icon: IndoorIcon, also: [] },
   { href: "/food", label: "Food", fr: "Bouffe", icon: FoodIcon, also: [] },
-  { href: "/progress", label: "Profile", fr: "Profil", icon: ProfileIcon, also: ["/feed", "/settings", "/ranks", "/trends", "/calendar"] },
+  { href: "/progress", label: "Profile", fr: "Profil", icon: ProfileIcon, also: ["/feed", "/social", "/settings", "/ranks", "/trends", "/calendar"] },
 ];
 
 export function BottomNav() {
