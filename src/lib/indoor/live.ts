@@ -60,6 +60,14 @@ export function prune(peers: Map<string, Peer>, now: number): string[] {
   return gone;
 }
 
+/**
+ * The FORGE live server (live-server/): one small process that sends each rider
+ * only the riders near them, so a hundred can share a map. Without it
+ * (NEXT_PUBLIC_LIVE_URL unset) the rooms run on Supabase Realtime, fine for a
+ * handful of riders.
+ */
+const LIVE_URL = process.env.NEXT_PUBLIC_LIVE_URL?.replace(/\/$/, "");
+
 /** The room for a course and sport. Riders and runners have separate rooms. */
 export const roomName = (courseId: string, sport: "ride" | "run") => `indoor:${sport}:${courseId}`.slice(0, 120);
 
@@ -68,6 +76,14 @@ export const roomName = (courseId: string, sport: "ride" | "run") => `indoor:${s
  * tracked, so looking does not add you to the count. Returns the unsubscribe.
  */
 export function peekRoom(courseId: string, sport: "ride" | "run", onCount: (n: number) => void): () => void {
+  if (LIVE_URL) {
+    // The live server counts the room; asked now and every 15 s while the page looks.
+    let stopped = false;
+    const ask = () => fetch(`${LIVE_URL.replace(/^ws/, "http")}/count?room=${encodeURIComponent(roomName(courseId, sport))}`)
+      .then((r) => r.json()).then((j: { n?: number }) => { if (!stopped && typeof j.n === "number") onCount(j.n); }).catch(() => {});
+    ask(); const timer = setInterval(ask, 15000);
+    return () => { stopped = true; clearInterval(timer); };
+  }
   if (!supabase) return () => {};
   const channel = supabase.channel(roomName(courseId, sport));
   channel.on("presence", { event: "sync" }, () => onCount(Object.keys(channel.presenceState()).length)).subscribe();
@@ -113,6 +129,7 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
   if (!user) return null;
 
   const me = user.id;
+  if (LIVE_URL) return joinServerRoom(me, courseId, sport, name, onChange, onKudos, onSignal, onChat);
   const peers = new Map<string, Peer>();
   let present = 1;
 
@@ -183,6 +200,73 @@ export async function joinRoom(courseId: string, sport: "ride" | "run", name: st
       channel.send({ type: "broadcast", event: "chat", payload: { from: me, n: firstName, k } });
     },
     leave: () => { channel.untrack().catch(() => {}); supabase?.removeChannel(channel); },
+  };
+}
+
+/**
+ * The same room on the live server: positions come in snapshots of the riders
+ * near me (twice a second), each rider's name and outfit only the first time.
+ * Reconnects by itself (a dropped connection, or an expired sign-in) until left.
+ */
+async function joinServerRoom(me: string, courseId: string, sport: "ride" | "run", name: string, onChange: () => void, onKudos?: (fromName: string) => void, onSignal?: (fromId: string, data: unknown) => void, onChat?: (fromId: string, fromName: string, key: string) => void): Promise<Room> {
+  const peers = new Map<string, Peer>();
+  const info = new Map<string, { name: string; look?: string; color?: string; quality?: "m" | "e" | "d"; category?: string; voice?: boolean }>();
+  let present = 1, socket: WebSocket | null = null, left = false, lastChat = 0;
+  const firstName = name.trim().split(/\s+/)[0]?.slice(0, 24) || "Rider";
+  const out = (msg: unknown) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg)); };
+
+  const connect = () => new Promise<void>((ready) => {
+    const ws = new WebSocket(LIVE_URL!);
+    socket = ws;
+    const done = setTimeout(ready, 5000);
+    ws.onopen = async () => {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      ws.send(JSON.stringify({ t: "join", room: roomName(courseId, sport), token, name: firstName }));
+    };
+    ws.onmessage = (e) => {
+      let m: { t?: string; n?: number; r?: unknown[][]; gone?: string[]; from?: string; k?: unknown; s?: unknown };
+      try { m = JSON.parse(String(e.data)); } catch { return; }
+      if (m.t === "hello") { clearTimeout(done); ready(); return; }
+      if (m.t === "snap" && Array.isArray(m.r)) {
+        let changed = false; const now = Date.now();
+        present = typeof m.n === "number" ? m.n : present;
+        for (const row of m.r) {
+          const [id, d, v] = row as [string, number, number];
+          if (typeof id !== "string" || typeof d !== "number" || typeof v !== "number" || !Number.isFinite(d) || d < 0 || v < 0 || v > 30) continue;
+          if (row.length > 3) {
+            const [, , , n, lk, c, q, cat, vo] = row;
+            info.set(id, { name: (typeof n === "string" && n ? n : tr("Cycliste", "Rider")).slice(0, 24), look: lookCode(lk), color: hexColor(c), quality: q === "m" || q === "e" || q === "d" ? q : undefined, category: typeof cat === "string" && /^[ABCD]$/.test(cat) ? cat : undefined, voice: vo === 1 });
+          }
+          const who = info.get(id); if (!who) continue;
+          if (!peers.has(id)) changed = true;
+          peers.set(id, { id, ...who, distanceM: d, speedMs: v, at: now });
+        }
+        for (const id of m.gone ?? []) if (peers.delete(id)) { info.delete(id); changed = true; }
+        if (changed) onChange();
+        return;
+      }
+      if (!m.from || !peers.has(m.from)) return; // only from someone riding near me
+      if (m.t === "kudos") onKudos?.(info.get(m.from)?.name ?? tr("Cycliste", "Rider"));
+      else if (m.t === "chat") { const key = quickLine(m.k); if (key) onChat?.(m.from, info.get(m.from)?.name ?? tr("Cycliste", "Rider"), key); }
+      else if (m.t === "rtc") onSignal?.(m.from, m.s);
+    };
+    ws.onclose = () => { clearTimeout(done); ready(); if (socket === ws) socket = null; if (!left) setTimeout(() => { if (!left) connect(); }, 3000); };
+  });
+  await connect();
+
+  return {
+    me,
+    peers,
+    count: () => present,
+    send: (d, v, extra) => out({ t: "pos", d: Math.round(d * 10) / 10, v: Math.round(v * 100) / 100, lk: extra?.look, c: extra?.color, q: extra?.quality, cat: extra?.category, vo: extra?.voice ? 1 : undefined }),
+    signal: (to, data) => { if (peers.has(to)) out({ t: "rtc", to, s: data }); },
+    kudos: (to) => { if (peers.has(to)) out({ t: "kudos", to }); },
+    chat: (key) => {
+      const k = quickLine(key), now = Date.now();
+      if (!k || now - lastChat < 2000) return;
+      lastChat = now; out({ t: "chat", k });
+    },
+    leave: () => { left = true; socket?.close(); socket = null; },
   };
 }
 

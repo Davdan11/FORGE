@@ -1,0 +1,9 @@
+{
+  "name": "forge-live-server",
+  "private": true,
+  "type": "module",
+  "description": "FORGE live positions for the indoor game: one small process, riders near you only.",
+  "scripts": { "start": "node server.mjs", "bots": "node bots.mjs" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "jose": "^6.0.0", "ws": "^8.18.0" }
+}
