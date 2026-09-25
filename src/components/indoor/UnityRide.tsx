@@ -149,7 +149,8 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         companyName: "FORGE", productName: "FORGE Ride", productVersion: "0.1.0",
         // A phone (or "Normal" graphics) keeps its frame rate at 1.5×; a computer on "High" (the game's default
         // there) gets the screen's full sharpness, up to 2×.
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, highGraphics() ? 2 : 1.5),
+        // A Retina screen at 2x is four times the pixels: 1.5x stays sharp and is far lighter (1x on Normal graphics).
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, highGraphics() ? 1.5 : 1),
       }, (p) => setProgress(p))
         .then((u) => {
           if (cancelled) { u.Quit(); return; }
