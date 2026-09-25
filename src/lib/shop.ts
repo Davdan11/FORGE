@@ -27,6 +27,9 @@ const ROWS: Record<SkinSlot, Row[]> = {
     ["ÉQUIPE DYNAMICC", "TEAM DYNAMICC", "common", 0], ["QUÉBEC", "QUÉBEC", "common", 0], ["ROUGE COURSE", "RACE RED", "common", 2],
     ["NUIT BLANCHE", "WHITE NIGHT", "rare", 4], ["BLEU MARINE", "NAVY", "rare", 6], ["ÉMERAUDE", "EMERALD", "epic", 9],
     ["ROSE MAILLOT", "PINK JERSEY", "epic", 12], ["OR NOIR", "BLACK GOLD", "legendary", 15, 3], ["CHAMPION", "CHAMPION", "legendary", 20, 5, 3],
+    ["VAGUE BLEUE", "BLUE WAVE", "rare", 3], ["VIPÈRE", "VIPER", "rare", 5], ["CYBER VIOLET", "CYBER VIOLET", "epic", 7],
+    ["BLIZZARD", "BLIZZARD", "epic", 9], ["ÉCLAIR ROUGE", "RED BOLT", "epic", 11], ["AILES D'OR", "GOLDEN WINGS", "legendary", 13, 1],
+    ["COURONNE NOIRE", "BLACK CROWN", "legendary", 16, 3], ["FLEUR-DE-LYS", "FLEUR-DE-LYS", "legendary", 18, 3],
   ],
   helmet: [
     ["D'ORIGINE", "ORIGINAL", "common", 0], ["BLANC", "WHITE", "common", 2], ["NOIR MAT", "MATTE BLACK", "common", 3],

@@ -17,7 +17,7 @@ describe("sparks", () => {
 describe("the catalogue", () => {
   it("mirrors the game's six collections (RigSkins.cs)", () => {
     const count = (slot: string) => CATALOGUE.filter((i) => i.slot === slot).length;
-    expect([count("outfit"), count("helmet"), count("shoes"), count("glasses"), count("frame"), count("wheels")]).toEqual([9, 6, 6, 6, 9, 7]);
+    expect([count("outfit"), count("helmet"), count("shoes"), count("glasses"), count("frame"), count("wheels")]).toEqual([17, 6, 6, 6, 9, 7]);
   });
   it("gives the free items and prices the rest by rarity", () => {
     expect(ownedKeys({ owned: [] })).toContain("skin:frame:0");
