@@ -72,6 +72,17 @@ GAME_ROUTES.push(
   { ...r(24, ["Mondiaux · contre-la-montre", "Worlds · time trial"], ["Montréal", "Montréal"], ["CLM officiel UCI 2026 · 39 km", "Official UCI 2026 TT · 39 km"], ["Vieux-Montréal, circuit Gilles-Villeneuve, parc Jean-Drapeau", "Old Montréal, Gilles-Villeneuve circuit, Parc Jean-Drapeau"], 39, 151, "#A875FF", "mondiaux-clm"), real: true },
   { ...r(25, ["Mondiaux · course élite", "Worlds · elite race"], ["Montréal", "Montréal"], ["Course officielle UCI 2026 · 277 km", "Official UCI 2026 race · 277 km"], ["La Montérégie, le pont Champlain, puis 12 tours du mont Royal", "The Montérégie, the Champlain bridge, then 12 laps of Mount Royal"], 277, 3654, "#FFD133", "mondiaux-elite"), real: true },
 );
+// The great climbs of the Giro and the Tour (the game's "Great climbs" page).
+const climb = (id: number, name: string, country: [string, string], level: [string, string], about: [string, string], km: number, gainM: number, accent: string, image: string) =>
+  ({ ...r(id, [name, name], country, level, about, km, gainM, accent, image), real: true });
+GAME_ROUTES.push(
+  climb(26, "Passo dello Stelvio", ["Italie", "Italy"], ["Col réel · 48 lacets", "Real climb · 48 hairpins"], ["Depuis Prato, par Trafoi, jusqu'à 2 758 m", "From Prato, through Trafoi, up to 2,758 m"], 22.1, 1904, "#8CCCFF", "alpine"),
+  climb(27, "Passo del Mortirolo", ["Italie", "Italy"], ["Col réel · le plus dur", "Real climb · the hardest"], ["Depuis Mazzo : 11 km à plus de 10 %", "From Mazzo: 11 km above 10 %"], 11.4, 1336, "#FF594D", "giant"),
+  climb(28, "Passo Giau", ["Italie", "Italy"], ["Col réel · Dolomites", "Real climb · Dolomites"], ["Depuis Selva di Cadore, au pied des Dolomites", "From Selva di Cadore, below the Dolomites"], 11, 1013, "#FF99D9", "alpine"),
+  climb(29, "Col de la Croix de Fer", ["France", "France"], ["Col réel · 29 km", "Real climb · 29 km"], ["Depuis Saint-Jean-de-Maurienne, par Saint-Sorlin-d'Arves", "From Saint-Jean-de-Maurienne, through Saint-Sorlin-d'Arves"], 28.7, 1819, "#BFBFCC", "alpine"),
+  climb(30, "Col d'Aubisque", ["France", "France"], ["Col réel · Pyrénées", "Real climb · Pyrenees"], ["Depuis Laruns, par Eaux-Bonnes et Gourette", "From Laruns, through Eaux-Bonnes and Gourette"], 18.4, 1304, "#66E68C", "alpine"),
+  climb(31, "Grand Colombier", ["France", "France"], ["Col réel · Jura", "Real climb · Jura"], ["Depuis Culoz, les rampes à 14 % au-dessus du Rhône", "From Culoz, the 14 % ramps above the Rhône"], 17.3, 1315, "#FFB340", "giant"),
+);
 
 export interface GameEvent { id: string; race: boolean; kind: "group" | "race" | "tt"; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 
