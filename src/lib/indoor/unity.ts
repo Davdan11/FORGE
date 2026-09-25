@@ -61,7 +61,9 @@ export type UnityMessage =
   | { type: "palmares"; data: unknown }
   | { type: "event"; action: "join" | "leave" | "start"; id: string; route: string; start: number; kind: "group" | "race" | "tt"; category: string }
   | { type: "challenge"; action: string; code: string; route?: string; routeName?: string; seconds?: number; won?: boolean }
-  | { type: "buy"; item: string };
+  | { type: "buy"; item: string }
+  /** The game's home screen: CONNECT opens the sensors panel (Web Bluetooth pairs only from a tap in the page). */
+  | { type: "openSensors" };
 
 /**
  * The room a Unity rider shares. Riders of the Unity world and of the

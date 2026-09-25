@@ -97,6 +97,11 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   const game = useRef({ category: "D" as Category, quality: "declared" as string, watts: 0, hr: null as number | null, cadence: null as number | null, eventRoom: null as string | null, route: "", event: null as string | null, distance: 0, speedKph: 0, elapsed: 0, grade: 0, erg: null as number | null });
   const live = useRef({ manual: 0, hasSensor: false, curve: "generic" as SpeedCurveId });
   useEffect(() => { live.current = { manual, hasSensor: sensors.length > 0, curve }; }, [manual, sensors, curve]);
+  // The game's home screen shows what is paired: the names, and whether one of them is a trainer.
+  useEffect(() => {
+    if (!ready) return;
+    send({ type: "sensors", items: sensors.map((s) => sensorLabel(s, en) ?? sensorName(s.kind, en)), ok: sensors.some((s) => !!s.trainer) });
+  }, [ready, sensors, en]); // eslint-disable-line react-hooks/exhaustive-deps
   const acc = useRef(freshRide());
   const room = useRef<Room | null>(null);
   const roomKey = useRef("");
@@ -369,6 +374,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
           enterRoom(unityRoom(g.route, g.event, g.eventRoom));
           break;
         case "graphics": writePref("forge.gfx", m.gfx); break;
+        case "openSensors": setPanel(true); setVoicePanel(false); break;
         case "grade": g.grade = m.grade; break;
         case "ergTarget": g.erg = m.watts; break;
         case "event":
