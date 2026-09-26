@@ -120,11 +120,12 @@ describe("new badges", () => {
 
   it("awards each real col from the finished routes, and the full set once all are done", () => {
     expect(evaluateBadges(stats({ routesDone: ["c15"] }), ctx())).toContain("col_ventoux");
-    const some = evaluateBadges(stats({ routesDone: ["c14", "c15", "c16", "c17", "c18", "c19", "c20"] }), ctx());
+    const some = evaluateBadges(stats({ routesDone: ["c14", "c15", "c16", "c17", "c18", "c19", "c20", "c21"] }), ctx());
     expect(some).not.toContain("real_all");
-    expect(evaluateBadges(stats({ routesDone: ["c14", "c15", "c16", "c17", "c18", "c19", "c20", "c21"] }), ctx())).toContain("real_all");
+    // Every real French road: the first eight, and the Croix de Fer, the Aubisque and the Grand Colombier.
+    expect(evaluateBadges(stats({ routesDone: ["c14", "c15", "c16", "c17", "c18", "c19", "c20", "c21", "c29", "c30", "c31"] }), ctx())).toContain("real_all");
     const bar = BADGES.find((b) => b.id === "real_all")!.progress!(stats({ routesDone: ["c14", "c3"] }), ctx());
-    expect(bar).toEqual([1, 8]);
+    expect(bar).toEqual([1, 11]);
   });
 
   it("awards segment medals from the palmarès", () => {

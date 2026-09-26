@@ -65,7 +65,12 @@ export function findItem(key: string): ShopItem | undefined {
   return m ? CATALOGUE.find((i) => i.slot === m[1] && i.index === Number(m[2])) : undefined;
 }
 /** Free items: nothing to reach, nothing to pay. */
-export const isFree = (i: ShopItem) => i.level + i.golds + i.routes === 0;
+/**
+ * Opening: the whole garage is free and open to everyone (no price, no level). Set to false when the shop
+ * starts charging (the game's RiderUnlocks.LaunchFree too).
+ */
+export const LAUNCH_FREE = true;
+export const isFree = (i: ShopItem) => LAUNCH_FREE || i.level + i.golds + i.routes === 0;
 export const priceOf = (i: ShopItem) => (isFree(i) ? 0 : PRICE[i.rarity]);
 
 export function sparks(stats: Pick<Stats, "xp" | "badges" | "coinsSpent" | "testSparks">) {
@@ -93,7 +98,7 @@ export function tryBuy(stats: Pick<Stats, "xp" | "badges" | "coinsSpent" | "owne
   if (!item) return { ok: false, reason: "unknown" };
   if (ownedKeys(stats).includes(key)) return { ok: false, reason: "owned" };
   // TEMPORARY: the owner's test bonus also lifts the level requirement (remove with TEST_BONUS).
-  if (level < item.level && !stats.testSparks) return { ok: false, reason: "level", need: item.level };
+  if (level < item.level && !stats.testSparks && !LAUNCH_FREE) return { ok: false, reason: "level", need: item.level };
   const price = priceOf(item);
   if (sparks(stats) < price) return { ok: false, reason: "sparks", need: price - sparks(stats) };
   return { ok: true, item, price };

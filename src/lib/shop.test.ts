@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BADGE_SPARKS, CATALOGUE, PRICE, findItem, itemKey, lookItems, ownedKeys, priceOf, sparks, tryBuy } from "./shop";
+import { BADGE_SPARKS, CATALOGUE, LAUNCH_FREE, PRICE, findItem, itemKey, lookItems, ownedKeys, priceOf, sparks, tryBuy } from "./shop";
 
 /* The garage shop: sparks follow XP and badges, purchases are checked here, the game only asks. */
 
@@ -19,7 +19,8 @@ describe("the catalogue", () => {
     const count = (slot: string) => CATALOGUE.filter((i) => i.slot === slot).length;
     expect([count("outfit"), count("helmet"), count("shoes"), count("glasses"), count("frame"), count("wheels")]).toEqual([17, 6, 6, 6, 9, 7]);
   });
-  it("gives the free items and prices the rest by rarity", () => {
+  // The paid shop (after the opening offer: LAUNCH_FREE false).
+  it.skipIf(LAUNCH_FREE)("gives the free items and prices the rest by rarity", () => {
     expect(ownedKeys({ owned: [] })).toContain("skin:frame:0");
     expect(priceOf(findItem("skin:frame:0")!)).toBe(0);
     expect(priceOf(findItem("skin:frame:3")!)).toBe(PRICE.rare);
@@ -32,7 +33,7 @@ describe("the catalogue", () => {
 });
 
 describe("buying", () => {
-  it("needs the level, then the sparks", () => {
+  it.skipIf(LAUNCH_FREE)("needs the level, then the sparks", () => {
     expect(tryBuy(base, 3, "skin:frame:3")).toEqual({ ok: false, reason: "level", need: 5 });
     expect(tryBuy({ ...base, xp: 500 }, 8, "skin:frame:3")).toEqual({ ok: false, reason: "sparks", need: 250 });
     const r = tryBuy(base, 8, "skin:frame:3");
@@ -42,5 +43,13 @@ describe("buying", () => {
     expect(tryBuy({ ...base, owned: [itemKey("frame", 3)] }, 8, "skin:frame:3")).toEqual({ ok: false, reason: "owned" });
     expect(tryBuy(base, 8, "skin:frame:0")).toEqual({ ok: false, reason: "owned" });
     expect(tryBuy(base, 8, "kit:3")).toEqual({ ok: false, reason: "unknown" });
+  });
+});
+
+describe("the opening offer", () => {
+  it.runIf(LAUNCH_FREE)("gives the whole garage to everyone, at no price", () => {
+    const stats = { xp: 0, badges: [], coinsSpent: 0, owned: [] as string[] };
+    for (const item of CATALOGUE) expect(priceOf(item)).toBe(0);
+    expect(ownedKeys(stats).length).toBe(CATALOGUE.length);
   });
 });
