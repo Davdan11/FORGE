@@ -354,7 +354,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
           if (m.gfx) writePref("forge.gfx", m.gfx);
           if (m.lang === "en" || m.lang === "fr") setEn(m.lang === "en");
           g.route = m.route;
-          getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW, ftpGuessed: profile.ftpW == null, rating: profile.rating?.value }, s.xp), lang: navigator.language }));
+          getStats().then((s) => send({ ...profileMessage({ name: profile.name, weightKg: profile.weightKg, ftpW, ftpGuessed: profile.ftpW == null, rating: profile.rating?.value, units: profile.units?.distance === "mi" ? "mi" : "km" }, s.xp), lang: navigator.language }));
           if (profile.indoorGame?.look) send({ type: "look", look: profile.indoorGame.look });
           // Joining a friend: onto their road (catalog routes only; a generated one can't be rebuilt from its key here).
           { const id = startRoute ? m.routes.find((r) => r.key === startRoute)?.id : undefined; if (id != null && id !== m.routeId) send({ type: "command", action: "route", value: String(id) }); }

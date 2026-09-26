@@ -83,6 +83,13 @@ GAME_ROUTES.push(
   climb(30, "Col d'Aubisque", ["France", "France"], ["Col réel · Pyrénées", "Real climb · Pyrenees"], ["Depuis Laruns, par Eaux-Bonnes et Gourette", "From Laruns, through Eaux-Bonnes and Gourette"], 18.4, 1304, "#66E68C", "alpine"),
   climb(31, "Grand Colombier", ["France", "France"], ["Col réel · Jura", "Real climb · Jura"], ["Depuis Culoz, les rampes à 14 % au-dessus du Rhône", "From Culoz, the 14 % ramps above the Rhône"], 17.3, 1315, "#FFB340", "giant"),
 );
+// Québec beyond Montréal (the game's "Québec" page, with the Montréal routes).
+GAME_ROUTES.push(
+  climb(32, "Parc de la Gatineau", ["Québec", "Quebec"], ["Montée réelle · belvédère Champlain", "Real climb · Champlain Lookout"], ["D'Old Chelsea au belvédère Champlain", "From Old Chelsea to the Champlain Lookout"], 13, 380, "#66D973", "pine"),
+  climb(33, "Mont-Tremblant", ["Québec", "Quebec"], ["Route réelle · Laurentides", "Real road · Laurentians"], ["De Saint-Jovite jusqu'au pied des pistes", "From Saint-Jovite to the foot of the slopes"], 18.7, 257, "#F2734D", "pine"),
+  climb(34, "Chemin du Roy", ["Québec", "Quebec"], ["Route réelle · fleuve", "Real road · river"], ["De Neuville à Deschambault, le long du Saint-Laurent", "From Neuville to Deschambault, along the St. Lawrence"], 34.9, 207, "#59A6FF", "pine"),
+  climb(35, "Charlevoix", ["Québec", "Quebec"], ["Route réelle · côtes à 15 %", "Real road · 15 % hills"], ["De Baie-Saint-Paul aux Éboulements, au-dessus du fleuve", "From Baie-Saint-Paul to Les Éboulements, above the river"], 17.2, 558, "#FFCC4D", "pine"),
+);
 
 export interface GameEvent { id: string; race: boolean; kind: "group" | "race" | "tt"; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 

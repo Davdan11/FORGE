@@ -104,7 +104,7 @@ export function ridersMessage(peers: Iterable<Peer>, now: number) {
 }
 
 /** Who the rider is, for the game: weight and FTP for the physics, and the progression the app counts. */
-export function profileMessage(p: { name: string; weightKg: number; ftpW: number; ftpGuessed?: boolean; rating?: number }, totalXp: number) {
+export function profileMessage(p: { name: string; weightKg: number; ftpW: number; ftpGuessed?: boolean; rating?: number; units?: "km" | "mi" }, totalXp: number) {
   const lv = levelFromXp(totalXp);
   return {
     type: "profile",
@@ -119,6 +119,8 @@ export function profileMessage(p: { name: string; weightKg: number; ftpW: number
     // Only estimated from a level: the game may raise it from the first minutes of measured power.
     ...(p.ftpGuessed ? { ftpGuessed: true } : {}),
     ...(p.rating ? { rating: Math.round(p.rating) } : {}),
+    // Kilometres or miles, as chosen in the app (the game's own setting wins once the rider changes it there).
+    ...(p.units ? { units: p.units } : {}),
   };
 }
 
