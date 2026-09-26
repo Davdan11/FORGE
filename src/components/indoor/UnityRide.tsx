@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal, Mic, MicOff, Volume2, VolumeX, Flag } from "lucide-react";
+import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal, Mic, MicOff, Volume2, VolumeX, Flag, MoreHorizontal } from "lucide-react";
 import { powerFromHr, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, sensorName, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
 import { shouldSendGrade, resultText } from "@/lib/indoor/ftms";
@@ -116,6 +116,9 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   const [voiceOn, setVoiceOn] = useState(false);
   const [inRoom, setInRoom] = useState(true);
   const [voiceMic, setVoiceMic] = useState(true);
+  // The app's buttons (voice, sensors, quit) fold behind one small "⋯" so they do not sit on the game; a tap opens
+  // them, and they fold back by themselves after a few seconds (or stay while one of their panels is open).
+  const [tools, setTools] = useState(false);
   const [voicePanel, setVoicePanel] = useState(false);
   const [openMic, setOpenMic] = useState(() => readPref("forge.voice.open") === "1");
   const [held, setHeld] = useState(false);
@@ -490,6 +493,13 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   }
   // Push to talk: hold B (V and T are the game's) or the on-screen button.
   useEffect(() => { voice.current?.setHeld(held); }, [held]);
+  // Fold the app's buttons back 6 s after they were opened, unless one of their panels is open.
+  useEffect(() => {
+    if (!tools || panel || voicePanel) return;
+    const timer = window.setTimeout(() => setTools(false), 6000);
+    return () => window.clearTimeout(timer);
+  }, [tools, panel, voicePanel]);
+
   useEffect(() => {
     if (!voiceOn || openMic) return;
     const typing = (e: KeyboardEvent) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
@@ -553,6 +563,11 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
               <Mic className="w-6 h-6" strokeWidth={2.2} />
             </button>
           )}
+          <button type="button" onClick={() => setTools((v) => !v)} className={`${ROUND} !h-9 !w-9 ${tools ? "" : "opacity-60"}`} aria-expanded={tools} aria-label={t("Options", "Options")} title={t("Options", "Options")}>
+            <MoreHorizontal className="w-4 h-4" strokeWidth={2.4} />
+            {!tools && voiceOn && heard.length > 0 && <span className={BADGE}>{heard.length}</span>}
+          </button>
+          {tools && (<>
           <button type="button" onClick={() => { setVoicePanel((v) => !v); setPanel(false); }} className={`${ROUND} ${voicePanel ? "!border-volt" : ""}`} aria-expanded={voicePanel} aria-label={t("Voix", "Voice")} title={t("Voix", "Voice")}>
             {voiceOn ? <Mic className="w-5 h-5 text-volt-deep" strokeWidth={2.2} /> : <MicOff className="w-5 h-5" strokeWidth={2.2} />}
             {voiceOn && heard.length > 0 && <span className={BADGE}>{heard.length}</span>}
@@ -563,6 +578,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
           </button>
           {people > 0 && <span className={`${ROUND} cursor-default`} role="status" aria-label={`${people} ${t("en ligne", "online")}`} title={`${people} ${t("en ligne", "online")}`}><Users className="w-5 h-5" strokeWidth={2.2} /><span className={BADGE}>{people}</span></span>}
           <button type="button" onClick={quit} className={ROUND} aria-label={t("Quitter", "Quit")} title={t("Quitter", "Quit")}><X className="w-5 h-5" strokeWidth={2.2} /></button>
+          </>)}
           {voiceOn && (heard.some((h) => h.speaking) || talking) && (
             <div className="grid gap-1 max-w-[40vw]" aria-live="polite">
               {talking && <span className="chip chip--volt h-8"><Mic className="w-3.5 h-3.5" strokeWidth={2.4} />{t("Tu parles", "You're talking")}</span>}
