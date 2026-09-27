@@ -1,0 +1,36 @@
+# FORGE on Hostinger (Apache): the site is plain files (Next static export).
+Options -Indexes
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
+# Always HTTPS.
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# /route -> /route/ (every page is a folder with its index.html).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_URI} !/$
+RewriteCond %{REQUEST_FILENAME}/ -d
+RewriteRule ^(.*)$ /$1/ [L,R=301]
+
+# The 3D game (Unity Web). Its files decompress themselves in the browser, so they go out as plain binary; the
+# Android and iPhone apps load them from here, hence the open CORS on /unity only.
+AddType application/octet-stream .unityweb
+AddType application/wasm .wasm
+AddType audio/mpeg .mp3
+<IfModule mod_headers.c>
+  <FilesMatch "\.(unityweb|mp3|js)$">
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+  # Hashed Next files never change: cache them for a year. Pages and the game: revalidate.
+  <If "%{REQUEST_URI} =~ m#^/_next/static/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+  <If "%{REQUEST_URI} =~ m#^/unity/#">
+    Header set Cache-Control "public, max-age=3600, must-revalidate"
+  </If>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
