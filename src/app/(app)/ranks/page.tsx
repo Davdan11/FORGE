@@ -91,7 +91,7 @@ export default function RanksPage() {
                             const got = lvl.level >= from;
                             const here = current && s === sub;
                             return (
-                              <div key={s} className={`grid justify-items-center gap-1 rounded-2xl py-2 ${here ? "bg-[rgba(31,199,111,.12)] ring-1 ring-volt" : ""}`}>
+                              <div key={s} className={`grid justify-items-center gap-1 rounded-2xl py-2 ${here ? "bg-[rgba(255,46,120,.12)] ring-1 ring-volt" : ""}`}>
                                 <RankEmblem tier={tk} sub={s} size={48} locked={!got} />
                                 <span className={`text-[11px] font-medium ${got ? "" : "text-smoke"}`}>{s}</span>
                                 <span className="text-[10px] text-smoke tnum">{t("Niv.", "Lv")} {from}–{from + PER_SUB - 1}</span>

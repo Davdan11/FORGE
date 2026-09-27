@@ -11,6 +11,7 @@ import { getProfile, getStats } from "@/lib/db";
 import { subRankFor, tierForLevel } from "@/lib/gamification";
 import { RankEmblem } from "./RankEmblem";
 import { levelFromXp, rankFor } from "@/lib/gamification";
+import { Logo } from "./Logo";
 
 /* Desktop shell navigation (≥ lg). Mirrors BottomNav items. */
 const ITEMS: { href: string; label: string; fr: string; icon: NavIcon }[] = [
@@ -34,7 +35,7 @@ export function SideNav() {
   const lvl = stats ? levelFromXp(stats.xp) : null;
   return (
     <aside className="hidden lg:flex fixed inset-y-0 left-0 w-[240px] flex-col border-r border-line bg-[rgba(255,255,255,.85)] backdrop-blur-xl px-5 py-7 z-30">
-      <Link href="/today" className="display text-[1.55rem] tracking-[.06em] leading-none mb-10 px-2">FORGE<span className="text-volt">.</span></Link>
+      <Link href="/today" className="block mb-10 px-2" aria-label="FORGE"><Logo ink className="h-8 w-auto" /></Link>
       <ul className="grid gap-1">
         {ITEMS.map((it) => {
           const on = path === it.href || path.startsWith(it.href + "/") || (it.href === "/today" && path.startsWith("/session"));

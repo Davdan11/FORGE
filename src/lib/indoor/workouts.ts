@@ -76,7 +76,7 @@ export function zoneOfPct(pct: number): 1 | 2 | 3 | 4 | 5 | 6 {
   return pct < 56 ? 1 : pct < 76 ? 2 : pct < 91 ? 3 : pct < 106 ? 4 : pct < 121 ? 5 : 6;
 }
 export const ZONE_LABEL = ["", "Recovery", "Endurance", "Tempo", "Threshold", "VO2 max", "Anaerobic"] as const;
-export const ZONE_HEX = ["", "#9aa3ad", "#4aa3df", "#1fc76f", "#f2c14e", "#f08a3c", "#d9453d"] as const;
+export const ZONE_HEX = ["", "#9aa3ad", "#4aa3df", "#ff2e78", "#f2c14e", "#f08a3c", "#d9453d"] as const;
 const ZONE_LABEL_FR = ["", "Récupération", "Endurance", "Tempo", "Seuil", "VO2 max", "Anaérobie"] as const;
 /** A zone's name in the app's language. */
 export const zoneName = (z: number) => tr(ZONE_LABEL_FR[z] ?? "", ZONE_LABEL[z] ?? "");

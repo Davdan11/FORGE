@@ -16,6 +16,7 @@ import { Page, Press } from "@/components/motion";
 import { UnityRide } from "@/components/indoor/UnityRide";
 import { Platforms } from "@/components/indoor/Platforms";
 import type { Profile as AthleteProfile } from "@/lib/types";
+import { isReminded, remindMe } from "@/lib/eventReminders";
 
 /* Indoor is FORGE Ride, the Unity game, presented like a game launch: a
    cinematic hero made of real in-game shots, what is live right now (people
@@ -66,6 +67,20 @@ export default function IndoorPage() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(id); }, []);
   const events = useMemo(() => upcomingEvents(4, now), [now]);
+  // A friend's challenge link (/indoor/?defi=CODE): kept until the game opens (UnityRide sends it on "ready").
+  const [defi, setDefi] = useState<string | null>(null);
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("defi");
+    if (code) { try { sessionStorage.setItem("forge.defi", code); } catch { /* no storage */ } setDefi(code); }
+  }, []);
+  // "Remind me": a notification ten minutes before the start (lib/eventReminders).
+  const [reminded, setReminded] = useState<Set<string>>(() => new Set());
+  useEffect(() => { setReminded(new Set(events.filter((e) => isReminded(e.id)).map((e) => e.id))); }, [events]);
+  async function bell(e: (typeof events)[number]) {
+    const r = await remindMe(e);
+    if (r === "denied") { alert(t("Les notifications sont bloquées pour FORGE. Active-les dans les réglages du téléphone ou du navigateur.", "Notifications are blocked for FORGE. Turn them on in your phone or browser settings.")); return; }
+    setReminded((cur) => { const n = new Set(cur); if (r) n.add(e.id); else n.delete(e.id); return n; });
+  }
   const [online, setOnline] = useState<Record<string, number>>({});
   useEffect(() => {
     if (!isConfigured || playing) return;
@@ -255,6 +270,14 @@ export default function IndoorPage() {
               text={t("Tenues, casques, souliers, cadres et roues — du commun au légendaire, à débloquer en roulant.", "Kits, helmets, shoes, frames and wheels — common to legendary, unlocked by riding.")} />
           </div>
 
+          {defi && (
+            <button type="button" onClick={ride} className="w-full mb-10 rounded-2xl p-5 text-left border border-[#FF2E78]/60 bg-[#FF2E78]/15 hover:bg-[#FF2E78]/25 transition">
+              <p className="text-xs font-bold uppercase tracking-[.12em] text-[#FF7AA8]">{t("Défi reçu", "Challenge received")}</p>
+              <p className="mt-1 text-2xl font-black italic uppercase">{t("Bats le temps de ton ami →", "Beat your friend’s time →")}</p>
+              <p className="text-xs text-bone/60 mt-1">{t("Appuie pour lancer le jeu : le défi démarre tout seul sur son parcours.", "Tap to start the game: the challenge begins on their route by itself.")}</p>
+            </button>
+          )}
+
           {/* ── NEXT STARTS ──────────────────────────────────────── */}
           <SectionHead kicker={t("Horaire", "Schedule")} title={t("Prochains départs", "Next starts")}
             aside={<span className="text-xs text-bone/55">{t("Rejoins dans le jeu : MENU → ÉVÉNEMENTS", "Join in the game: MENU → EVENTS")}</span>} />
@@ -276,6 +299,13 @@ export default function IndoorPage() {
                 <div className="py-4 pr-5 text-right shrink-0">
                   <p className="text-2xl font-black italic tabular-nums leading-none">{clock(e.start)}</p>
                   <p className="text-[11px] text-bone/55 mt-1">{minutesTo(e.start) === 0 ? t("en cours", "starting") : t(`dans ${minutesTo(e.start)} min`, `in ${minutesTo(e.start)} min`)}</p>
+                  {minutesTo(e.start) > 10 && (
+                    <span role="button" tabIndex={0} aria-pressed={reminded.has(e.id)}
+                      onClick={(ev) => { ev.stopPropagation(); void bell(e); }} onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.stopPropagation(); void bell(e); } }}
+                      className={`inline-flex mt-2 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${reminded.has(e.id) ? "bg-[#FF2E78] border-[#FF2E78] text-white" : "border-white/25 text-bone/80 hover:border-white/60"}`}>
+                      {reminded.has(e.id) ? t("Rappel activé", "Reminder set") : t("Me rappeler", "Remind me")}
+                    </span>
+                  )}
                 </div>
               </button>
             ))}

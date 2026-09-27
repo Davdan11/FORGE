@@ -9,6 +9,7 @@ import { ART } from "@/lib/data/images";
 import { MoveMedia } from "@/components/MoveMedia";
 import { Screen, Hero, ScreenSkeleton, Rail } from "@/components/ui";
 import { Page, Stagger, Item, Press } from "@/components/motion";
+import { MoveSwitch } from "@/components/MoveSwitch";
 
 const PATTERNS = [["", "All", "Tout"], ["squat", "Squat", "Squat"], ["hinge", "Hinge", "Charnière"], ["push_h", "Push", "Poussée"], ["push_v", "Overhead", "Au-dessus de la tête"], ["pull_h", "Row", "Rowing"], ["pull_v", "Pull-up", "Traction"], ["lunge", "Single-leg", "Unilatéral"], ["core", "Core", "Tronc"], ["carry", "Carry", "Portage"], ["power", "Power", "Puissance"], ["cardio", "Cardio", "Cardio"], ["mobility", "Mobility", "Mobilité"]] as const;
 
@@ -26,6 +27,7 @@ function Library() {
   return (
     <Page>
       <Screen>
+        <div className="flex justify-center mb-3 lg:hidden"><MoveSwitch /></div>
         <Hero image={ART.library} color height="h-[260px]" eyebrow={t(`${EXERCISES.length} exercices · technique · erreurs fréquentes · substitutions`, `${EXERCISES.length} exercises · form tips · common mistakes · swaps`)} title={lang === "fr" ? <>La <em>bibliothèque.</em></> : <>The <em>library.</em></>}>
           <input className="input mt-4 !bg-[rgba(255,255,255,.92)] !text-ink backdrop-blur-md" placeholder={t("Cherche un mouvement, un muscle ou un schéma", "Search a movement, muscle or pattern")} value={q} onChange={(e) => setQ(e.target.value)} />
         </Hero>

@@ -27,6 +27,8 @@ import { syncReminders } from "@/lib/remindersSync";
 import { sessionTitle } from "@/lib/engine/plan";
 import { useT, useLang, locale, bilingual, loc } from "@/lib/i18n";
 import type { MealSlot, NutritionDay, PainArea, PrescribedExercise, Readiness, Session, UnitPrefs } from "@/lib/types";
+import { healthToday } from "@/lib/health";
+import { InstallApp } from "@/components/InstallApp";
 
 /* Labels for data keys that reach the screen. English shows the key itself, as before. */
 const BLOCK_FR: Record<PrescribedExercise["block"], string> = { prep: "préparation", main: "principal", accessory: "accessoire", finisher: "finition", cooldown: "retour au calme" };
@@ -112,6 +114,8 @@ export default function Today() {
               </div>
             </Item>
           )}
+
+          <Item><div className="mb-6 empty:hidden"><InstallApp /></div></Item>
 
           {/* The numbers that move: readiness as a ring, the streak, the next level. */}
           <Item>
@@ -327,7 +331,9 @@ function WeekStrip({ today, sessions, mon }: { today: string; sessions: Session[
 }
 
 function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: (r: Readiness) => void }) {
-  const [sleep, setSleep] = useState(7);
+  // Last night's sleep from the watch (Health Connect / Apple Health), when connected: the slider starts there.
+  const measured = healthToday()?.sleepMin;
+  const [sleep, setSleep] = useState(() => (measured ? Math.min(11, Math.max(3, Math.round((measured / 60) * 2) / 2)) : 7));
   const [quality, setQuality] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [soreness, setSoreness] = useState<1 | 2 | 3 | 4 | 5>(2);
   const [stress, setStress] = useState<1 | 2 | 3 | 4 | 5>(2);
@@ -364,7 +370,7 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
           </div>
           <p className="text-sm text-smoke max-w-[38ch] sm:pb-1">{t("Ton sommeil et ton état décident de la charge du jour. Des réponses honnêtes font une meilleure séance.", "How you slept and feel decides today’s load. Honest answers make a better session.")}</p>
         </div>
-        <div className="field"><span className="meta">{t("Sommeil cette nuit", "Sleep last night")} · {sleep} h</span><input type="range" min={3} max={11} step={0.5} value={sleep} onChange={(e) => setSleep(Number(e.target.value))} style={{ ["--fill" as string]: `${((sleep - 3) / 8) * 100}%` }} className="w-full" /></div>
+        <div className="field"><span className="meta">{t("Sommeil cette nuit", "Sleep last night")} · {sleep} h{measured ? t(" · mesuré par ta montre", " · measured by your watch") : ""}</span><input type="range" min={3} max={11} step={0.5} value={sleep} onChange={(e) => setSleep(Number(e.target.value))} style={{ ["--fill" as string]: `${((sleep - 3) / 8) * 100}%` }} className="w-full" /></div>
         {/* minmax(0,1fr): a plain 1fr track has an auto minimum, so the segments
             would push the columns wider than the card instead of compressing. */}
         <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-5">

@@ -37,9 +37,26 @@ const at = (date: string, hhmm: string, plusMin = 0) => {
 };
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
-export function remindersFor(profile: Profile, days: Day[], now: Date): Reminder[] {
+/** Extras beyond the plan: indoor events the rider asked to be reminded of, and the week streak. */
+export interface ReminderExtras {
+  events?: { id: string; title: string; route: string; start: Date }[];
+  /** Weeks in a row with training, and whether this week already counts. */
+  streak?: { weeks: number; thisWeekDone: boolean };
+}
+
+export function remindersFor(profile: Profile, days: Day[], now: Date, extras: ReminderExtras = {}): Reminder[] {
   if (!profile.notifications) return [];
   const out: Reminder[] = [];
+  // Indoor events the rider tapped "remind me" on: ten minutes before the start.
+  for (const e of extras.events ?? []) {
+    out.push({ key: `event:${e.id}`, at: new Date(e.start.getTime() - 10 * 60000), title: tr(`${e.title} dans 10 min`, `${e.title} in 10 min`), body: tr(`${e.route} · réchauffe-toi et monte sur le vélo.`, `${e.route} · warm up and get on the bike.`), url: "/indoor" });
+  }
+  // Sunday, late afternoon: a streak about to break if nothing happens this week.
+  const st = extras.streak;
+  if (st && st.weeks > 0 && !st.thisWeekDone) {
+    const sunday = new Date(now); sunday.setDate(now.getDate() + ((7 - now.getDay()) % 7)); sunday.setHours(17, 0, 0, 0);
+    out.push({ key: `streak:${sunday.toDateString()}`, at: sunday, title: tr(`Ta série de ${st.weeks} semaine${st.weeks > 1 ? "s" : ""} est en jeu`, `Your ${st.weeks}-week streak is on the line`), body: tr("Une séance, une sortie ou 20 minutes sur le vélo d’ici ce soir, et elle continue.", "One session, one outing or 20 minutes on the bike tonight keeps it going."), url: "/today" });
+  }
   for (const d of days) {
     // Morning check-in, half an hour after waking, unless it is already done.
     if (!d.readiness) {

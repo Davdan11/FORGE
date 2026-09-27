@@ -667,7 +667,7 @@ function RankingTab({ me, rating, followingIds, colors }: { me: string | null; r
               {scope === "world" && !mineShown && rating && place && place.place > rows.length && (
                 <>
                   <li className="text-center text-smoke text-xs py-1.5 tracking-[.3em]" aria-hidden>···</li>
-                  <li className="flex items-center gap-3 px-4 py-3 bg-[rgba(31,199,111,.10)]">
+                  <li className="flex items-center gap-3 px-4 py-3 bg-[rgba(255,46,120,.10)]">
                     <span className="w-8 text-sm font-semibold tnum text-right shrink-0">{place.place}</span>
                     <span className="flex-1 font-semibold">{t("Toi", "You")}</span>
                     <RatingPair value={Math.round(rating.value)} />
@@ -731,7 +731,7 @@ function BoardRow({ rank, row, mine, color }: { rank: number; row: RatingRow; mi
   const t = useT();
   const podium = ["#E8B931", "#AEB6BF", "#C8834A"][rank - 1];
   return (
-    <li className={`flex items-center gap-3 px-4 py-3 ${mine ? "bg-[rgba(31,199,111,.10)] shadow-[inset_3px_0_0_var(--volt-deep)]" : ""}`}>
+    <li className={`flex items-center gap-3 px-4 py-3 ${mine ? "bg-[rgba(255,46,120,.10)] shadow-[inset_3px_0_0_var(--volt-deep)]" : ""}`}>
       <span className="w-8 shrink-0 grid place-items-center">
         {podium ? <span className="w-7 h-7 rounded-full grid place-items-center text-xs font-bold tnum text-white" style={{ background: podium }}>{rank}</span>
           : <span className="text-sm text-smoke tnum">{rank}</span>}

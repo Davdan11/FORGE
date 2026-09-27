@@ -304,7 +304,7 @@ export function RatingScale<T extends 1 | 2 | 3 | 4 | 5>({ label, value, onChang
 }) {
   const id = useId();
   const good = better === "high" ? (value - 1) / 4 : (5 - value) / 4;
-  const tone = good >= 0.75 ? "#3ee89a" : good >= 0.5 ? "#b8f03a" : good >= 0.25 ? "#f2b33d" : "var(--danger)";
+  const tone = good >= 0.75 ? "#ff7a45" : good >= 0.5 ? "#ff2e78" : good >= 0.25 ? "#f2b33d" : "var(--danger)";
   const text = good >= 0.75 ? "var(--volt-deep)" : good >= 0.5 ? "#4f7d00" : good >= 0.25 ? "#9a6414" : "var(--danger)";
   return (
     <div className="grid gap-2 min-w-0">

@@ -315,6 +315,8 @@ export interface Activity {
     /** Indoor sessions: the virtual course, what measured the effort, and the workout followed. */
     indoor?: { course: string; quality: "measured" | "estimated" | "declared"; avgW?: number; workout?: string; workoutDone?: boolean; with?: number };
     /** A ride imported from another platform's file (Zwift, MyWhoosh, Rouvy…): kept apart, per platform. */
+    /** A workout read from Health Connect / Apple Health: the store's id, so it comes in once. */
+    health?: string;
     imported?: { platform: string; file: string; avgW?: number; maxW?: number; normalizedW?: number; avgCadence?: number; best5min?: number; best20min?: number };
   };
   /** [seconds since start, bpm] from a Bluetooth strap or watch, every ~5 s. */

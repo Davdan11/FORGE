@@ -140,7 +140,7 @@ export default function FoodPage() {
                           <Link href={`/food/meal?id=${enc(meal.id)}&date=${day.date}`} className="block relative h-44 md:h-52 lg:h-56">
                             <Photo src={meal.image} color veil className="absolute inset-0" />
                             <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5 grid gap-1">
-                              <span className="meta text-bone/80">{m.note ? <span className="font-bold" style={{ color: "#c6f432" }}>{NOTE_LABEL[m.note] ? L(NOTE_LABEL[m.note]) : m.note}</span> : t(SLOT_LABEL[m.slot].fr, m.slot === "pre" ? "Pre-workout" : m.slot === "post" ? "Recovery" : m.slot)}{m.scale !== 1 ? ` · ×${m.scale}` : ""} · {meal.minutes} min</span>
+                              <span className="meta text-bone/80">{m.note ? <span className="font-bold" style={{ color: "#ff3d82" }}>{NOTE_LABEL[m.note] ? L(NOTE_LABEL[m.note]) : m.note}</span> : t(SLOT_LABEL[m.slot].fr, m.slot === "pre" ? "Pre-workout" : m.slot === "post" ? "Recovery" : m.slot)}{m.scale !== 1 ? ` · ×${m.scale}` : ""} · {meal.minutes} min</span>
                               <span className="display text-2xl lg:text-3xl leading-[.95]">{meal.name.split(" with ")[0]}</span>
                               {meal.name.includes(" with ") && <span className="text-sm text-bone/85">{t("avec", "with")} {meal.name.split(" with ")[1]}</span>}
                             </div>

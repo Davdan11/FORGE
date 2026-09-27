@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
-import { isEmail, normalisePhone, sendCode, signInWith, verifyCode, type Provider } from "@/lib/auth";
+import { authMethods, isEmail, normalisePhone, sendCode, signInWith, verifyCode, type AuthMethods, type Provider } from "@/lib/auth";
 import { Press } from "./motion";
 import { tr, useT } from "@/lib/i18n";
 
@@ -26,6 +26,8 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [methods, setMethods] = useState<AuthMethods | null>(null);
+  useEffect(() => { let live = true; authMethods().then((m) => { if (live) setMethods(m); }); return () => { live = false; }; }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -81,12 +83,16 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
 
   return (
     <div className={`grid ${compact ? "gap-2" : "gap-3"}`}>
-      <button type="button" className="pill pill--block !bg-ink !text-bone !border-ink gap-3" disabled={!!busy} onClick={() => provider("apple")}><AppleMark />{busy === "apple" ? t("Ouverture d’Apple…", "Opening Apple…") : t("Continuer avec Apple", "Continue with Apple")}</button>
-      <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button>
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "phone" }); }}>{t("Numéro de téléphone", "Phone number")}</button>
-        <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "email" }); }}>{t("Courriel", "Email")}</button>
-      </div>
+      {/* Only the ways the project has switched on (see authMethods): no button that answers "not enabled". */}
+      {methods?.apple && <button type="button" className="pill pill--block !bg-ink !text-bone !border-ink gap-3" disabled={!!busy} onClick={() => provider("apple")}><AppleMark />{busy === "apple" ? t("Ouverture d’Apple…", "Opening Apple…") : t("Continuer avec Apple", "Continue with Apple")}</button>}
+      {methods?.google && <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button>}
+      {methods && !methods.apple && !methods.google && !methods.phone
+        ? <Press><button type="button" className="pill pill--volt pill--block" onClick={() => { setError(null); setStep({ kind: "email" }); }}>{t("Continuer avec mon courriel", "Continue with my email")}</button></Press>
+        : <div className={`grid gap-2 ${methods?.phone ? "grid-cols-2" : ""}`}>
+            {methods?.phone && <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "phone" }); }}>{t("Numéro de téléphone", "Phone number")}</button>}
+            <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "email" }); }}>{t("Courriel", "Email")}</button>
+          </div>}
+      <p className="text-xs text-smoke text-center">{t("Un code par courriel, pas de mot de passe. Ton entraînement est sauvegardé et suit sur tous tes appareils.", "A code by email, no password. Your training is backed up and follows you on every device.")}</p>
       {error && <p className="text-sm text-[#b42318]" role="alert">{error}</p>}
     </div>
   );

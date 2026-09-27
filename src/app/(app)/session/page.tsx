@@ -330,7 +330,7 @@ function SetRow({ i, set, logged, units, disabled, timed, loadable, onLog }: { i
 
   if (logged) {
     return (
-      <motion.li initial={{ backgroundColor: "rgba(31,199,111,.18)" }} animate={{ backgroundColor: "rgba(31,199,111,0)" }} transition={{ duration: 1.2 }} className="grid grid-cols-[28px_1fr_auto_auto] items-center gap-3 text-sm px-4 py-3 border-b border-line">
+      <motion.li initial={{ backgroundColor: "rgba(255,46,120,.18)" }} animate={{ backgroundColor: "rgba(255,46,120,0)" }} transition={{ duration: 1.2 }} className="grid grid-cols-[28px_1fr_auto_auto] items-center gap-3 text-sm px-4 py-3 border-b border-line">
         <span className="meta">{i + 1}</span>
         <span className="tnum">{logged.seconds ? `${logged.seconds}s` : `${logged.reps} reps`}{logged.loadKg ? ` · ${fmtLoad(logged.loadKg, units)}` : ""}{logged.adjusted && <span className="block text-[11px] text-volt">{t("prochaine série ajustée", "next set adjusted")}</span>}</span>
         <span className={`chip chip--rpe rpe-${logged.rpe ?? 6}`} aria-pressed={logged.rpe != null}>RPE {logged.rpe ?? "—"}</span>

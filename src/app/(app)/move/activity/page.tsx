@@ -103,7 +103,7 @@ function ActivityDetail() {
                 <Section title={t(`Tours · ${workout?.name ?? "guidé"}`, `Laps · ${workout?.name ?? "guided"}`)}>
                   <ul className="card px-4 divide-y divide-line">{a.laps.map((l, i) => (
                     <li key={i} className="py-2.5 grid grid-cols-[1fr_auto_auto] gap-3 text-sm tnum items-center">
-                      <span><span className="chip mr-2" style={{ background: `rgba(31,199,111,${[0, .18, .32, .5, .7, 1][l.zone]})`, color: "var(--ink)", borderColor: "transparent" }}>Z{l.zone}</span>{segmentLabel(l.label, lang)}</span>
+                      <span><span className="chip mr-2" style={{ background: `rgba(255,46,120,${[0, .18, .32, .5, .7, 1][l.zone]})`, color: "var(--ink)", borderColor: "transparent" }}>Z{l.zone}</span>{segmentLabel(l.label, lang)}</span>
                       <span className="text-smoke text-xs">{lang === "fr" ? ZONE_LABEL_FR[l.zone] : ZONE_LABEL[l.zone]}</span>
                       <span>{fmtDist(l.distanceM, u)} · {fmtDuration(l.seconds)}</span>
                     </li>))}</ul>

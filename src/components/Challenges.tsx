@@ -62,7 +62,7 @@ function DailyCard({ c, units, paid, t }: { c: Challenge; units: DistanceUnit; p
   return (
     <div className={`card p-4 grid gap-3 ${c.done ? "!border-volt" : ""}`}>
       <div className="flex items-start gap-3">
-        <span className={`w-11 h-11 rounded-2xl grid place-items-center shrink-0 ${c.done ? "bg-volt text-ink" : "bg-[rgba(31,199,111,.12)] text-ink"}`}>
+        <span className={`w-11 h-11 rounded-2xl grid place-items-center shrink-0 ${c.done ? "bg-volt text-ink" : "bg-[rgba(255,46,120,.12)] text-ink"}`}>
           <SportGlyph sport={c.sport} className="w-6 h-6" />
         </span>
         <div className="grid gap-0.5 min-w-0 flex-1">

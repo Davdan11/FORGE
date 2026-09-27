@@ -27,6 +27,8 @@ import { SPORT_GROUPS, groupLabel } from "@/lib/data/sports";
 import { LocateFixed, Bike } from "lucide-react";
 import { StartCountdown } from "@/components/StartCountdown";
 import type { Activity, ActivityType, CardioWorkout, Lap, TrackPoint, UnitPrefs } from "@/lib/types";
+import { MoveSwitch } from "@/components/MoveSwitch";
+import { parseTrackFile } from "@/lib/import/track";
 
 /** The native "location refused" message; also recognised below to offer the settings button. */
 const deniedNative = () => tr(`${APP_NAME} n’a pas accès à ta position. Autorise-la dans Réglages → Applications → ${APP_NAME} → Position.`, `${APP_NAME} can't use your location. Allow it in Settings → Apps → ${APP_NAME} → Location.`);
@@ -176,6 +178,24 @@ function Move() {
     setPending({ id: uid(), type: d.type, startedAt: d.startedAt, endedAt: new Date(last).toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points: d.points, splits: s.splits, title: tr(`${label} (récupérée)`, `${label} (recovered)`), workoutId: d.workoutId, shared: true, xp: 0, ...effort(d.type, s.movingSec || durationSec, s.distanceM, d.hr ?? []) });
   }
 
+  /** A run or ride from another app (GPX from Strava or a watch, TCX from Garmin Connect): the usual save sheet. */
+  const importInput = useRef<HTMLInputElement>(null);
+  async function importTrack(files: FileList | null) {
+    const f = files?.[0]; if (importInput.current) importInput.current.value = "";
+    if (!f) return;
+    try {
+      if (f.size > 40 * 1024 * 1024) throw new Error("big");
+      const tr0 = parseTrackFile(await f.text(), f.name);
+      const s = summarise(tr0.points);
+      const last = tr0.points[tr0.points.length - 1].t;
+      const durationSec = Math.max(1, Math.round((last - tr0.points[0].t) / 1000));
+      setErr(null); setType(tr0.type);
+      setPending({ id: uid(), type: tr0.type, startedAt: tr0.startedAt, endedAt: new Date(last).toISOString(), distanceM: s.distanceM, durationSec, movingSec: s.movingSec, avgPaceSecKm: s.distanceM > 0 ? durationSec / (s.distanceM / 1000) : undefined, maxSpeedMs: s.maxSpeedMs, elevGainM: s.elevGainM, elevLossM: s.elevLossM, points: tr0.points, splits: s.splits, title: tr0.name ?? sportName(tr0.type, lang), shared: true, xp: 0, ...effort(tr0.type, s.movingSec || durationSec, s.distanceM, tr0.hr) });
+    } catch {
+      setErr(t("Ce fichier ne se lit pas. Exporte ta sortie en GPX (Strava, montre) ou en TCX (Garmin Connect).", "That file can't be read. Export your activity as GPX (Strava, a watch) or TCX (Garmin Connect)."));
+    }
+  }
+
   async function save(a: Activity) {
     const today = todayISO();
     const session = await db.sessions.where("date").equals(today).first();
@@ -209,6 +229,7 @@ function Move() {
           {rec === "idle" && points.length === 0 ? (
             <>
               <MapView points={[]} locate locateKey={locateKey} onLocate={setLoc} />
+              <div className="absolute z-10 inset-x-0 flex justify-center lg:hidden" style={{ top: "calc(var(--safe-top) + 64px)" }}><MoveSwitch /></div>
               <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(180deg,rgba(243,246,242,.55)_0%,transparent_22%,transparent_62%,rgba(243,246,242,.85)_100%)]" />
               <div className="absolute inset-x-0 top-[calc(var(--safe-top)+12px)] lg:top-7 pointer-events-none">
                 <div className="screen flex justify-between items-start gap-3">
@@ -256,6 +277,8 @@ function Move() {
                   </div>
                 )}
                 <Press><button type="button" className="pill pill--volt pill--block pill--lg" onClick={() => { setErr(null); setCounting(true); }}>{workout ? t("Lancer l’entraînement guidé", "Start guided workout") : t(`Démarrer · ${typeLabel.toLowerCase()}`, `Start ${typeLabel.toLowerCase()}`)}</button></Press>
+                <input ref={importInput} type="file" accept=".gpx,.tcx,application/gpx+xml" className="hidden" onChange={(e) => importTrack(e.target.files)} />
+                <button type="button" className="text-sm text-smoke underline justify-self-center" onClick={() => importInput.current?.click()}>{t("Importer une sortie (Strava, Garmin, montre : GPX ou TCX)", "Import an activity (Strava, Garmin, a watch: GPX or TCX)")}</button>
                 <HeartChip heart={heart} maxHr={maxHrFor(profile.age)} />
                 <AnimatePresence>{err && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-danger">{err}{isNativeShell() && err === deniedNative() && <> <button type="button" className="underline" onClick={() => openLocationSettings()}>{t("Ouvrir les réglages", "Open settings")}</button></>}</motion.p>}</AnimatePresence>
                 </div>
@@ -438,7 +461,7 @@ function SaveSheet({ a, units, onCancel, onSave, onChange }: { a: Activity; unit
 }
 
 /* Zone colours: calm to hard, the same order a watch uses. */
-const ZONE_COLOR = ["var(--line)", "#9ad0ec", "#1fc76f", "#f2c14e", "#f08a3c", "#d9453d"];
+const ZONE_COLOR = ["var(--line)", "#9ad0ec", "#ff2e78", "#f2c14e", "#f08a3c", "#d9453d"];
 
 /** Connect a heart-rate strap or watch for this activity. */
 function HeartChip({ heart, maxHr }: { heart: ReturnType<typeof useHeartRate>; maxHr: number }) {

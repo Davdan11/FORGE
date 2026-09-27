@@ -1,8 +1,8 @@
 /* FORGE service worker — offline shell + scheduled nutrition nudges.
    App data lives in IndexedDB (Dexie); this only caches the shell and
    handles notification clicks. */
-const VERSION = "forge-v1";
-const SHELL = ["/", "/today", "/manifest.json", "/icon.svg"];
+const VERSION = "forge-v2";
+const SHELL = ["/", "/today/", "/move/", "/food/", "/progress/", "/indoor/", "/manifest.json", "/icon.svg", "/brand/forge-logo.svg", "/brand/forge-mark.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).catch(() => {}));
@@ -16,22 +16,32 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+/* What works offline: every page once visited (network first, the saved copy when there is none), and the files
+   that never change (hashed code, images, icons) straight from the cache. Not the 3D game (hundreds of MB, it has
+   its own browser cache) nor other sites (map tiles, Supabase). */
+const STATIC = /^\/(_next\/static|art|brand|indoor|badges|models)\/|\.(png|jpg|jpeg|webp|svg|woff2?)$/;
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // Never cache map tiles, fonts from other origins or Supabase calls.
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin || url.pathname.startsWith("/unity/")) return;
+  if (STATIC.test(url.pathname)) {
+    event.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); }
+      return res;
+    })));
+    return;
+  }
   event.respondWith(
     fetch(req)
       .then((res) => {
-        if (res.ok && (url.pathname.startsWith("/_next/static") || SHELL.includes(url.pathname))) {
+        if (res.ok && (req.mode === "navigate" || SHELL.includes(url.pathname) || url.pathname.endsWith(".txt"))) {
           const copy = res.clone();
           caches.open(VERSION).then((c) => c.put(req, copy));
         }
         return res;
       })
-      .catch(() => caches.match(req).then((hit) => hit || (req.mode === "navigate" ? caches.match("/today") : Response.error())))
+      .catch(() => caches.match(req).then((hit) => hit || (req.mode === "navigate" ? caches.match("/today/") : Response.error())))
   );
 });
 

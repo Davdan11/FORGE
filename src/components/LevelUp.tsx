@@ -35,7 +35,7 @@ export function LevelUpWatcher() {
   return <AnimatePresence>{level != null && <LevelUpCard level={level} onClose={() => setLevel(null)} />}</AnimatePresence>;
 }
 
-const COLORS = ["#c6f432", "#c6f432", "#ffffff", "#1fc76f", "#c6f432", "#f6f3ec"];
+const COLORS = ["#ff3d82", "#ff3d82", "#ffffff", "#ff2e78", "#ff3d82", "#f6f3ec"];
 
 export function LevelUpCard({ level, onClose }: { level: number; onClose: () => void }) {
   const reduce = useReducedMotion();
@@ -91,13 +91,13 @@ export function LevelUpCard({ level, onClose }: { level: number; onClose: () => 
           className="eyebrow mb-2">{t("Niveau supérieur", "Level up")}</motion.p>
 
         <motion.span initial={reduce ? false : { opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
-          className="numeral !text-[6.5rem] leading-none tnum" style={{ color: "#c6f432" }}>{shown}</motion.span>
+          className="numeral !text-[6.5rem] leading-none tnum" style={{ color: "#ff3d82" }}>{shown}</motion.span>
 
         <div className="relative mt-4 grid place-items-center">
           {/* Shockwaves */}
           {!reduce && [0, 1].map((k) => (
             <motion.span key={k} aria-hidden="true" className="absolute rounded-full border-[3px]"
-              style={{ width: 170, height: 170, borderColor: "#c6f432" }}
+              style={{ width: 170, height: 170, borderColor: "#ff3d82" }}
               initial={{ scale: 0.4, opacity: 0 }}
               animate={{ scale: [0.4, 2.6], opacity: [0, 0.9, 0] }}
               transition={{ duration: 1.1, delay: 0.62 + k * 0.18, ease: "easeOut" }} />

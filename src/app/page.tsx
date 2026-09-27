@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { getProfile } from "@/lib/db";
 import { documentUrl } from "@/lib/native";
 import { tr, useT } from "@/lib/i18n";
+import { Logo } from "@/components/Logo";
 
 /* ─────────────────────────────────────────────────────────────
    Boot.
@@ -53,6 +54,11 @@ export default function Root() {
       setBoot({ state: "failed", why });
     };
 
+    // Someone who already has a plan goes straight in (the app's Guard still checks the profile there).
+    let returning = false;
+    try { returning = localStorage.getItem("forge.hasProfile") === "1"; } catch { /* private mode */ }
+    if (returning) { go("/today/"); return; }
+
     const timer = window.setTimeout(
       () => fail(tr("Le stockage n’a pas répondu. Tes données sont sur cet appareil; l’app n’a juste pas réussi à les ouvrir.", "Storage did not respond. Your data is on this device; the app just could not open it.")),
       DEADLINE_MS,
@@ -69,13 +75,12 @@ export default function Root() {
   }, []);
 
   return (
-    <main className="flex-1 grid place-items-center px-6">
-      <div className="grid justify-items-center gap-3 text-center">
-        <span className="display display--lg text-ink overflow-hidden flex" style={{ fontSize: "var(--text-display-lg)" }}>
-          {"FORGE".split("").map((c, i) => (
-            <motion.i key={i} className="not-italic inline-block" initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ duration: 0.7, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}>{c}</motion.i>
-          ))}
-        </span>
+    <main className="flex-1 grid place-items-center px-6 bg-[#0e1016] text-bone">
+      <div className="grid justify-items-center gap-4 text-center">
+        {/* Same dark screen and logo as the phone apps' splash, so the start is one continuous picture. */}
+        <motion.div initial={{ opacity: 0, scale: .92, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}>
+          <Logo className="w-[min(62vw,300px)] h-auto" />
+        </motion.div>
         <motion.span className="h-[2px] bg-volt" initial={{ width: 0 }} animate={{ width: 96 }} transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }} />
 
         {boot.state === "failed" && (

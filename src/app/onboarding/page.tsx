@@ -23,6 +23,7 @@ import { isConfigured } from "@/lib/supabase/client";
 import { currentUser, firstName, restoreAccount } from "@/lib/auth";
 import { syncNow } from "@/lib/sync";
 import { bilingual, loc, locale, useLang, useT } from "@/lib/i18n";
+import { Logo } from "@/components/Logo";
 
 /* Remembered when someone chooses to start without an account, so the
    question is not asked again on this device. Settings can still sign in. */
@@ -130,6 +131,17 @@ export default function Onboarding() {
   // 13 in the US, 16 in the EU/EEA — read after hydration, like the units.
   const minAge = hydrated ? minimumAge() : MIN_AGE;
   const tooYoung = age > 0 && age < minAge;
+  // The two agreements, asked where the plan gets created: after the goal (quick start) or at the end.
+  const consentBlock = (<>
+            <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
+      <input type="checkbox" className="tick mt-0.5 shrink-0" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+      <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">{t("Je comprends.", "I understand.")}</strong> {HEALTH_NOTICE[lang]}</span>
+    </label>
+    <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
+      <input type="checkbox" className="tick mt-0.5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+      <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">{t("J’accepte", "I agree")}</strong> {t("les", "to the")} <Link href="/legal/terms" className="underline">{t("Conditions d’utilisation", "Terms of Use")}</Link> {t("et la", "and")} <Link href="/legal/privacy" className="underline">{t("Politique de confidentialité", "Privacy Policy")}</Link>{t(`, et je consens à ce que ${APP_NAME} utilise les informations de santé que j’entre — comme mon poids, mes blessures et ma fréquence cardiaque — pour bâtir mon plan.`, `, and I consent to ${APP_NAME} using the health information I enter — like my weight, injuries and heart rate — to build my plan.`)}</span>
+    </label>
+  </>);
   const canNext = useMemo(() => (step === 0 ? name.trim().length > 0 && age >= minAge && age <= 100 : true), [step, name, age, minAge]);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
 
@@ -220,7 +232,7 @@ export default function Onboarding() {
       <div className="min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_560px]">
         <div className="relative h-[300px] lg:h-dvh lg:sticky lg:top-0 overflow-hidden">
           <Photo src={ART.today} color veil className="absolute inset-0" />
-          <span className="on-photo absolute top-[calc(var(--safe-top)+16px)] left-5 lg:top-8 lg:left-8 display text-lg lg:text-2xl">{APP_NAME}<span className="text-volt">.</span></span>
+          <span className="on-photo absolute top-[calc(var(--safe-top)+16px)] left-5 lg:top-8 lg:left-8 "><Logo className="h-7 lg:h-9 w-auto" title={APP_NAME} /></span>
           <p className="on-photo absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-10 lg:pb-10 display display--lg leading-[0.95] max-w-[14ch]" style={{ fontSize: "var(--text-display-lg)" }}>{t("Entraîne-toi. Mesure. ", "Train. Track. ")}<em>{t("Monte en rang.", "Rank up.")}</em></p>
         </div>
         <div className="px-5 pb-10 pt-8 lg:px-12 lg:py-12 lg:min-h-dvh lg:flex lg:flex-col lg:justify-center">
@@ -256,7 +268,7 @@ export default function Onboarding() {
         <AnimatePresence mode="wait">
           <motion.div key={step} initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="absolute inset-0"><Photo src={PHOTOS[step]} veil className="absolute inset-0" /></motion.div>
         </AnimatePresence>
-        <span className="on-photo absolute top-[calc(var(--safe-top)+16px)] left-5 lg:top-8 lg:left-8 display text-lg lg:text-2xl">{APP_NAME}<span className="text-volt">.</span></span>
+        <span className="on-photo absolute top-[calc(var(--safe-top)+16px)] left-5 lg:top-8 lg:left-8 "><Logo className="h-7 lg:h-9 w-auto" title={APP_NAME} /></span>
         <div className="on-photo absolute inset-x-0 bottom-0 px-5 pb-4 lg:px-10 lg:pb-10 grid gap-3">
           <p className="hidden md:block display display--lg leading-[0.95] max-w-[12ch]" style={{ fontSize: "var(--text-display-lg)" }}><AnimatePresence mode="wait"><motion.span key={step} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.5 }} className="block">{CLAIMS[step][lang]}</motion.span></AnimatePresence></p>
           <p className="meta text-bone/80"><span className="text-volt font-bold">{String(step + 1).padStart(2, "0")}</span> / {String(STEPS.length).padStart(2, "0")} · {STEPS[step][lang]}</p>
@@ -302,6 +314,10 @@ export default function Onboarding() {
             <RadioField label={t("Depuis combien de temps tu t’entraînes?", "How long have you been training?")} value={level} onChange={setLevel} options={[{ v: "new", label: t("Je commence", "Just starting") }, { v: "intermediate", label: t("1–3 ans", "1–3 years") }, { v: "advanced", label: t("3 ans et +", "3+ years") }]} />
             <p className="text-sm text-smoke">{t("Ton objectif fixe tes calories, tes reps et combien de cardio accompagne la muscu. Change-le n’importe quand et ton plan suit.", "Your goal sets your calories, your reps and how much cardio goes with the lifting. Change it any time and your plan updates.")}</p>
           </>)}
+          {step === 1 && (<div className="grid gap-3 mt-2">
+            <p className="text-sm text-smoke">{t("C’est tout ce qu’il faut pour commencer. Horaire, matériel, récup et bouffe prennent des valeurs sensées; tu les ajustes quand tu veux dans Réglages.", "That’s all it takes to start. Schedule, gear, recovery and food get sensible defaults; adjust them any time in Settings.")}</p>
+            {consentBlock}
+          </div>)}
           {step === 2 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>{t("Combien de", "How much")} <em>{t("temps", "time")}</em> {t("t’as vraiment?", "is real?")}</h1>
             <RadioField label={t("Séances par semaine", "Sessions per week")} value={days} onChange={setDays} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} />
@@ -346,14 +362,7 @@ export default function Onboarding() {
             <div className="field"><span className="meta">{t("Aliments que tu ne manges pas", "Foods you don’t eat")}</span><MultiSeg value={avoidFoods} onChange={setAvoidFoods} options={choiceOptions(AVOID, lang)} /></div>
             <RadioField label={t("Repas par jour", "Meals per day")} value={mealsPerDay} onChange={setMealsPerDay} options={[3, 4, 5].map((m) => ({ v: m as Profile["mealsPerDay"], label: String(m) }))} />
             <p className="text-sm text-smoke">{t("Les cibles viennent de ton corps, de ton objectif et du type de journée. Plus de 30 000 recettes avec la préparation étape par étape; les repas ne se répètent jamais sur trois jours.", "Targets come from your body, your goal and the kind of day it is. 30,000+ recipes with step-by-step cooking; meals never repeat within three days.")}</p>
-            <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
-              <input type="checkbox" className="tick mt-0.5 shrink-0" checked={ack} onChange={(e) => setAck(e.target.checked)} />
-              <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">{t("Je comprends.", "I understand.")}</strong> {HEALTH_NOTICE[lang]}</span>
-            </label>
-            <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
-              <input type="checkbox" className="tick mt-0.5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-              <span className="text-xs text-smoke leading-relaxed"><strong className="text-ink">{t("J’accepte", "I agree")}</strong> {t("les", "to the")} <Link href="/legal/terms" className="underline">{t("Conditions d’utilisation", "Terms of Use")}</Link> {t("et la", "and")} <Link href="/legal/privacy" className="underline">{t("Politique de confidentialité", "Privacy Policy")}</Link>{t(`, et je consens à ce que ${APP_NAME} utilise les informations de santé que j’entre — comme mon poids, mes blessures et ma fréquence cardiaque — pour bâtir mon plan.`, `, and I consent to ${APP_NAME} using the health information I enter — like my weight, injuries and heart rate — to build my plan.`)}</span>
-            </label>
+            {consentBlock}
           </>)}
         </motion.div>
       </AnimatePresence>
@@ -377,7 +386,12 @@ export default function Onboarding() {
 
       <div className="flex gap-3 mt-8 lg:mt-10">
         {step > 0 && <button type="button" className="pill" onClick={() => go(step - 1)}>{t("Retour", "Back")}</button>}
-        {step < STEPS.length - 1 ? (
+        {step === 1 ? (
+          <div className="flex-1 grid gap-2">
+            <Press><button type="button" className="pill pill--volt pill--block" disabled={busy || !ack || !consent} onClick={finish}>{busy ? t("On bâtit ton entraînement…", "Building your training…") : t("Créer mon entraînement", "Create my training")}</button></Press>
+            <button type="button" className="text-sm text-smoke underline" onClick={() => go(2)}>{t("Personnaliser davantage (4 étapes)", "Fine-tune first (4 steps)")}</button>
+          </div>
+        ) : step < STEPS.length - 1 ? (
           <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={!canNext} onClick={() => go(step + 1)}>{t("Continuer", "Continue")}</button></Press>
         ) : (
           <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={busy || !ack || !consent} onClick={finish}>{busy ? t("On bâtit ton entraînement…", "Building your training…") : t("Créer mon entraînement", "Create my training")}</button></Press>

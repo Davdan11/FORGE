@@ -30,6 +30,7 @@ import { InjuryPanel } from "@/components/InjuryPanel";
 import { AREAS, AVOID, DIETS, DEFAULT_LIFESTYLE, HOME_KIT, PLACES, SLEEP, STRESS, WORK, equipmentFor, choiceOptions, choiceLabel, placeText } from "@/lib/data/choices";
 import { buildNutritionDay } from "@/lib/nutrition/engine";
 import type { Goal, PainArea, Profile } from "@/lib/types";
+import { HealthPanel } from "@/components/HealthPanel";
 
 const GOALS: { v: Goal; name: { fr: string; en: string }; image: string }[] = [
   { v: "strength", name: { fr: "Devenir fort", en: "Get strong" }, image: sessionImage("lower", 400, 400) },
@@ -219,6 +220,12 @@ export default function SettingsPage() {
                 ) : (
                   <div className="card p-4 grid gap-3"><p className="text-sm">{t("Crée un compte ou connecte-toi pour sauvegarder ton entraînement et l’utiliser sur tous tes appareils. Ce qui est sur ce téléphone est conservé.", "Create an account or sign in to back up your training and use it on every device. What is on this phone is kept.")}</p><AccountPanel onSignedIn={onSignedIn} compact /></div>
                 )}
+              </Section>
+            </Item>
+
+            <Item>
+              <Section title={t("Apps connectées", "Connected apps")}>
+                <HealthPanel />
               </Section>
             </Item>
 

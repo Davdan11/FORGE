@@ -177,3 +177,19 @@ export async function deleteAccount(): Promise<string | null> {
   await supabase.auth.signOut().catch(() => {});
   return null;
 }
+
+
+/** Which sign-in methods the Supabase project has switched on (its public settings). Cached for the session:
+ *  the account panel only shows what works, instead of buttons that answer "not enabled". */
+export type AuthMethods = { apple: boolean; google: boolean; phone: boolean; email: boolean };
+let methodsCache: Promise<AuthMethods> | null = null;
+export function authMethods(): Promise<AuthMethods> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const fallback: AuthMethods = { apple: false, google: false, phone: false, email: true };
+  if (!url || !key) return Promise.resolve(fallback);
+  methodsCache ??= fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d: { external?: Record<string, boolean> } | null) => d?.external ? { apple: !!d.external.apple, google: !!d.external.google, phone: !!d.external.phone, email: d.external.email !== false } : fallback)
+    .catch(() => fallback);
+  return methodsCache;
+}

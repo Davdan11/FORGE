@@ -62,7 +62,7 @@ export function SegmentBar({ segments }: { segments: WorkoutSegment[] }) {
   const op = { 1: 0.25, 2: 0.45, 3: 0.65, 4: 0.85, 5: 1 } as Record<number, number>;
   return (
     <div className="flex gap-[2px] h-4 rounded-md overflow-hidden">
-      {segments.map((s, i) => <span key={i} title={`${segmentLabel(s.label, lang)} · ${Math.round(s.seconds / 60)} min · Z${s.zone}`} style={{ width: `${(s.seconds / total) * 100}%`, background: `rgba(31,199,111,${op[s.zone]})` }} />)}
+      {segments.map((s, i) => <span key={i} title={`${segmentLabel(s.label, lang)} · ${Math.round(s.seconds / 60)} min · Z${s.zone}`} style={{ width: `${(s.seconds / total) * 100}%`, background: `rgba(255,46,120,${op[s.zone]})` }} />)}
     </div>
   );
 }

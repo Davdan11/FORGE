@@ -66,6 +66,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>FORGE reads your steps, sleep and the workouts from your watch or other apps so your training and recovery take them into account. FORGE never writes to Apple Health.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>FORGE does not write to Apple Health.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>FORGE connects to your heart-rate strap, power meter or smart trainer so an indoor ride moves at the speed your effort earns.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -367,6 +367,23 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
           keepWorn(profile.indoorGame?.look).then(sendWallet);
           if (profile.indoorGame?.palmares) send({ type: "palmares", data: JSON.parse(profile.indoorGame.palmares) });
           enterRoom(unityRoom(g.route, g.event));
+          // Opened from a friend's challenge link (/indoor/?defi=CODE): the game takes the challenge at once.
+          try {
+            const code = new URLSearchParams(window.location.search).get("defi") ?? sessionStorage.getItem("forge.defi");
+            if (code) { sessionStorage.removeItem("forge.defi"); send({ type: "challenge", action: "start", code, from: profile.name }); }
+          } catch { /* no storage */ }
+          break;
+        case "challenge":
+          // A ride finished: the game made a challenge code with its time. Share it as a link that opens the game on it.
+          if (m.action === "create" && m.code) {
+            const link = `${window.location.origin}/indoor/?defi=${encodeURIComponent(m.code)}`;
+            const mins = m.seconds ? `${Math.floor(m.seconds / 60)}:${String(m.seconds % 60).padStart(2, "0")}` : "";
+            const text = tr(`Je te défie sur ${m.routeName ?? "FORGE Ride"}${mins ? ` : bats mon temps de ${mins}` : ""} !`, `I challenge you on ${m.routeName ?? "FORGE Ride"}${mins ? `: beat my ${mins}` : ""}!`);
+            const share = navigator.share ? navigator.share({ title: "FORGE Ride", text, url: link }) : navigator.clipboard?.writeText(`${text} ${link}`).then(() => say(tr("Lien du défi copié : envoie-le à ton ami.", "Challenge link copied: send it to your friend.")));
+            Promise.resolve(share).catch(() => {});
+          } else if (m.action === "result") {
+            say(m.won ? tr("Défi gagné ! Tu as battu le temps de ton ami.", "Challenge won! You beat your friend's time.") : tr("Défi perdu cette fois. Retente-le !", "Challenge lost this time. Try again!"));
+          }
           break;
         case "position":
           // Friends see where I ride (Social page): announced once pedalling, again on a new road.
