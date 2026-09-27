@@ -149,6 +149,8 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         dataUrl: `${BUILD}.data.unityweb`,
         frameworkUrl: `${BUILD}.framework.js.unityweb`,
         codeUrl: `${BUILD}.wasm.unityweb`,
+        // The game's streamed files (its music playlist) sit beside the build, loaded only when a track plays.
+        streamingAssetsUrl: "/unity/StreamingAssets",
         companyName: "FORGE", productName: "FORGE Ride", productVersion: "0.1.0",
         // A phone (or "Normal" graphics) keeps its frame rate at 1.5×; a computer on "High" (the game's default
         // there) gets the screen's full sharpness, up to 2×.
