@@ -14,9 +14,10 @@
     "test:watch": "vitest",
     "art": "node scripts/art-manifest.mjs",
     "art:optimise": "node scripts/optimise-art.mjs && npm run art",
-    "build:native": "cross-env BUILD_TARGET=native next build && npx cap sync",
+    "build:native": "cross-env BUILD_TARGET=native next build && node scripts/strip-native.mjs && npx cap sync",
     "ios": "npm run build:native && npx cap open ios",
-    "android": "npm run build:native && npx cap open android"
+    "android": "npm run build:native && npx cap open android",
+    "android:release": "npm run build:native && cd android && gradlew.bat bundleRelease"
   },
   "dependencies": {
     "@capacitor-community/background-geolocation": "^1.2.26",

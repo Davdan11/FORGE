@@ -27,7 +27,11 @@ import { getLang } from "@/lib/i18n";
 
 /* The Unity Web build lives in public/unity (built from the FORGE-Unity repo,
    menu File > Build, target Web, output <this app>/public/unity). */
-const BUILD = "/unity/Build/unity";
+// The 3D game is far too big to ship inside the phone apps (Google Play caps an app near 200 MB), so the Android
+// and iOS builds load it from the website: NEXT_PUBLIC_GAME_HOST (e.g. https://forge.example.com), with CORS open
+// to the app. The website itself leaves it empty and serves the files from its own /unity folder.
+const GAME_HOST = (process.env.NEXT_PUBLIC_GAME_HOST ?? "").replace(/\/$/, "");
+const BUILD = `${GAME_HOST}/unity/Build/unity`;
 
 interface UnityInstance { SendMessage: (obj: string, method: string, arg: string) => void; Quit: () => Promise<void> }
 declare global {
@@ -150,7 +154,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         frameworkUrl: `${BUILD}.framework.js.unityweb`,
         codeUrl: `${BUILD}.wasm.unityweb`,
         // The game's streamed files (its music playlist) sit beside the build, loaded only when a track plays.
-        streamingAssetsUrl: "/unity/StreamingAssets",
+        streamingAssetsUrl: `${GAME_HOST}/unity/StreamingAssets`,
         companyName: "FORGE", productName: "FORGE Ride", productVersion: "0.1.0",
         // A phone (or "Normal" graphics) keeps its frame rate at 1.5×; a computer on "High" (the game's default
         // there) gets the screen's full sharpness, up to 2×.

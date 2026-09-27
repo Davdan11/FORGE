@@ -41,3 +41,8 @@ android/local.properties
 
 # Unity Web build of the indoor game (tens of MB, built from the FORGE-Unity repo)
 public/unity/
+
+# Release signing (the upload key lives in ~/.forge/android, never in git)
+android/keystore.properties
+*.jks
+*.keystore
