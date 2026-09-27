@@ -295,20 +295,36 @@ const webTransport: Transport = {
       optionalServices: [SERVICE.heart_rate],
     });
 
-    const server = await device.gatt?.connect();
-    if (!server) throw new Error(tr("Impossible de se connecter au capteur.", "Could not connect to the sensor."));
-    const service = await server.getPrimaryService(SERVICE[kind]);
-    const characteristic = await service.getCharacteristic(CHARACTERISTIC[kind]);
-
     const decode = decoderFor(kind);
     const handler = (e: Event) => {
       const v = (e.target as unknown as MinimalCharacteristic).value;
       if (v) onReading(decode(v));
     };
-
-    characteristic.addEventListener("characteristicvaluechanged", handler);
-    await characteristic.startNotifications();
-    device.addEventListener("gattserverdisconnected", () => onDisconnect?.());
+    // Connect and listen; used again after a drop. Crank sensors (a Garmin cadence pod…) sleep as soon as the
+    // pedals stop and drop the link now and then: the browser keeps the device, so it can reconnect by itself
+    // without the chooser.
+    const open = async () => {
+      const server = await device.gatt?.connect();
+      if (!server) throw new Error(tr("Impossible de se connecter au capteur.", "Could not connect to the sensor."));
+      const svc = await server.getPrimaryService(SERVICE[kind]);
+      const ch = await svc.getCharacteristic(CHARACTERISTIC[kind]);
+      ch.addEventListener("characteristicvaluechanged", handler);
+      await ch.startNotifications();
+      return { service: svc, characteristic: ch };
+    };
+    let { service, characteristic } = await open();
+    let closed = false;
+    device.addEventListener("gattserverdisconnected", () => {
+      if (closed) return;
+      // Try again every 3 s for 10 minutes (the rider may just have stopped pedalling), then report it lost.
+      let tries = 0;
+      const retry = async () => {
+        if (closed) return;
+        try { ({ service, characteristic } = await open()); }
+        catch { if (++tries < 200) setTimeout(retry, 3000); else onDisconnect?.(); }
+      };
+      setTimeout(retry, 1000);
+    });
 
     // Control, when the machine offers it. Indications must be on before the
     // first write, or the answer to it is lost.
@@ -336,6 +352,7 @@ const webTransport: Transport = {
       name: device.name ?? sensorName(kind),
       control,
       disconnect: () => {
+        closed = true;
         if (cp && cpHandler) { cp.removeEventListener("characteristicvaluechanged", cpHandler); cp.stopNotifications().catch(() => {}); }
         characteristic.removeEventListener("characteristicvaluechanged", handler);
         characteristic.stopNotifications().catch(() => {});
