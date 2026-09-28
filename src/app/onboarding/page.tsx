@@ -131,7 +131,7 @@ export default function Onboarding() {
   // 13 in the US, 16 in the EU/EEA — read after hydration, like the units.
   const minAge = hydrated ? minimumAge() : MIN_AGE;
   const tooYoung = age > 0 && age < minAge;
-  // The two agreements, asked where the plan gets created: after the goal (quick start) or at the end.
+  // The two agreements, asked where the plan gets created: at the end, after all six steps.
   const consentBlock = (<>
             <label className="card p-4 flex gap-3 items-start text-left cursor-pointer">
       <input type="checkbox" className="tick mt-0.5 shrink-0" checked={ack} onChange={(e) => setAck(e.target.checked)} />
@@ -314,10 +314,6 @@ export default function Onboarding() {
             <RadioField label={t("Depuis combien de temps tu t’entraînes?", "How long have you been training?")} value={level} onChange={setLevel} options={[{ v: "new", label: t("Je commence", "Just starting") }, { v: "intermediate", label: t("1–3 ans", "1–3 years") }, { v: "advanced", label: t("3 ans et +", "3+ years") }]} />
             <p className="text-sm text-smoke">{t("Ton objectif fixe tes calories, tes reps et combien de cardio accompagne la muscu. Change-le n’importe quand et ton plan suit.", "Your goal sets your calories, your reps and how much cardio goes with the lifting. Change it any time and your plan updates.")}</p>
           </>)}
-          {step === 1 && (<div className="grid gap-3 mt-2">
-            <p className="text-sm text-smoke">{t("C’est tout ce qu’il faut pour commencer. Horaire, matériel, récup et bouffe prennent des valeurs sensées; tu les ajustes quand tu veux dans Réglages.", "That’s all it takes to start. Schedule, gear, recovery and food get sensible defaults; adjust them any time in Settings.")}</p>
-            {consentBlock}
-          </div>)}
           {step === 2 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>{t("Combien de", "How much")} <em>{t("temps", "time")}</em> {t("t’as vraiment?", "is real?")}</h1>
             <RadioField label={t("Séances par semaine", "Sessions per week")} value={days} onChange={setDays} options={[2, 3, 4, 5, 6].map((d) => ({ v: d as Profile["daysPerWeek"], label: String(d) }))} />
@@ -386,12 +382,7 @@ export default function Onboarding() {
 
       <div className="flex gap-3 mt-8 lg:mt-10">
         {step > 0 && <button type="button" className="pill" onClick={() => go(step - 1)}>{t("Retour", "Back")}</button>}
-        {step === 1 ? (
-          <div className="flex-1 grid gap-2">
-            <Press><button type="button" className="pill pill--volt pill--block" disabled={busy || !ack || !consent} onClick={finish}>{busy ? t("On bâtit ton entraînement…", "Building your training…") : t("Créer mon entraînement", "Create my training")}</button></Press>
-            <button type="button" className="text-sm text-smoke underline" onClick={() => go(2)}>{t("Personnaliser davantage (4 étapes)", "Fine-tune first (4 steps)")}</button>
-          </div>
-        ) : step < STEPS.length - 1 ? (
+        {step < STEPS.length - 1 ? (
           <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={!canNext} onClick={() => go(step + 1)}>{t("Continuer", "Continue")}</button></Press>
         ) : (
           <Press className="flex-1"><button type="button" className="pill pill--volt pill--block" disabled={busy || !ack || !consent} onClick={finish}>{busy ? t("On bâtit ton entraînement…", "Building your training…") : t("Créer mon entraînement", "Create my training")}</button></Press>
