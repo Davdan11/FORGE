@@ -43,12 +43,16 @@ export interface UnitySummary {
   event: string | null;
   /** A race ridden to the line: where the rider finished, of how many, in which category. */
   race?: { place: number; of: number; category: string; id: string } | null;
+  /** FORGE Run or FORGE Ride (games before FORGE Run don't send it: a ride). */
+  sport?: "bike" | "run";
 }
 
 export type UnityMessage =
   | { type: "graphics"; gfx: "high" | "normal" }
-  | { type: "ready"; lang?: "fr" | "en"; gfx?: "high" | "normal"; routeId: number; route: string; routes: { id: number; key: string; name: string; country: string; lengthKm: number; ascent: number }[] }
+  | { type: "ready"; sport?: "bike" | "run"; lang?: "fr" | "en"; gfx?: "high" | "normal"; routeId: number; route: string; routes: { id: number; key: string; name: string; country: string; lengthKm: number; ascent: number }[] }
   | { type: "grade"; grade: number }
+  /** FORGE Run or FORGE Ride, chosen in the game's home screen: which sensors to offer, and how to save. */
+  | { type: "sport"; sport: "bike" | "run" }
   | { type: "ergTarget"; watts: number | null }
   | { type: "position"; routeId: number; route: string; distance: number; speedKph: number; elapsed: number; draft: number; altitude: number; category: string; paused: boolean }
   | { type: "checkpoint"; number: number; distance: number }

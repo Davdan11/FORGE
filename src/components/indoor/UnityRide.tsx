@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal, Mic, MicOff, Volume2, VolumeX, Flag, MoreHorizontal } from "lucide-react";
 import { powerFromHr, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, sensorName, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
-import { shouldSendGrade, resultText } from "@/lib/indoor/ftms";
+import { shouldSendGrade, resultText, cmdRequestControl, cmdTargetIncline } from "@/lib/indoor/ftms";
 import { curveName, powerFromCurve, trainerLabel, PROTOCOL_LABEL, PROTOCOL_LABEL_FR, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
 import { extrapolate, joinRoom, prune, type Room } from "@/lib/indoor/live";
 import { DROP_AT, VoiceChat, reportVoice, voiceSignal, type ReportReason } from "@/lib/indoor/voice";
@@ -41,6 +41,10 @@ declare global {
 /* "trainer" finds any brand: FTMS, Tacx FE-C, Wahoo legacy, or a trainer that
    only reports power or speed (see lib/indoor/trainer.ts). */
 const SENSORS: SensorKind[] = ["trainer", "heart_rate", "cycling_power", "csc"];
+/* FORGE Run: a smart treadmill (its belt is the speed, its incline follows the road) or a footpod on the shoe. */
+const RUN_SENSORS: SensorKind[] = ["treadmill", "footpod", "heart_rate"];
+/** The steepest incline asked of a treadmill (most go to 15 %; none is ever asked to go downhill or to change speed). */
+const MAX_INCLINE = 15;
 
 /* Sensors outlive one ride. Web Bluetooth can only pair from a tap on the device list, so quitting the game
    and coming back must not drop the trainer: the links live here, and their readings go to whichever ride is
@@ -81,6 +85,10 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   const tr = (fr: string, english: string) => (enRef.current ? english : fr);
 
   const fusion = useRef(new SensorFusion());
+  // FORGE Ride or FORGE Run (the game says which, from its home screen).
+  const [sport, setSport] = useState<"bike" | "run">("bike");
+  const sportRef = useRef(sport);
+  useEffect(() => { sportRef.current = sport; }, [sport]);
   const [sensors, setSensorList] = useState<Sensor[]>(() => kept.sensors);
   const setSensors = (next: (cur: Sensor[]) => Sensor[]) => setSensorList((cur) => (kept.sensors = next(cur)));
   const [connecting, setConnecting] = useState<SensorKind | null>(null);
@@ -94,6 +102,11 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   const maxHr = useMemo(() => maxHrFor(profile.age), [profile.age]);
 
   const controller = useRef<TrainerControl | null>(null);
+  // FORGE Run: the treadmill's own control point (FTMS), once it granted control. Only ever asked for an incline.
+  const treadmill = useRef<((command: Uint8Array) => Promise<{ ok: boolean; result: number }>) | null>(null);
+  const [hills, setHills] = useState(() => readPref("forge.run.followHills") !== "0");
+  const followHills = useRef(hills);
+  useEffect(() => { followHills.current = hills; }, [hills]);
   const controlOk = useRef(false);
   const [control, setControl] = useState<"none" | "asking" | "ok" | string>("none");
 
@@ -105,7 +118,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   const send = (msg: object) => unity.current?.SendMessage("ForgeBridge", "Receive", JSON.stringify(msg));
   useEffect(() => {
     if (!ready) return;
-    send({ type: "sensors", items: sensors.map((s) => sensorLabel(s, en) ?? sensorName(s.kind, en)), ok: sensors.some((s) => !!s.trainer) });
+    send({ type: "sensors", items: sensors.map((s) => sensorLabel(s, en) ?? sensorName(s.kind, en)), ok: sensors.some((s) => !!s.trainer || s.kind === "treadmill") });
   }, [ready, sensors, en]); // eslint-disable-line react-hooks/exhaustive-deps
   const acc = useRef(freshRide());
   const room = useRef<Room | null>(null);
@@ -215,6 +228,25 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
       const now = Date.now(), g = game.current, L = live.current, a = acc.current;
       const f = fusion.current;
       const power = f.get("power"), machineSpeed = f.get("speedMs"), hr = f.get("hr"), cadence = f.get("cadence");
+      if (sportRef.current === "run") {
+        // The belt (or the footpod) is the speed, as is; the game shows the pace from it. A running power meter, if
+        // any, is passed along for the record only. No speed: the runner stands still (never a made-up pace).
+        const measured = machineSpeed != null;
+        send({ type: "sample", watts: power ?? -1, cadence: cadence ?? -1, heartRate: hr ?? -1, speedKph: measured ? machineSpeed * 3.6 : -1, quality: measured ? "measured" : "declared" });
+        if (now - lastReadout >= 1000) { lastReadout = now; setReadout(L.hasSensor ? { rpm: cadence, kph: measured ? machineSpeed * 3.6 : undefined } : null); }
+        g.quality = measured ? "measured" : "declared"; g.watts = power ?? 0; g.hr = hr ?? null; g.cadence = cadence ?? null;
+        if (g.speedKph > 1.8) { a.moving += 0.25; a.creditSec += (measured ? XP_CREDIT.measured : 0) * 0.25; }
+        if (hr != null && g.elapsed >= a.nextHrAt) { a.hr.push([Math.round(g.elapsed), Math.round(hr)]); a.nextHrAt = g.elapsed + 5; }
+        // The treadmill follows the road's grade, 0 to 15 %. Only the incline: its speed is the runner's, always.
+        const belt = treadmill.current;
+        if (belt && !busy && followHills.current) {
+          const incline = Math.min(MAX_INCLINE, Math.max(0, g.grade));
+          if (shouldSendGrade(sent.grade, incline, sent.gradeAt, now)) {
+            sent.grade = incline; sent.gradeAt = now; busy = true;
+            belt(cmdTargetIncline(incline)).then((r) => { if (!r.ok && r.result) sayRef.current(tr("Tapis : ", "Treadmill: ") + (resultText(r.result, enRef.current) ?? tr("commande refusée", "command refused")) + "."); }).finally(() => { busy = false; });
+          }
+        }
+      } else {
       let effort: Effort;
       if (power != null) effort = { watts: power, quality: "measured" };
       else if (machineSpeed != null) effort = powerFromCurve(machineSpeed, L.curve);
@@ -236,6 +268,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         } else if (shouldSendGrade(sent.grade, g.grade, sent.gradeAt, now)) {
           sent.grade = g.grade; sent.gradeAt = now; sent.erg = -1; const pct = g.grade; control((c) => c.setGrade(pct));
         }
+      }
       }
 
       const r = room.current;
@@ -263,6 +296,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     kept.lost = (kind) => {
       setSensorList((cur) => (kept.sensors = cur.filter((x) => x.kind !== kind)));
       if (kind === "trainer") { controller.current = null; controlOk.current = false; setControl("none"); }
+      if (kind === "treadmill") treadmill.current = null;
       sayRef.current(tr(`${sensorName(kind, false)} : déconnecté.`, `${sensorName(kind, true)} disconnected.`));
     };
     return () => { kept.sink = null; kept.lost = null; };
@@ -298,24 +332,25 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     const quality = credit >= 0.95 ? "measured" : credit > 0 ? "estimated" : "declared";
     const hrs = hrSummary(a.hr);
     const movingSec = Math.round(a.moving);
-    const k = activityKcal({ type: "ride", movingMin: movingSec / 60, distanceM: s.distance, profile, hr: a.hr });
+    const run = s.sport === "run" || sportRef.current === "run";
+    const k = activityKcal({ type: run ? "run" : "ride", movingMin: movingSec / 60, distanceM: s.distance, profile, hr: a.hr });
     const avgW = s.avgWatts > 0 ? Math.round(s.avgWatts) : undefined;
     const kcal = avgW && quality === "measured" && k.source !== "heart_rate" ? Math.round(s.kilojoules) : k.kcal;
     const routeName = routeTitle(s.route);
     const activity: Activity = {
-      id: uid(), type: "ride",
+      id: uid(), type: run ? "run" : "ride",
       startedAt: a.startedIso, endedAt: new Date().toISOString(),
       distanceM: Math.round(s.distance), durationSec: Math.round(s.elapsed), movingSec,
       avgPaceSecKm: s.distance > 0 ? movingSec / (s.distance / 1000) : undefined,
       elevGainM: Math.round(s.ascent), points: [], splits: a.splits,
-      title: tr(`${routeName} · sortie indoor`, `${routeName} · indoor ride`), shared: false, xp: 0,
+      title: run ? tr(`${routeName} · course sur tapis`, `${routeName} · treadmill run`) : tr(`${routeName} · sortie indoor`, `${routeName} · indoor ride`), shared: false, xp: 0,
       meta: { discipline: "indoor", indoor: { course: routeName, quality, avgW, workout: s.workout ?? undefined, workoutDone: s.workoutDone || undefined, with: a.maxPeople || undefined } },
       hrSeries: a.hr.length ? a.hr : undefined, streams: a.streams.t.length ? a.streams : undefined, avgHr: hrs?.avg, maxHr: hrs?.max, kcal, kcalSource: k.source,
     };
     const before = (await getStats()).xp;
     const { xp } = await awardIndoor(activity, credit);
     await db.activities.put({ ...activity, xp, dirty: 1, updatedAt: new Date().toISOString() } as Activity);
-    if (credit > 0) await awardChallenges("ride", profile.units.distance);
+    if (credit > 0) await awardChallenges(run ? "run" : "ride", profile.units.distance);
     // First time this route is finished (the rider may have carried on past the line): a one-off bonus.
     if (s.completed) await awardRouteBadge(s.route.replace(/x\d+$/, ""), routeKm(s.route), credit);
     // What the account actually gained — the session, the week's streak bonus and any challenge —
@@ -357,6 +392,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
       switch (m.type) {
         case "ready":
           setReady(true);
+          if (m.sport) setSport(m.sport);
           if (m.gfx) writePref("forge.gfx", m.gfx);
           if (m.lang === "en" || m.lang === "fr") setEn(m.lang === "en");
           g.route = m.route;
@@ -403,6 +439,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         case "graphics": writePref("forge.gfx", m.gfx); break;
         case "openSensors": setPanel(true); setVoicePanel(false); break;
         case "grade": g.grade = m.grade; break;
+        case "sport": setSport(m.sport); acc.current = freshRide(); break;
         case "ergTarget": g.erg = m.watts; break;
         case "event":
           g.event = m.action === "leave" ? null : m.id;
@@ -465,6 +502,11 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
       // Paired: the panel gets out of the way (it opens again from "Capteurs").
       if (!s.trainer?.commands) window.setTimeout(() => setPanel(false), 1200);
       say(s.trainer ? tr(`Trainer détecté : ${sensorLabel(s, false)}`, `Trainer found: ${sensorLabel(s, true)}`) : tr(`${s.name} connecté.`, `${s.name} connected.`));
+      if (kind === "treadmill" && s.control) {
+        const r = await s.control(cmdRequestControl());
+        if (r.ok) { treadmill.current = s.control; setControl("ok"); }
+        else setControl(r.result ? resultText(r.result, enRef.current) ?? tr("refusé", "refused") : tr("pas de réponse", "no answer"));
+      }
       const commands = s.trainer?.commands;
       if (commands) {
         // FTMS: request control then start, exactly as before. Wahoo: unlock
@@ -539,6 +581,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
       exitRef.current = null;
       if (controlOk.current) controller.current?.stop().catch(() => {});
       controlOk.current = false;
+      treadmill.current?.(cmdTargetIncline(0)).catch(() => {}); // flat again; the belt itself is the runner's to stop
       onExit(acc.current.saved ? tr("Sortie enregistrée.", "Ride saved.") : undefined);
     };
     if (!unity.current || acc.current.saved || game.current.elapsed < 1) { done(); return; }
@@ -659,7 +702,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
           <div className={PANEL}>
             {availability && (availability.ok ? (
               <div className="flex gap-1.5 flex-wrap">
-                {SENSORS.map((k) => {
+                {(sport === "run" ? RUN_SENSORS : SENSORS).map((k) => {
                   const on = connected.has(k);
                   return (
                     <button key={k} type="button" onClick={() => !on && connect(k)} disabled={connecting !== null || on}
@@ -671,6 +714,12 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
                 })}
               </div>
             ) : <p className="text-xs text-smoke flex gap-2"><BluetoothOff className="w-4 h-4 shrink-0" strokeWidth={2} />{availability.reason}</p>)}
+            {sport === "run" && (
+                <button type="button" onClick={() => { const next = !hills; setHills(next); followHills.current = next; writePref("forge.run.followHills", next ? "1" : "0"); }}
+                  className={`h-9 px-3 rounded-full border text-xs justify-self-start ${hills ? "border-volt text-volt-deep" : "border-line-strong text-ink"}`}>
+                  {hills ? t("Le tapis suit les côtes (0–15 %)", "Treadmill follows the hills (0–15 %)") : t("Inclinaison fixe", "Fixed incline")}
+                </button>
+              )}
             {readout && (
               <p className="text-xs text-ink tnum">
                 {t("Reçu", "Receiving")} : {readout.w != null ? `${Math.round(readout.w)} W` : "— W"} · {readout.rpm != null ? `${Math.round(readout.rpm)} rpm` : "— rpm"}{readout.kph != null ? ` · ${readout.kph.toFixed(1)} km/h` : ""}
