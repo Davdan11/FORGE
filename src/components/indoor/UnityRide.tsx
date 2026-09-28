@@ -172,7 +172,9 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         // A phone (or "Normal" graphics) keeps its frame rate at 1.5×; a computer on "High" (the game's default
         // there) gets the screen's full sharpness, up to 2×.
         // A Retina screen at 2x is four times the pixels: 1.5x stays sharp and is far lighter (1x on Normal graphics).
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, highGraphics() ? 1.5 : 1),
+        // The picture at the screen's own sharpness: a Retina Mac or a 4K monitor drew it at half size and stretched it
+        // (the "blurry" web game). High: the screen's full pixel ratio, up to 2; Normal: up to 1.5.
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, highGraphics() ? 2 : 1.5),
       }, (p) => setProgress(p))
         .then((u) => {
           if (cancelled) { u.Quit(); return; }
@@ -776,6 +778,8 @@ function readPref(key: string): string | null { try { return typeof localStorage
 function writePref(key: string, value: string) { try { localStorage.setItem(key, value); } catch { /* private mode */ } }
 /** High graphics unless this is a phone or tablet, or the rider picked Normal in the game. */
 function highGraphics() {
+  // Once: the game used to switch itself to Normal after a slow moment, and that stuck. Every computer starts on High again.
+  if (readPref("forge.gfxRev") !== "2") { writePref("forge.gfxRev", "2"); if (readPref("forge.gfx") === "normal") writePref("forge.gfx", "high"); }
   const touch = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
   return !touch && readPref("forge.gfx") !== "normal";
 }
