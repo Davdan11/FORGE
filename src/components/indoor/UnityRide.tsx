@@ -63,11 +63,13 @@ const PROTOCOL_FR: Record<TrainerProtocol, string> = PROTOCOL_LABEL_FR;
  * and ERG targets, puts the rider in the room with the people on the same road,
  * and saves the ride with its XP when the game says it is over.
  */
-export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
+export function UnityRide({ profile, ftpW, startRoute, startSport, onExit, say }: {
   profile: Profile;
   ftpW: number;
   /** Open on this road (a route key from the Social page's "Join"). */
   startRoute?: string | null;
+  /** Open on this side of the game (the Indoor page's RUN button opens FORGE Run). */
+  startSport?: "bike" | "run";
   onExit: (message?: string, activityId?: string) => void;
   say: (m: string) => void;
 }) {
@@ -399,6 +401,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         case "ready":
           setReady(true);
           if (m.sport) setSport(m.sport);
+          if (startSport && m.sport !== startSport) send({ type: "command", action: "sport", value: startSport });
           if (m.gfx) writePref("forge.gfx", m.gfx);
           if (m.lang === "en" || m.lang === "fr") setEn(m.lang === "en");
           g.route = m.route;

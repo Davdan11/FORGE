@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bluetooth, ChevronRight, Flag, Medal, Mountain, Play, Shirt, Timer, Users, Wind, Zap } from "lucide-react";
+import { Bluetooth, ChevronRight, Flag, Footprints, Medal, Mountain, Play, Shirt, Timer, Users, Wind, Zap } from "lucide-react";
 import { db, getProfile, getStats } from "@/lib/db";
 import { guessFtp } from "@/lib/indoor/physics";
 import { peekRoom } from "@/lib/indoor/live";
@@ -27,7 +27,10 @@ import { isReminded, remindMe } from "@/lib/eventReminders";
    runs in UnityRide, which keeps sensors, XP and saving in the app. The
    page follows the app language (French or English). */
 
-const HERO = ["hero", "alpine", "provence", "sakura", "giant"].map((n) => `/indoor/${n}.jpg`);
+// The hero alternates the bike and the run (FORGE Run): the big word follows the picture.
+const HERO: { src: string; word: "RIDE" | "RUN" }[] = [
+  ["hero", "RIDE"], ["run_tuscan", "RUN"], ["alpine", "RIDE"], ["run_montreal", "RUN"], ["provence", "RIDE"], ["run_charlevoix", "RUN"], ["sakura", "RIDE"], ["giant", "RIDE"],
+].map(([n, word]) => ({ src: `/indoor/${n}.jpg`, word: word as "RIDE" | "RUN" }));
 const PINK = "#FF2E78", ORANGE = "#FF5A3D";
 
 export default function IndoorPage() {
@@ -36,6 +39,7 @@ export default function IndoorPage() {
   const indoor = useLiveQuery(() => db.activities.filter((a) => !!a.meta?.indoor).toArray(), []);
   const router = useRouter();
   const [showAll, setShowAll] = useState(false);
+  const [startSport, setStartSport] = useState<"run" | null>(null);
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3400); };
@@ -126,7 +130,7 @@ export default function IndoorPage() {
   if (playing) {
     return (
       <Page>
-        <UnityRide profile={profile} ftpW={ftpW} startRoute={startRoute} say={say} onExit={(msg, id) => { setPlaying(false); if (msg) say(msg); if (id) router.push(`/move/activity?id=${id}`); }} />
+        <UnityRide profile={profile} ftpW={ftpW} startRoute={startRoute} startSport={startSport ?? undefined} say={say} onExit={(msg, id) => { setPlaying(false); if (msg) say(msg); if (id) router.push(`/move/activity?id=${id}`); }} />
         <Toast text={toast} />
       </Page>
     );
@@ -143,7 +147,9 @@ export default function IndoorPage() {
   const next = events[0];
   const minutesTo = (d: Date) => Math.max(0, Math.round((d.getTime() - now) / 60_000));
   const clock = (d: Date) => d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
-  const ride = () => setPlaying(true);
+  const ride = () => { setStartSport(null); setPlaying(true); };
+  // FORGE Run: open the game straight on its RUN side.
+  const run = () => { setStartSport("run"); setPlaying(true); };
 
   return (
     <Page>
@@ -163,7 +169,7 @@ export default function IndoorPage() {
       <div className="bleed -mt-[calc(var(--safe-top)+16px)] lg:-mt-10 bg-[#07090d] text-bone min-h-screen pb-nav">
         {/* ── HERO ─────────────────────────────────────────────── */}
         <header className="relative h-[92svh] min-h-[600px] max-h-[980px] overflow-hidden">
-          {HERO.map((src, i) => (
+          {HERO.map(({ src }, i) => (
             <img key={src} src={src} alt="" aria-hidden decoding="async" loading={i === 0 ? "eager" : "lazy"}
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1600ms] ${i === slide ? "opacity-100 fr-kb" : "opacity-0"}`} />
           ))}
@@ -183,12 +189,12 @@ export default function IndoorPage() {
               <span className="block drop-shadow-[0_8px_30px_rgba(0,0,0,.45)]">FORGE</span>
               <span className="relative inline-block mt-2">
                 <span className="absolute -inset-x-4 inset-y-1 fr-skew" style={{ background: `linear-gradient(90deg, ${PINK}, ${ORANGE})`, boxShadow: `0 18px 60px ${PINK}55` }} aria-hidden />
-                <span className="relative px-1">RIDE</span>
+                <span key={HERO[slide].word} className="relative px-1 inline-block fr-rise">{HERO[slide].word}</span>
               </span>
             </h1>
 
             <p className="fr-rise mt-6 max-w-[620px] text-lg md:text-2xl font-semibold text-bone/90 leading-snug" style={{ animationDelay: ".16s" }}>
-              {t("Le monde entier sur ton trainer. Roule en groupe, attaque les cols, bats tes amis.", "The whole world on your trainer. Ride in groups, attack the climbs, beat your friends.")}
+              {t("Le monde entier sur ton trainer, et maintenant sur ton tapis roulant. Roule en groupe, attaque les cols, cours les mêmes routes.", "The whole world on your trainer, and now on your treadmill. Ride in groups, attack the climbs, run the same roads.")}
             </p>
 
             <div className="fr-rise mt-6 flex flex-wrap gap-2" style={{ animationDelay: ".22s" }}>
@@ -207,6 +213,11 @@ export default function IndoorPage() {
                 <button type="button" onClick={ride} className="fr-skew h-[72px] md:h-[84px] px-10 md:px-14 text-white font-black italic uppercase text-2xl md:text-3xl tracking-tight shadow-[0_20px_60px_rgba(255,46,120,.45)] hover:brightness-110 transition"
                   style={{ background: `linear-gradient(90deg, ${PINK}, ${ORANGE})` }}>
                   <span className="inline-flex items-center gap-3"><Play className="w-7 h-7 fill-white" strokeWidth={0} />{t("Jouer", "Ride now")}</span>
+                </button>
+              </Press>
+              <Press>
+                <button type="button" onClick={run} className="fr-skew h-[60px] md:h-[68px] px-8 md:px-10 text-white font-black italic uppercase text-xl md:text-2xl tracking-tight border-2 border-white/70 bg-white/10 backdrop-blur hover:bg-white/20 transition">
+                  <span className="inline-flex items-center gap-2"><Footprints className="w-6 h-6" strokeWidth={2.4} />{t("Courir", "Run")}</span>
                 </button>
               </Press>
               <a href="#worlds" className="inline-flex items-center gap-1 text-sm font-semibold text-bone/80 hover:text-bone">{t(`Voir les ${GAME_ROUTES.length} parcours`, `See the ${GAME_ROUTES.length} routes`)}<ChevronRight className="w-4 h-4" /></a>
@@ -228,6 +239,30 @@ export default function IndoorPage() {
               note={rides.length > 0 && xp === 0 ? t("Sans capteur, une sortie ne donne pas d'XP : branche un trainer, un capteur de puissance ou un cardio.", "Without a sensor a ride earns no XP: connect a trainer, a power meter or a heart-rate strap.") : undefined} />
             <div className="col-span-2 md:col-span-1"><Stat label={t("Étincelles", "Sparks")} value={(stats ? sparks(stats) : 0).toLocaleString(locale)} accent
               note={t("1 par XP gagnée dans l'app, +100 par badge. Dépense-les au garage du jeu.", "1 per XP earned in the app, +100 per badge. Spend them in the game's garage.")} /></div>
+          </section>
+
+          {/* ── NEW · FORGE RUN: the game on foot ─────────────────────── */}
+          <section className="relative mb-16 rounded-3xl overflow-hidden border border-white/10 min-h-[420px] md:min-h-[460px] flex">
+            <img src="/indoor/run_tuscan.jpg" alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover object-[70%_50%]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#07090d] via-[#07090d]/75 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07090d]/80 to-transparent md:hidden" />
+            <div className="relative self-end md:self-center p-6 md:p-12 max-w-[600px]">
+              <span className="inline-block fr-skew px-3 py-1 text-[11px] font-black italic uppercase tracking-[.2em] text-white" style={{ background: `linear-gradient(90deg, ${PINK}, ${ORANGE})` }}>{t("Nouveau", "New")}</span>
+              <h2 className="mt-4 text-4xl md:text-6xl font-black italic uppercase tracking-tight leading-[.9]">FORGE Run</h2>
+              <p className="mt-4 text-base md:text-lg text-bone/85 leading-snug">{t("Branche ton tapis roulant ou ton capteur de foulée et cours les mêmes routes : ton coureur avance à ton rythme, le tapis s'incline dans les côtes, ton rythme en min/km à l'écran.", "Connect your treadmill or your footpod and run the same roads: your runner moves at your pace, the treadmill tilts on the climbs, your pace in min/km on screen.")}</p>
+              <ul className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
+                <li className="rounded-full px-3 py-1.5 bg-white/10 border border-white/15">{t("Tapis intelligent (FTMS)", "Smart treadmill (FTMS)")}</li>
+                <li className="rounded-full px-3 py-1.5 bg-white/10 border border-white/15">{t("Inclinaison 0–15 %", "Incline 0–15%")}</li>
+                <li className="rounded-full px-3 py-1.5 bg-white/10 border border-white/15">{t("Capteur de foulée", "Footpod")}</li>
+                <li className="rounded-full px-3 py-1.5 bg-white/10 border border-white/15">{t(`${GAME_ROUTES.length} parcours`, `${GAME_ROUTES.length} routes`)}</li>
+              </ul>
+              <Press>
+                <button type="button" onClick={run} className="mt-7 fr-skew h-[60px] px-9 text-white font-black italic uppercase text-xl tracking-tight shadow-[0_20px_60px_rgba(255,46,120,.4)] hover:brightness-110 transition"
+                  style={{ background: `linear-gradient(90deg, ${PINK}, ${ORANGE})` }}>
+                  <span className="inline-flex items-center gap-2"><Footprints className="w-6 h-6" strokeWidth={2.4} />{t("Courir maintenant", "Run now")}</span>
+                </button>
+              </Press>
+            </div>
           </section>
 
           {/* ── YOUR RIDES: every ride's end screen stays here for good, newest first ── */}
@@ -304,6 +339,8 @@ export default function IndoorPage() {
               text={t("Ton temps devient un code. Ton ami roule contre ton fantôme, sur la même route.", "Your time becomes a code. Your friend races your ghost on the same road.")} />
             <Feature image="/indoor/pine.jpg" icon={<Timer className="w-5 h-5" />} title={t("Entraînements et test FTP", "Workouts and FTP test")}
               text={t("Dix séances guidées : le trainer tient les watts pour toi. Test de 20 minutes ou rampe, et ton FTP se met à jour.", "Ten guided sessions: the trainer holds the watts for you. 20-minute or ramp test, and your FTP updates.")} />
+            <Feature image="/indoor/run_provence.jpg" icon={<Footprints className="w-5 h-5" />} title={t("FORGE Run : la course", "FORGE Run: running")}
+              text={t("Choisis COURSE : ton cycliste devient un coureur. Tapis ou capteur de foulée, les mêmes routes à ton rythme.", "Choose RUN: your rider becomes a runner. Treadmill or footpod, the same roads at your pace.")} />
             <Feature image="/indoor/garage.jpg" icon={<Shirt className="w-5 h-5" />} title={t("Ton garage", "Your garage")}
               text={t("Tenues, casques, souliers, cadres et roues — du commun au légendaire, à débloquer en roulant.", "Kits, helmets, shoes, frames and wheels — common to legendary, unlocked by riding.")} />
           </div>
