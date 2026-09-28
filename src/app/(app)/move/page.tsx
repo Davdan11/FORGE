@@ -27,7 +27,6 @@ import { SPORT_GROUPS, groupLabel } from "@/lib/data/sports";
 import { LocateFixed, Bike } from "lucide-react";
 import { StartCountdown } from "@/components/StartCountdown";
 import type { Activity, ActivityType, CardioWorkout, Lap, TrackPoint, UnitPrefs } from "@/lib/types";
-import { MoveSwitch } from "@/components/MoveSwitch";
 import { parseTrackFile } from "@/lib/import/track";
 
 /** The native "location refused" message; also recognised below to offer the settings button. */
@@ -229,7 +228,6 @@ function Move() {
           {rec === "idle" && points.length === 0 ? (
             <>
               <MapView points={[]} locate locateKey={locateKey} onLocate={setLoc} />
-              <div className="absolute z-10 inset-x-0 flex justify-center lg:hidden" style={{ top: "calc(var(--safe-top) + 64px)" }}><MoveSwitch /></div>
               <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(180deg,rgba(243,246,242,.55)_0%,transparent_22%,transparent_62%,rgba(243,246,242,.85)_100%)]" />
               <div className="absolute inset-x-0 top-[calc(var(--safe-top)+12px)] lg:top-7 pointer-events-none">
                 <div className="screen flex justify-between items-start gap-3">
@@ -316,6 +314,7 @@ function Move() {
                   it was found. */}
               <div className="mb-4 flex items-center gap-2 flex-wrap">
                 <Seg value={tab} onChange={setTab} options={[{ v: "record", label: t("Enregistrer", "Record") }, { v: "workouts", label: t("Entraînements", "Workouts") }, { v: "history", label: t("Historique", "History") }]} />
+                <Link href="/library" className="pill pill--sm justify-self-start lg:hidden">{t("Bibliothèque d’exercices →", "Exercise library →")}</Link>
                 <Link href="/indoor" className="chip ml-auto"><Bike className="w-3.5 h-3.5" strokeWidth={2} />{t("Intérieur", "Indoor")}</Link>
               </div>
               <AnimatePresence mode="wait">
