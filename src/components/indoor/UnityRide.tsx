@@ -68,7 +68,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   ftpW: number;
   /** Open on this road (a route key from the Social page's "Join"). */
   startRoute?: string | null;
-  onExit: (message?: string) => void;
+  onExit: (message?: string, activityId?: string) => void;
   say: (m: string) => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -112,8 +112,10 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
 
   // What the game last told us, read by the timers.
   const game = useRef({ category: "D" as Category, quality: "declared" as string, watts: 0, hr: null as number | null, cadence: null as number | null, eventRoom: null as string | null, route: "", event: null as string | null, distance: 0, speedKph: 0, elapsed: 0, grade: 0, erg: null as number | null });
-  const live = useRef({ manual: 0, hasSensor: false, curve: "generic" as SpeedCurveId });
-  useEffect(() => { live.current = { manual, hasSensor: sensors.length > 0, curve }; }, [manual, sensors, curve]);
+  const live = useRef({ manual: 0, hasSensor: false, curve: "generic" as SpeedCurveId, powerAdjust: 0 });
+  // Power calibration: every trainer measures a little differently; the rider nudges it once (-10 to +15 %).
+  const [powerAdjust, setPowerAdjust] = useState(() => { const v = Number(readPref("forge.powerAdjust")); return Number.isFinite(v) ? Math.max(-10, Math.min(15, v)) : 0; });
+  useEffect(() => { live.current = { manual, hasSensor: sensors.length > 0, curve, powerAdjust }; }, [manual, sensors, curve, powerAdjust]);
   // The game's home screen shows what is paired: the names, and whether one of them is a trainer.
   const send = (msg: object) => unity.current?.SendMessage("ForgeBridge", "Receive", JSON.stringify(msg));
   useEffect(() => {
@@ -229,7 +231,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     const timer = setInterval(() => {
       const now = Date.now(), g = game.current, L = live.current, a = acc.current;
       const f = fusion.current;
-      const power = f.get("power"), machineSpeed = f.get("speedMs"), hr = f.get("hr"), cadence = f.get("cadence");
+      const raw = f.get("power"), power = raw != null ? raw * (1 + L.powerAdjust / 100) : raw, machineSpeed = f.get("speedMs"), hr = f.get("hr"), cadence = f.get("cadence");
       if (sportRef.current === "run") {
         // The belt (or the footpod) is the speed, as is; the game shows the pace from it. A running power meter, if
         // any, is passed along for the record only. No speed: the runner stands still (never a made-up pace).
@@ -268,7 +270,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
       // The trainer: ERG while the game's workout holds a target, the road's grade otherwise.
       if (controlOk.current && !busy) {
         if (g.erg != null) {
-          if (Math.abs(g.erg - sent.erg) >= 5 || now - sent.ergAt > 10000) { sent.erg = g.erg; sent.ergAt = now; const w = g.erg; control((c) => c.setTargetPower(w)); }
+          if (Math.abs(g.erg - sent.erg) >= 5 || now - sent.ergAt > 10000) { sent.erg = g.erg; sent.ergAt = now; const w = Math.round(g.erg / (1 + live.current.powerAdjust / 100)); control((c) => c.setTargetPower(w)); }
         } else if (shouldSendGrade(sent.grade, g.grade, sent.gradeAt, now)) {
           sent.grade = g.grade; sent.gradeAt = now; sent.erg = -1; const pct = g.grade; control((c) => c.setGrade(pct));
         }
@@ -354,6 +356,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     const before = (await getStats()).xp;
     const { xp } = await awardIndoor(activity, credit);
     await db.activities.put({ ...activity, xp, dirty: 1, updatedAt: new Date().toISOString() } as Activity);
+    a.activityId = activity.id;
     if (credit > 0) await awardChallenges(run ? "run" : "ride", profile.units.distance);
     // First time this route is finished (the rider may have carried on past the line): a one-off bonus.
     if (s.completed) await awardRouteBadge(s.route.replace(/x\d+$/, ""), routeKm(s.route), credit);
@@ -361,7 +364,6 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     // so the game shows exactly the XP and level the rest of the app shows.
     send(rewardMessage((await getStats()).xp - before, before));
     sendWallet();
-    exitRef.current?.();
   }
   const routeNames = useRef<Record<string, string>>({});
   const onlineRoute = useRef(""), onlineStop = useRef<(() => void) | null>(null), handle = useRef<Promise<string | null> | null>(null);
@@ -472,6 +474,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         // (the game sends it when the rider stops, switches route or restarts), with "completed" if the line was crossed.
         case "finish": break;
         case "end": saveRide(m); break;
+        case "exit": if (exitRef.current) exitRef.current(); else quit(); break; // the end screen's QUIT
         case "profileUpdate":
           db.profile.update(profile.id, { weightKg: m.weightKg, ftpW: m.ftp, dirty: 1, updatedAt: new Date().toISOString() });
           break;
@@ -514,7 +517,6 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     window.addEventListener("resize", later);
     window.addEventListener("orientationchange", later);
     return () => { window.removeEventListener("resize", later); window.removeEventListener("orientationchange", later); probe.remove(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   /* ── sensors ── */
@@ -599,19 +601,22 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener("blur", blur); setHeld(false); };
   }, [voiceOn, openMic]);
 
-  /** Leave: a ride in progress is ended (and saved) by the game first. */
+  /** Leave. A ride in progress is ended (and saved) by the game first, which then shows its end screen with the
+      stats; its QUIT button (or this X again) leaves, onto the saved ride's page. */
   function quit() {
     const done = () => {
       exitRef.current = null;
       if (controlOk.current) controller.current?.stop().catch(() => {});
       controlOk.current = false;
       treadmill.current?.(cmdTargetIncline(0)).catch(() => {}); // flat again; the belt itself is the runner's to stop
-      onExit(acc.current.saved ? tr("Sortie enregistrée.", "Ride saved.") : undefined);
+      onExit(acc.current.saved && acc.current.activityId ? tr("Sortie enregistrée.", "Ride saved.") : undefined, acc.current.activityId);
     };
-    if (!unity.current || acc.current.saved || game.current.elapsed < 1) { done(); return; }
     exitRef.current = done;
+    if (!unity.current || acc.current.saved || game.current.elapsed < 1) { done(); return; }
+    setPanel(false); // the end screen shows in full
     send({ type: "command", action: "end" });
-    setTimeout(() => { if (exitRef.current) done(); }, 2500); // never trap the rider in the game
+    // The game answers with "end" and its end screen; no answer means it is stuck: never trap the rider in it.
+    setTimeout(() => { if (!acc.current.saved) done(); }, 3000);
   }
 
   const connected = new Set(sensors.map((s) => s.kind));
@@ -749,6 +754,13 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
                 {t("Reçu", "Receiving")} : {readout.w != null ? `${Math.round(readout.w)} W` : "— W"} · {readout.rpm != null ? `${Math.round(readout.rpm)} rpm` : "— rpm"}{readout.kph != null ? ` · ${readout.kph.toFixed(1)} km/h` : ""}
               </p>
             )}
+            {sport !== "run" && sensors.length > 0 && !speedOnly && (
+              <label className="grid gap-1">
+                <span className="meta">{t(`Calibration de la puissance · ${powerAdjust > 0 ? "+" : ""}${powerAdjust} %`, `Power calibration · ${powerAdjust > 0 ? "+" : ""}${powerAdjust} %`)}</span>
+                <input type="range" min={-10} max={15} step={1} value={powerAdjust} onChange={(e) => { const v = +e.target.value; setPowerAdjust(v); writePref("forge.powerAdjust", String(v)); }} style={{ ["--fill" as string]: `${((powerAdjust + 10) / 25) * 100}%` }} />
+                <span className="text-xs text-smoke">{t("Chaque trainer mesure un peu différemment. Si FORGE affiche moins (ou plus) que ton autre appli ou tes pédales, ajuste ici une fois; l'ERG en tient compte.", "Every trainer measures a little differently. If FORGE shows less (or more) than your other app or your pedals, adjust it here once; ERG takes it into account.")}</span>
+              </label>
+            )}
             {readout && readout.rpm == null && (readout.w ?? 0) > 20 && !connected.has("csc") && (
               <p className="text-xs text-smoke">{t("Ton trainer n'envoie pas la cadence (beaucoup n'en ont pas). Un capteur de cadence (bouton ci-dessus) l'ajoute.", "Your trainer doesn't report cadence (many don't). A cadence sensor (button above) adds it.")}</p>
             )}
@@ -805,5 +817,5 @@ function highGraphics() {
 }
 function parseIds(v: string | null): string[] { try { const a = JSON.parse(v ?? "[]"); return Array.isArray(a) ? a.filter((x): x is string => typeof x === "string") : []; } catch { return []; } }
 
-const freshRide = () => ({ streams: emptyStreams(), moving: 0, creditSec: 0, hr: [] as [number, number][], nextHrAt: 0, splits: [] as { km: number; sec: number }[], lastSplit: 0, maxPeople: 0, startedIso: new Date().toISOString(), saved: false });
+const freshRide = () => ({ streams: emptyStreams(), moving: 0, creditSec: 0, hr: [] as [number, number][], nextHrAt: 0, splits: [] as { km: number; sec: number }[], lastSplit: 0, maxPeople: 0, startedIso: new Date().toISOString(), saved: false, activityId: undefined as string | undefined });
 const titleCase = (s: string) => s.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());

@@ -67,7 +67,9 @@ export type UnityMessage =
   | { type: "challenge"; action: string; code: string; route?: string; routeName?: string; seconds?: number; won?: boolean }
   | { type: "buy"; item: string }
   /** The game's home screen: CONNECT opens the sensors panel (Web Bluetooth pairs only from a tap in the page). */
-  | { type: "openSensors" };
+  | { type: "openSensors" }
+  /** The end screen's QUIT: back to the app, onto the ride just saved. */
+  | { type: "exit" };
 
 /**
  * The room a Unity rider shares. Riders of the Unity world and of the

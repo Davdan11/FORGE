@@ -3,6 +3,8 @@
 import { sparks, TEST_BONUS } from "@/lib/shop";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Bluetooth, ChevronRight, Flag, Medal, Mountain, Play, Shirt, Timer, Users, Wind, Zap } from "lucide-react";
 import { db, getProfile, getStats } from "@/lib/db";
 import { guessFtp } from "@/lib/indoor/physics";
@@ -32,6 +34,8 @@ export default function IndoorPage() {
   const profile = useLiveQuery(() => getProfile(), []);
   const stats = useLiveQuery(() => getStats(), []);
   const indoor = useLiveQuery(() => db.activities.filter((a) => !!a.meta?.indoor).toArray(), []);
+  const router = useRouter();
+  const [showAll, setShowAll] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3400); };
@@ -122,7 +126,7 @@ export default function IndoorPage() {
   if (playing) {
     return (
       <Page>
-        <UnityRide profile={profile} ftpW={ftpW} startRoute={startRoute} say={say} onExit={(msg) => { setPlaying(false); if (msg) say(msg); }} />
+        <UnityRide profile={profile} ftpW={ftpW} startRoute={startRoute} say={say} onExit={(msg, id) => { setPlaying(false); if (msg) say(msg); if (id) router.push(`/move/activity?id=${id}`); }} />
         <Toast text={toast} />
       </Page>
     );
@@ -131,6 +135,7 @@ export default function IndoorPage() {
   const lvl = levelFromXp(stats?.xp ?? 0);
   const cat = categoryFor(ftpW, profile.weightKg);
   const rides = indoor ?? [];
+  const miles = profile.units?.distance === "mi";
   const locale = lang === "fr" ? "fr-CA" : "en-US";
   const km = rides.reduce((s, a) => s + a.distanceM, 0) / 1000;
   const hours = rides.reduce((s, a) => s + (a.movingSec ?? a.durationSec), 0) / 3600;
@@ -224,6 +229,34 @@ export default function IndoorPage() {
             <div className="col-span-2 md:col-span-1"><Stat label={t("Étincelles", "Sparks")} value={(stats ? sparks(stats) : 0).toLocaleString(locale)} accent
               note={t("1 par XP gagnée dans l'app, +100 par badge. Dépense-les au garage du jeu.", "1 per XP earned in the app, +100 per badge. Spend them in the game's garage.")} /></div>
           </section>
+
+          {/* ── YOUR RIDES: every ride's end screen stays here for good, newest first ── */}
+          {rides.length > 0 && (
+            <section className="mb-16">
+              <p className="text-[11px] tracking-[.24em] uppercase font-semibold" style={{ color: PINK }}>{t("Tes stats, sortie par sortie", "Your stats, ride by ride")}</p>
+              <h2 className="mt-1 mb-5 text-3xl md:text-5xl font-black italic uppercase tracking-tight leading-none">{t("Tes sorties", "Your rides")}</h2>
+              <div className="grid gap-2 md:grid-cols-2">
+                {[...rides].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, showAll ? undefined : 6).map((a) => {
+                  const w = a.meta?.indoor?.avgW;
+                  return (
+                    <Link key={a.id} href={`/move/activity?id=${a.id}`} className="rounded-2xl bg-white/[.05] border border-white/10 hover:border-white/30 transition-colors p-4 flex items-center gap-4">
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-bold italic uppercase truncate">{a.title}</span>
+                        <span className="text-xs text-white/60">{new Date(a.startedAt).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" })}{a.xp ? <> · <span className="font-semibold" style={{ color: PINK }}>+{a.xp} XP</span></> : null}</span>
+                      </span>
+                      <span className="grid grid-cols-3 gap-4 text-right tnum">
+                        <span><span className="block font-black italic text-lg leading-none">{(a.distanceM / (miles ? 1609.34 : 1000)).toLocaleString(locale, { maximumFractionDigits: 1 })}</span><span className="text-[10px] uppercase tracking-widest text-white/50">{miles ? "mi" : "km"}</span></span>
+                        <span><span className="block font-black italic text-lg leading-none">{Math.floor(a.durationSec / 60)}</span><span className="text-[10px] uppercase tracking-widest text-white/50">min</span></span>
+                        <span><span className="block font-black italic text-lg leading-none">{w ? Math.round(w) : "—"}</span><span className="text-[10px] uppercase tracking-widest text-white/50">{t("W moy.", "avg W")}</span></span>
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+              {rides.length > 6 && <button type="button" className="mt-3 h-10 px-5 rounded-full border border-white/25 text-sm font-semibold" onClick={() => setShowAll((v) => !v)}>{showAll ? t("Voir moins", "Show fewer") : t(`Voir les ${rides.length} sorties`, `See all ${rides.length} rides`)}</button>}
+            </section>
+          )}
 
           {/* ── YOUR OTHER PLATFORMS (imported .fit rides, one card each) ── */}
           <Platforms forge={{ rides: rides.length, km, hours, climbM: rides.reduce((s, a) => s + a.elevGainM, 0) }} say={say} />
