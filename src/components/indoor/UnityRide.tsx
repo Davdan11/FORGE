@@ -232,7 +232,9 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         // The belt (or the footpod) is the speed, as is; the game shows the pace from it. A running power meter, if
         // any, is passed along for the record only. No speed: the runner stands still (never a made-up pace).
         const measured = machineSpeed != null;
-        send({ type: "sample", watts: power ?? -1, cadence: cadence ?? -1, heartRate: hr ?? -1, speedKph: measured ? machineSpeed * 3.6 : -1, quality: measured ? "measured" : "declared" });
+        // No treadmill or footpod: the panel's slider (tenths of km/h) lets the runner try the roads; it earns no XP.
+        const typed = !measured && !L.hasSensor && L.manual > 0 ? L.manual / 10 : -1;
+        send({ type: "sample", watts: power ?? -1, cadence: cadence ?? -1, heartRate: hr ?? -1, speedKph: measured ? machineSpeed * 3.6 : typed, quality: measured ? "measured" : "declared" });
         if (now - lastReadout >= 1000) { lastReadout = now; setReadout(L.hasSensor ? { rpm: cadence, kph: measured ? machineSpeed * 3.6 : undefined } : null); }
         g.quality = measured ? "measured" : "declared"; g.watts = power ?? 0; g.hr = hr ?? null; g.cadence = cadence ?? null;
         if (g.speedKph > 1.8) { a.moving += 0.25; a.creditSec += (measured ? XP_CREDIT.measured : 0) * 0.25; }
@@ -439,7 +441,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
         case "graphics": writePref("forge.gfx", m.gfx); break;
         case "openSensors": setPanel(true); setVoicePanel(false); break;
         case "grade": g.grade = m.grade; break;
-        case "sport": setSport(m.sport); acc.current = freshRide(); break;
+        case "sport": setSport(m.sport); setManual(0); acc.current = freshRide(); break;
         case "ergTarget": g.erg = m.watts; break;
         case "event":
           g.event = m.action === "leave" ? null : m.id;
@@ -740,7 +742,13 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
             {control === "asking" && <p className="text-xs text-smoke">{t("Le trainer demande l’accès…", "Asking the trainer for control…")}</p>}
             {control === "ok" && <p className="text-xs text-volt-deep">{t("Trainer contrôlé : la résistance suit la route (ou ta séance).", "Trainer in control: resistance follows the road (or your workout).")}</p>}
             {control !== "none" && control !== "asking" && control !== "ok" && <p className="text-xs text-smoke">{t(`Lecture seule : le trainer a refusé le contrôle (${control}). Ferme les autres applis qui l’utilisent.`, `Read-only: the trainer refused control (${control}). Close any other app using it.`)}</p>}
-            {!sensors.length && (
+            {!sensors.length && sport === "run" && (
+              <label className="grid gap-1">
+                <span className="meta">{t(`Vitesse sans capteur · ${(manual / 10).toFixed(1)} km/h · ne compte pas pour l’XP`, `Speed without a sensor · ${(manual / 10).toFixed(1)} km/h · earns no XP`)}</span>
+                <input type="range" min={0} max={200} step={5} value={Math.min(manual, 200)} onChange={(e) => setManual(+e.target.value)} style={{ ["--fill" as string]: `${(Math.min(manual, 200) / 200) * 100}%` }} />
+              </label>
+            )}
+            {!sensors.length && sport !== "run" && (
               <label className="grid gap-1">
                 <span className="meta">{t(`Effort sans capteur · ${manual} W · ne compte pas pour l’XP`, `Effort without a sensor · ${manual} W · earns no XP`)}</span>
                 <input type="range" min={0} max={400} step={10} value={manual} onChange={(e) => setManual(+e.target.value)} style={{ ["--fill" as string]: `${(manual / 400) * 100}%` }} />
