@@ -497,6 +497,26 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id]);
 
+  // The phone's notch and home bar: the game can't see them (Unity's safe area is the whole page on the web), so
+  // the page measures CSS's safe-area insets and hands them over as fractions of the screen.
+  useEffect(() => {
+    if (!ready) return;
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:fixed;inset:0;pointer-events:none;visibility:hidden;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)";
+    document.body.appendChild(probe);
+    const post = () => {
+      const s = getComputedStyle(probe), w = window.innerWidth || 1, h = window.innerHeight || 1;
+      const f = (v: string, of: number) => (parseFloat(v) || 0) / of;
+      send({ type: "command", action: "safearea", value: [f(s.paddingLeft, w), f(s.paddingTop, h), f(s.paddingRight, w), f(s.paddingBottom, h)].map((x) => x.toFixed(4)).join(",") });
+    };
+    post();
+    const later = () => setTimeout(post, 300); // iOS settles the insets after the rotation
+    window.addEventListener("resize", later);
+    window.addEventListener("orientationchange", later);
+    return () => { window.removeEventListener("resize", later); window.removeEventListener("orientationchange", later); probe.remove(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
   /* ── sensors ── */
   async function connect(kind: SensorKind) {
     setConnecting(kind);
