@@ -86,7 +86,7 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
       {/* Only the ways the project has switched on (see authMethods): no button that answers "not enabled". */}
       {methods?.apple && <button type="button" className="pill pill--block !bg-ink !text-bone !border-ink gap-3" disabled={!!busy} onClick={() => provider("apple")}><AppleMark />{busy === "apple" ? t("Ouverture d’Apple…", "Opening Apple…") : t("Continuer avec Apple", "Continue with Apple")}</button>}
       {methods?.google && <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button>}
-      {methods && !methods.apple && !methods.google && !methods.phone
+      {!methods || (!methods.apple && !methods.google && !methods.phone)
         ? <Press><button type="button" className="pill pill--volt pill--block" onClick={() => { setError(null); setStep({ kind: "email" }); }}>{t("Continuer avec mon courriel", "Continue with my email")}</button></Press>
         : <div className={`grid gap-2 ${methods?.phone ? "grid-cols-2" : ""}`}>
             {methods?.phone && <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "phone" }); }}>{t("Numéro de téléphone", "Phone number")}</button>}

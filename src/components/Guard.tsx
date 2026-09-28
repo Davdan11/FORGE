@@ -20,6 +20,8 @@ export function Guard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ok, setOk] = useState(false);
   useEffect(() => {
+    // A returning user (profile already seen on this device) gets the page at once; the check below still runs.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- storage is only readable after mount (static export)
     if (known()) setOk(true);
     getProfile().then((p) => {
       if (!p) { try { localStorage.removeItem(KNOWN); } catch { /* private mode */ } setOk(false); router.replace("/onboarding"); return; }

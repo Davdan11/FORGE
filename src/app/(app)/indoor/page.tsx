@@ -59,6 +59,7 @@ export default function IndoorPage() {
     if (!key || !/^[cg][\w-]{0,40}$/.test(key)) return;
     url.searchParams.delete("ride");
     window.history.replaceState(null, "", url.pathname + url.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address after mount
     setStartRoute(key); setPlaying(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -71,10 +72,14 @@ export default function IndoorPage() {
   const [defi, setDefi] = useState<string | null>(null);
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("defi");
-    if (code) { try { sessionStorage.setItem("forge.defi", code); } catch { /* no storage */ } setDefi(code); }
+    if (!code) return;
+    try { sessionStorage.setItem("forge.defi", code); } catch { /* no storage */ }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only known after mount (static export)
+    setDefi(code);
   }, []);
   // "Remind me": a notification ten minutes before the start (lib/eventReminders).
   const [reminded, setReminded] = useState<Set<string>>(() => new Set());
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- the saved reminders are only readable after mount
   useEffect(() => { setReminded(new Set(events.filter((e) => isReminded(e.id)).map((e) => e.id))); }, [events]);
   async function bell(e: (typeof events)[number]) {
     const r = await remindMe(e);

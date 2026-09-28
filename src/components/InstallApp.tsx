@@ -23,6 +23,7 @@ export function InstallApp() {
     if (standalone || hidden || isNativeShell()) return;
     const onPrompt = (e: Event) => { e.preventDefault(); setPrompt(e as Prompt); setShow(true); };
     window.addEventListener("beforeinstallprompt", onPrompt);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the browser is only known after mount
     if (/iphone|ipad/i.test(navigator.userAgent) && /safari/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent)) { setIos(true); setShow(true); }
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);

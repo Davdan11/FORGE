@@ -102,6 +102,7 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   const live = useRef({ manual: 0, hasSensor: false, curve: "generic" as SpeedCurveId });
   useEffect(() => { live.current = { manual, hasSensor: sensors.length > 0, curve }; }, [manual, sensors, curve]);
   // The game's home screen shows what is paired: the names, and whether one of them is a trainer.
+  const send = (msg: object) => unity.current?.SendMessage("ForgeBridge", "Receive", JSON.stringify(msg));
   useEffect(() => {
     if (!ready) return;
     send({ type: "sensors", items: sensors.map((s) => sensorLabel(s, en) ?? sensorName(s.kind, en)), ok: sensors.some((s) => !!s.trainer) });
@@ -131,7 +132,6 @@ export function UnityRide({ profile, ftpW, startRoute, onExit, say }: {
   const [muted, setMuted] = useState<Set<string>>(() => new Set(parseIds(readPref("forge.voice.muted"))));
   const [reporting, setReporting] = useState<{ id: string; name: string; reason: ReportReason } | null>(null);
 
-  const send = (msg: object) => unity.current?.SendMessage("ForgeBridge", "Receive", JSON.stringify(msg));
   /** The garage balance and what is owned (the game shows prices, locks and the buy button from it). */
   const sendWallet = () => wallet().then((w) => { send({ type: "wallet", sparks: w.sparks, test: w.test }); send({ type: "unlocks", items: w.owned }); });
 

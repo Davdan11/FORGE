@@ -316,7 +316,7 @@ function LiveCard({ rider, card, colors, now }: { rider: OnlineRider; card?: Rid
         <Link href={`/indoor?ride=${encodeURIComponent(rider.routeKey)}`} className="pill pill--volt pill--sm" aria-label={t(`Rejoindre @${rider.handle}`, `Join @${rider.handle}`)}>{t("Rejoindre", "Join")}</Link>
       </Press>
       <style>{`
-        @keyframes social-ping { 0% { box-shadow: 0 0 0 0 rgba(184,240,58,.75) } 100% { box-shadow: 0 0 0 10px rgba(184,240,58,0) } }
+        @keyframes social-ping { 0% { box-shadow: 0 0 0 0 rgba(255,46,120,.75) } 100% { box-shadow: 0 0 0 10px rgba(255,46,120,0) } }
         .live-ping { animation: social-ping 1.6s ease-out infinite }
         @media (prefers-reduced-motion: reduce) { .live-ping { animation: none } }
       `}</style>

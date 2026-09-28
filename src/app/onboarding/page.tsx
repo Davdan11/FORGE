@@ -282,7 +282,7 @@ export default function Onboarding() {
         <motion.div key={step} custom={dir} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="grid gap-5">
           {step === 0 && (<>
             <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>{t("Bâtissons", "Let’s build")} <em>{t("ton", "your")}</em> {t("plan.", "plan.")}</h1>
-            <p className="text-smoke text-sm">{t("Six étapes rapides, environ deux minutes. Tout peut être changé plus tard.", "Six quick steps, about two minutes. Everything can be changed later.")}</p>
+            <p className="text-smoke text-sm">{t("Deux étapes rapides, moins d’une minute. Tout peut être changé plus tard.", "Two quick steps, under a minute. Everything can be changed later.")}</p>
             {/* No autoFocus. In a browser it saves a tap; in the native app the
                 keyboard rises before the screen has been read and covers the
                 form, so the first thing anyone sees is two thirds of a keyboard. */}

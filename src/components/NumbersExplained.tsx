@@ -47,7 +47,7 @@ export function NumbersExplained({ profile, dayType, open: initiallyOpen = false
                 </li>
               ))}
             </ol>
-            <div className="border-t border-line p-4 grid gap-1.5 bg-[rgba(198,244,50,.14)]">
+            <div className="border-t border-line p-4 grid gap-1.5 bg-[rgba(255,46,120,.14)]">
               <span className="meta">{t("À quoi t’attendre", "What to expect")}</span>
               <p className="text-sm">
                 {losing || gaining ? (
