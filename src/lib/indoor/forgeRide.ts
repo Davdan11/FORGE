@@ -90,6 +90,24 @@ GAME_ROUTES.push(
   climb(34, "Chemin du Roy", ["Québec", "Quebec"], ["Route réelle · fleuve", "Real road · river"], ["De Neuville à Deschambault, le long du Saint-Laurent", "From Neuville to Deschambault, along the St. Lawrence"], 34.9, 207, "#59A6FF", "pine"),
   climb(35, "Charlevoix", ["Québec", "Quebec"], ["Route réelle · côtes à 15 %", "Real road · 15 % hills"], ["De Baie-Saint-Paul aux Éboulements, au-dessus du fleuve", "From Baie-Saint-Paul to Les Éboulements, above the river"], 17.2, 558, "#FFCC4D", "pine"),
 );
+// The world's real roads (the game's Europe, Americas and World pages), each with its own land: palms, lava, steppe, gum trees.
+GAME_ROUTES.push(
+  climb(36, "Ronde van Vlaanderen", ["Belgique", "Belgium"], ["Route réelle · monts flamands", "Real road · Flemish hills"], ["D'Audenarde au Vieux Quaremont et au Paterberg", "From Oudenaarde up the Oude Kwaremont and the Paterberg"], 14.7, 158, "#FFD933", "world/flandres"),
+  climb(37, "Trollstigen", ["Norvège", "Norway"], ["Route réelle · 11 lacets", "Real road · 11 hairpins"], ["D'Åndalsnes, l'échelle des trolls au-dessus du fjord", "From Åndalsnes, the trolls' ladder above the fjord"], 18.8, 780, "#73CCFF", "world/trollstigen"),
+  climb(38, "Sa Calobra", ["Espagne", "Spain"], ["Col réel · Majorque", "Real climb · Mallorca"], ["Du port jusqu'au Coll dels Reis, le nœud de cravate", "From the harbour to the Coll dels Reis, by the tie knot"], 12, 682, "#4DBFF2", "world/sa-calobra"),
+  climb(39, "Big Sur", ["États-Unis", "USA"], ["Route réelle · côte Pacifique", "Real road · Pacific coast"], ["De Carmel au pont de Bixby, le long du Pacifique", "From Carmel over the Bixby Bridge, along the Pacific"], 38, 544, "#4D99FF", "world/big-sur"),
+  climb(40, "Mount Blue Sky", ["États-Unis", "USA"], ["Col réel · 4 300 m", "Real climb · 4,300 m"], ["D'Idaho Springs jusqu'au sommet, la plus haute route asphaltée d'Amérique du Nord", "From Idaho Springs to the summit, North America's highest paved road"], 44.5, 2059, "#99BFFF", "world/mt-blue-sky"),
+  climb(41, "Ironman Kona", ["États-Unis", "USA"], ["Route réelle · Queen K", "Real road · Queen K"], ["De Kailua-Kona à Hawi, à travers les champs de lave", "From Kailua-Kona to Hawi, across the lava fields"], 84.6, 949, "#FF734D", "world/kona"),
+  climb(42, "Icefields Parkway", ["Canada", "Canada"], ["Route réelle · Rocheuses", "Real road · Rockies"], ["De Lake Louise à Jasper, entre les glaciers des Rocheuses", "From Lake Louise to Jasper, between the Rockies' glaciers"], 234.6, 2608, "#66D9F2", "world/icefields"),
+  climb(43, "Alto de Letras", ["Colombie", "Colombia"], ["Col réel · le plus long du monde", "Real climb · the world's longest"], ["De Mariquita jusqu'à 3 677 m, dans les Andes", "From Mariquita up to 3,677 m, in the Andes"], 78.6, 4290, "#FFCC33", "world/alto-letras"),
+  climb(44, "Curvas de Farellones", ["Chili", "Chile"], ["Col réel · 40 lacets", "Real climb · 40 hairpins"], ["De Santiago, les 40 virages jusqu'aux stations des Andes", "From Santiago, the 40 bends up to the Andes' ski resorts"], 31.4, 1691, "#F25959", "world/farellones"),
+  climb(45, "Rio de Janeiro", ["Brésil", "Brazil"], ["Route réelle · plages", "Real road · beaches"], ["De Copacabana à Barra, par Leblon et l'avenue Niemeyer", "From Copacabana to Barra, by Leblon and Avenida Niemeyer"], 19, 382, "#33D973", "world/rio"),
+  climb(46, "Mont Fuji", ["Japon", "Japan"], ["Col réel · 5e station", "Real climb · 5th station"], ["De Fujiyoshida à la 5e station, sur les flancs du volcan", "From Fujiyoshida to the 5th station, up the volcano"], 30.9, 1548, "#FF8099", "world/fuji"),
+  climb(47, "Guilin → Yangshuo", ["Chine", "China"], ["Route réelle · pitons karstiques", "Real road · karst peaks"], ["Le long de la rivière Li, entre les pitons de calcaire", "Along the Li River, between the limestone peaks"], 72.6, 576, "#59E699", "world/guilin"),
+  climb(48, "Qinghai Hu", ["Chine", "China"], ["Route réelle · 3 200 m", "Real road · 3,200 m"], ["Le long du plus grand lac de Chine, sur le plateau tibétain", "Along China's largest lake, on the Tibetan plateau"], 186, 1349, "#66B3FF", "world/qinghai"),
+  climb(49, "Great Ocean Road", ["Australie", "Australia"], ["Route réelle · côte sud", "Real road · south coast"], ["De Torquay à Apollo Bay, au bord de l'océan Austral", "From Torquay to Apollo Bay, by the Southern Ocean"], 91.6, 960, "#FFB34D", "world/great-ocean"),
+  climb(50, "Cape Town Cycle Tour", ["Afrique du Sud", "South Africa"], ["Route réelle · Chapman's Peak", "Real road · Chapman's Peak"], ["Le tour de la péninsule du Cap, par Chapman's Peak", "Around the Cape Peninsula, over Chapman's Peak"], 105.5, 1569, "#F28C40", "world/cape-town"),
+);
 
 export interface GameEvent { id: string; race: boolean; kind: "group" | "race" | "tt"; wkg: number; title: Record<Lang, string>; route: GameRoute; start: Date }
 
