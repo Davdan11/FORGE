@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getProfile } from "@/lib/db";
 import { recipeCount, searchRecipes } from "@/lib/nutrition/recipes";
+import { mealCuisine, mealName } from "@/lib/nutrition/cookbook";
 import { dietsOf } from "@/lib/nutrition/engine";
 import { useT, useLang, locale } from "@/lib/i18n";
 import { Screen, TopBar, Photo, Seg, ScreenSkeleton } from "@/components/ui";
@@ -40,7 +41,7 @@ function Browse() {
         <p className="text-xs text-smoke mb-4">{lang === "fr"
           ? `Chaque recette affiche kcal, protéines, glucides, sucre, lipides et fibres par portion, des mesures exactes et les étapes de cuisson.${diets.length ? ` Filtré selon ta diète : ${diets.map((d) => DIET_FR[d] ?? d).join(", ")}.` : ""}`
           : `Every recipe carries kcal, protein, carbs, sugar, fat and fiber per portion, exact measures and cook steps.${diets.length ? ` Filtered to your diet: ${diets.join(", ").replace(/_/g, "-")}.` : ""}`}</p>
-        <input className="input mb-3" placeholder={t("Chercher (en anglais) : salmon, tofu curry, oats…", "Search: salmon, tofu curry, oats…")} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
+        <input className="input mb-3" placeholder={t("Chercher : saumon, cari tofu, gruau…", "Search: salmon, tofu curry, oats…")} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
         <div className="grid gap-2 mb-4">
           <Seg scroll value={slot} onChange={(v) => { setSlot(v); setPage(1); }} options={[{ v: "", label: t("Tout", "All") }, { v: "breakfast", label: t("Déjeuner", "Breakfast") }, { v: "lunch", label: t("Dîner", "Lunch") }, { v: "dinner", label: t("Souper", "Dinner") }, { v: "snack", label: t("Collation", "Snack") }, { v: "pre", label: t("Avant", "Pre") }, { v: "post", label: t("Après", "Post") }]} />
           <div className="flex gap-2 flex-wrap">
@@ -57,8 +58,8 @@ function Browse() {
                   <Photo src={m.image} veil color className="absolute inset-0" />
                   <div className="absolute inset-x-0 bottom-0 z-10 p-3 grid gap-1">
                     <span className="flex gap-1 flex-wrap"><span className="chip chip--volt tnum">{m.kcal} kcal</span><span className="chip chip--live backdrop-blur-md tnum">{m.protein} P</span>{m.tags.includes("low_sugar") && <span className="chip chip--live backdrop-blur-md">{t("faible en sucre", "low sugar")}</span>}</span>
-                    <span className="font-semibold leading-tight text-sm line-clamp-3">{m.name}</span>
-                    <span className="text-[11px] text-smoke">{m.cuisine} · {m.minutes} min</span>
+                    <span className="font-semibold leading-tight text-sm line-clamp-3">{mealName(m, lang)}</span>
+                    <span className="text-[11px] text-smoke">{mealCuisine(m, lang)} · {m.minutes} min</span>
                   </div>
                 </Link>
               </Press>

@@ -9,6 +9,8 @@ import { loc as savedText, useLang, useT } from "@/lib/i18n";
 import { RankEmblem } from "@/components/RankEmblem";
 import { BadgeEmblem } from "@/components/BadgeEmblem";
 import { bestE1rmBySlug, logWeighIn } from "@/lib/progress";
+import { trendSeries } from "@/lib/nutrition/coach";
+import { GoalCard } from "@/components/CoachCards";
 import { badgeContext } from "@/lib/badgeFacts";
 import { blockOfWeek, firstWeekOf, weekOf } from "@/lib/engine/progression";
 import { getExercise } from "@/lib/data/exercises";
@@ -62,6 +64,8 @@ export default function ProgressPage() {
   const shared = activities.filter((a) => a.shared).sort((a, b) => (b.sharedAt ?? b.startedAt).localeCompare(a.sharedAt ?? a.startedAt));
   const readySeries = readiness.slice(-14);
   const wSeries = weights.slice(-30);
+  // The trend (smoothed) is what the plan follows; the morning reading swings a kilo with water.
+  const wTrend = trendSeries(weights).slice(-30);
   const wDelta = wSeries.length > 1 ? wSeries[wSeries.length - 1].kg - wSeries[0].kg : 0;
   const toUnitW = (kg: number) => (units.weight === "lb" ? `${Math.round(kgToLb(kg) * 10) / 10} lb` : `${Math.round(kg * 10) / 10} kg`);
   const today = todayISO();
@@ -150,11 +154,13 @@ export default function ProgressPage() {
                 </Section>
               </Item>
 
+              <Item><GoalCard /></Item>
               <Item>
                 <Section title={t("Corps", "Body")} aside={wSeries.length > 1 ? <span className={`text-xs tnum ${wDelta <= 0 ? "text-volt" : "text-bone"}`}>{wDelta > 0 ? "+" : ""}{toUnitW(wDelta)} · {wSeries.length} {t("pesées", "weigh-ins")}</span> : undefined}>
                   <div className="card p-4 grid gap-3">
-                    <div className="flex items-baseline justify-between"><span className="meta">{t("Actuel", "Current")}</span><span className="display text-3xl tnum">{toUnitW(wSeries[wSeries.length - 1]?.kg ?? profile.weightKg)}</span></div>
-                    {wSeries.length > 1 && <Sparkline values={wSeries.map((x) => (units.weight === "lb" ? kgToLb(x.kg) : x.kg))} labels={wSeries.map((x) => x.date)} height={48} format={(v) => `${Math.round(v * 10) / 10} ${units.weight}`} />}
+                    <div className="flex items-baseline justify-between"><span className="meta">{wTrend.length >= 3 ? t("Tendance", "Trend") : t("Actuel", "Current")}</span><span className="display text-3xl tnum">{toUnitW(wTrend.length >= 3 ? wTrend[wTrend.length - 1].trend : wSeries[wSeries.length - 1]?.kg ?? profile.weightKg)}</span></div>
+                    {wSeries.length > 1 && <Sparkline values={wTrend.map((x) => (units.weight === "lb" ? kgToLb(x.trend) : x.trend))} labels={wTrend.map((x) => x.date)} height={48} format={(v) => `${Math.round(v * 10) / 10} ${units.weight}`} />}
+                    {wTrend.length >= 3 && <p className="text-[11px] text-smoke">{t(`Ce matin : ${toUnitW(wSeries[wSeries.length - 1].kg)}. La tendance lisse l’eau et le sel d’un jour à l’autre; c’est elle que ton plan suit.`, `This morning: ${toUnitW(wSeries[wSeries.length - 1].kg)}. The trend smooths out day-to-day water and salt; it is what your plan follows.`)}</p>}
                     <div className="flex gap-2"><input className="input tnum flex-1" inputMode="decimal" placeholder={`${t("Ce matin", "This morning")} · ${units.weight}`} value={w} onChange={(e) => setW(e.target.value)} /><Press><button type="button" className="pill pill--bone" onClick={weigh} disabled={!Number(w)}>{t("Noter", "Log")}</button></Press></div>
                     {readySeries.length > 1 && <div className="pt-2 border-t border-line"><div className="flex justify-between items-baseline mb-1"><span className="meta">{t("Forme · 14 check-ins", "Readiness · 14 check-ins")}</span><span className="text-xs tnum">{Math.round(readySeries.reduce((a, r) => a + r.score, 0) / readySeries.length)} {t("moy.", "avg")}</span></div><Sparkline values={readySeries.map((r) => r.score)} labels={readySeries.map((r) => r.date)} height={40} format={(v) => `${Math.round(v)} / 100`} /></div>}
                   </div>

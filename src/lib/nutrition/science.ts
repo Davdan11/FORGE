@@ -21,6 +21,12 @@ import { tr, locale } from "../i18n";
      above 35 %; carbohydrate is the rest, with a floor.
    - Free sugar under the WHO ceiling (10 %, 6 % in a deficit);
      fibre at 14 g per 1,000 kcal.
+   - A target weight: once it is reached the rate goes to zero and
+     the food holds the weight there.
+   - The coach's correction (./coach.ts): formulas are right on
+     average and off by 10–15 % for any one person, so the weekly
+     check-in measures the real rate on the scale and moves the
+     calories until the body does what the plan says.
    ───────────────────────────────────────────────────────────── */
 
 export type DayType = NutritionDay["dayType"];
@@ -76,6 +82,21 @@ export const RATE_PER_WEEK: Record<Goal, number> = {
   perform: 0,
 };
 
+/** The goal's own weight is reached: losing is done at or under it, gaining at or over it. */
+export function goalReached(p: Pick<Profile, "goal" | "weightKg" | "targetWeightKg">) {
+  const t = p.targetWeightKg;
+  if (!t) return false;
+  if (p.goal === "cut" || p.goal === "recomp") return p.weightKg <= t + 0.1;
+  if (p.goal === "build") return p.weightKg >= t - 0.1;
+  return false;
+}
+
+/** The plan's intended rate, kg a week, before any bound: zero once the target is reached. */
+export const intendedRate = (p: Pick<Profile, "goal" | "weightKg" | "targetWeightKg">) => (goalReached(p) ? 0 : RATE_PER_WEEK[p.goal]);
+
+/** The coach's correction is held inside ±500 kcal: past that, something other than energy balance is going on. */
+export const MAX_COACH_ADJUST = 500;
+
 const MAX_DEFICIT = 0.25;   // never more than 25 % under maintenance
 const MAX_SURPLUS = 0.15;
 const PROTEIN_PER_KG: Record<Goal, number> = { cut: 2.2, recomp: 2.0, build: 1.8, strength: 1.8, endurance: 1.6, perform: 1.7 };
@@ -90,11 +111,16 @@ export function explainTargets(p: Profile, dayType: DayType) {
   const weeklyMaintenance = rest * factor;
 
   // The deficit or surplus comes from the rate, then is held inside safe bounds.
-  const rate = RATE_PER_WEEK[p.goal];
+  const rate = intendedRate(p);
+  const reached = goalReached(p);
   const dailyDelta = (rate * p.weightKg * KCAL_PER_KG) / 7;
   const bounded = Math.max(-MAX_DEFICIT * weeklyMaintenance, Math.min(MAX_SURPLUS * weeklyMaintenance, dailyDelta));
   const floor = Math.max(rest, p.sex === "female" ? 1200 : 1500);
-  const kcal = Math.round(Math.max(floor, maintenance + bounded) / 10) * 10;
+  const wanted = Math.max(-MAX_COACH_ADJUST, Math.min(MAX_COACH_ADJUST, p.coach?.adjustKcal ?? 0));
+  const planned = Math.max(floor, maintenance + bounded);
+  const kcal = Math.round(Math.max(floor, planned + wanted) / 10) * 10;
+  // What the coach's correction actually moved today (the floor can absorb some of it).
+  const adjust = kcal - Math.round(planned / 10) * 10;
 
   const ref = referenceWeight(p);
   const keto = p.dietary.includes("keto");
@@ -133,7 +159,10 @@ export function explainTargets(p: Profile, dayType: DayType) {
       `${p.daysPerWeek} training days a week${job ? `, and a ${job === "physical" ? "physical" : "on-your-feet"} job` : ""}. That gives your maintenance: ${Math.round(weeklyMaintenance).toLocaleString(locale())} kcal a day on average.`) },
     { label: dayType === "rest" ? tr("Jour de repos", "Rest day") : dayType === "hard" ? tr("Grosse journée d’entraînement", "Hard training day") : tr("Jour d’entraînement", "Training day"), value: `× ${dayFactor(p, dayType).toFixed(2)}`,
       why: dayType === "rest" ? tr("Moins de mouvement aujourd’hui, donc un peu moins de bouffe — surtout moins de glucides.", "Less moving today, so a little less food — mostly fewer carbs.") : dayType === "hard" ? tr("Plus de travail aujourd’hui, donc plus de carburant — surtout des glucides, autour de la séance.", "More work today, so more fuel — mostly carbs, around the session.") : tr("Une journée d’entraînement moyenne.", "An average training day.") },
-    { label: tr("Ton objectif", "Your goal"), value: Math.abs(kcal - maintenance) < 15 ? "±0 kcal" : `${signed(Math.round((kcal - maintenance) / 10) * 10)} kcal`, why: goalWhy(p.goal, rate, p.weightKg, kcal <= floor + 5 && bounded < 0, p.units?.weight === "lb") },
+    { label: tr("Ton objectif", "Your goal"), value: Math.abs(planned - maintenance) < 15 ? "±0 kcal" : `${signed(Math.round((planned - maintenance) / 10) * 10)} kcal`, why: reached ? tr("Objectif atteint : on mange au maintien pour garder ce poids. C’est la phase la plus sous-estimée — c’est elle qui rend le résultat permanent.", "Goal reached: eating at maintenance to hold this weight. The most underrated phase — it is what makes the result last.") : goalWhy(p.goal, rate, p.weightKg, planned <= floor + 5 && bounded < 0, p.units?.weight === "lb") },
+    ...(Math.abs(adjust) >= 10 ? [{ label: tr("Ajustement du coach", "Coach adjustment"), value: `${signed(Math.round(adjust / 10) * 10)} kcal`, why: adjust < 0
+      ? tr("Appris de ta balance : ton corps dépense un peu moins que la formule le prédit, alors on retire ça pour que tu avances au rythme prévu.", "Learned from your scale: your body burns a little less than the formula predicts, so this comes off to keep you on pace.")
+      : tr("Appris de ta balance : ton corps dépense un peu plus que la formule le prédit, alors on ajoute ça pour que tu avances au rythme prévu sans perdre de muscle.", "Learned from your scale: your body burns a little more than the formula predicts, so this goes on to keep you on pace without losing muscle.") }] : []),
     { label: tr("Protéines", "Protein"), value: `${protein} g`, why: tr(
       `${proteinPerKg.toFixed(1).replace(".", ",")} g par kg ${ref === p.weightKg ? "de ton poids" : `d’un poids de référence de ${String(ref).replace(".", ",")} kg (le surplus de gras n’a pas besoin de protéines)`}. ${p.goal === "cut" ? "Élevé en déficit pour garder le muscle que t’as." : "Assez pour bâtir et réparer après l’entraînement."}`,
       `${proteinPerKg.toFixed(1)} g per kg of ${ref === p.weightKg ? "your bodyweight" : `a reference weight of ${ref} kg (extra fat mass needs no protein)`}. ${p.goal === "cut" ? "High in a deficit to keep the muscle you have." : "Enough to build and repair after training."}`) },
@@ -168,7 +197,10 @@ function goalWhy(goal: Goal, rate: number, kg: number, atFloor: boolean, pounds 
  * types, against maintenance; shown as a range because real bodies adapt,
  * and the first week moves more (water and glycogen).
  */
-export function projection(p: Profile, weeks = 8) {
+export function projection(profile: Profile, weeks = 8) {
+  // The coach's correction only makes up for the formula being off for this
+  // body; what the plan aims at is the formula's rate, so it is left out here.
+  const p: Profile = { ...profile, coach: undefined };
   const trainDays = p.daysPerWeek;
   const avgIntake = (explainTargets(p, "train").kcal * trainDays + explainTargets(p, "rest").kcal * (7 - trainDays)) / 7;
   const maintenance = bmr(p) * activityFactor(p);

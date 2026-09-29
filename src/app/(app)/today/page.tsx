@@ -9,6 +9,7 @@ import { readinessScore, autoRegulate, PAIN_LABEL } from "@/lib/engine/readiness
 import { adaptationsFor } from "@/lib/engine/injury";
 import { buildNutritionDay, eatenTotals } from "@/lib/nutrition/engine";
 import { getMeal } from "@/lib/nutrition/recipes";
+import { mealTitle } from "@/lib/nutrition/cookbook";
 import { awardReadiness, bestE1rmBySlug } from "@/lib/progress";
 import { levelFromXp, rankFor, subRankFor, tierForLevel } from "@/lib/gamification";
 import { RankEmblem } from "@/components/RankEmblem";
@@ -29,6 +30,7 @@ import { useT, useLang, locale, bilingual, loc } from "@/lib/i18n";
 import type { MealSlot, NutritionDay, PainArea, PrescribedExercise, Readiness, Session, UnitPrefs } from "@/lib/types";
 import { healthToday } from "@/lib/health";
 import { InstallApp } from "@/components/InstallApp";
+import { GoalCard, WeeklyCheckIn } from "@/components/CoachCards";
 
 /* Labels for data keys that reach the screen. English shows the key itself, as before. */
 const BLOCK_FR: Record<PrescribedExercise["block"], string> = { prep: "préparation", main: "principal", accessory: "accessoire", finisher: "finition", cooldown: "retour au calme" };
@@ -228,6 +230,9 @@ export default function Today() {
             </Section>
           </Item>
 
+          <Item><WeeklyCheckIn /></Item>
+          <Item><GoalCard /></Item>
+
           <Item>{nutrition && <FoodToday nutrition={nutrition} notifications={profile.notifications} sessionName={session ? sessionTitle(session.kind) : undefined} onNotify={async () => {
             const perm = await ensureNotificationPermission();
             if (perm !== "granted") { say(perm === "denied" ? t(`Les notifications sont désactivées pour ${APP_NAME}. Active-les dans les réglages de ton téléphone.`, `Notifications are off for ${APP_NAME}. Turn them on in your phone's settings.`) : t("Les notifications ne sont pas prises en charge ici.", "Notifications aren’t supported here.")); return; }
@@ -396,6 +401,7 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
 
 function FoodToday({ nutrition, notifications, sessionName, onNotify }: { nutrition: NutritionDay; notifications: boolean; sessionName?: string; onNotify: () => void }) {
   const t = useT();
+  const lang = useLang();
   const tot = eatenTotals(nutrition);
   const next = nutrition.meals.find((m) => !m.done);
   const meal = next ? getMeal(next.mealId) : undefined;
@@ -407,7 +413,7 @@ function FoodToday({ nutrition, notifications, sessionName, onNotify }: { nutrit
             <Photo src={meal.image} veil color className="h-52" />
             <div className="on-photo absolute inset-x-0 bottom-0 p-4 grid gap-1">
               <span className="meta text-bone/80">{t("Prochain", "Next")} · {next.time} · {t(SLOT_FR[next.slot], next.slot)}</span>
-              <span className="display text-xl leading-[0.95] line-clamp-2">{meal.name.split(" with ")[0]}</span>
+              <span className="display text-xl leading-[0.95] line-clamp-2">{mealTitle(meal, lang)[0]}</span>
               <span className="text-xs text-bone/75 tnum">{Math.round(meal.kcal * next.scale)} kcal · {Math.round(meal.protein * next.scale)} {t("g protéines", "g protein")} · {Math.round(meal.sugar * next.scale)} {t("g sucre", "g sugar")} · {meal.minutes} min</span>
             </div>
           </Link>

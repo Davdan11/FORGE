@@ -6,13 +6,14 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, ChevronRight, UtensilsCrossed } from "lucide-react";
 import { db, getProfile, todayISO } from "@/lib/db";
 import { getMeal } from "@/lib/nutrition/recipes";
+import { mealTitle } from "@/lib/nutrition/cookbook";
 import { getExercise } from "@/lib/data/exercises";
 import { fmtLoad } from "@/lib/units";
 import { IMG } from "@/lib/data/images";
 import { Screen, Hero, Section, ScreenSkeleton, Photo } from "@/components/ui";
 import { Page, Stagger, Item } from "@/components/motion";
 import { sessionTitle } from "@/lib/engine/plan";
-import { useT, locale } from "@/lib/i18n";
+import { useT, useLang, locale } from "@/lib/i18n";
 import type { MealSlot } from "@/lib/types";
 
 /* Both languages kept side by side and picked at render, never at module load. */
@@ -36,6 +37,7 @@ export default function CalendarPage() {
   const [cursor, setCursor] = useState(() => { const d = new Date(today + "T00:00:00"); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [picked, setPicked] = useState(today);
   const t = useT();
+  const lang = useLang();
 
   type DayRow = { session?: NonNullable<typeof sessions>[number]; meals?: NonNullable<typeof nutrition>[number]; activities: NonNullable<typeof activities> };
   const byDate = useMemo(() => {
@@ -144,7 +146,7 @@ export default function CalendarPage() {
                                 <Link href={`/food/meal?id=${enc(meal.id)}&date=${picked}`} className="px-4 py-2.5 flex items-center gap-3">
                                   <Photo src={meal.image} color className="thumb !w-11 !h-11 shrink-0" />
                                   <span className="min-w-0 flex-1">
-                                    <span className="block text-sm font-medium truncate">{meal.name.split(" with ")[0]}</span>
+                                    <span className="block text-sm font-medium truncate">{mealTitle(meal, lang)[0]}</span>
                                     <span className="meta">{m.time} · {t(SLOT_FR[m.slot], m.slot)}</span>
                                   </span>
                                   <span className="text-xs text-smoke tnum shrink-0">{Math.round(meal.kcal * m.scale)} kcal</span>

@@ -20,13 +20,25 @@ describe("default units by region", () => {
 
 
 describe("cooking temperatures", () => {
-  it("shows Fahrenheit to pound users, rounded the way ovens are marked", () => {
-    expect(localizeCooking("Roast at 220 °C for 25 min.", "lb")).toBe("Roast at 425 °F for 25 min.");
-    expect(localizeCooking("until the inside hits 75 °C.", "lb")).toBe("until the inside hits 165 °F.");
-    expect(localizeCooking("Bake at 180–200 °C.", "lb")).toBe("Bake at 350–400 °F.");
+  it("shows Fahrenheit first to pound users, rounded the way ovens are marked, with Celsius alongside", () => {
+    expect(localizeCooking("Roast at 220 °C for 25 min.", "lb")).toBe("Roast at 425 °F (220 °C) for 25 min.");
+    expect(localizeCooking("Preheat to 200 °C.", "lb")).toBe("Preheat to 400 °F (200 °C).");
+    expect(localizeCooking("until the inside hits 74 °C.", "lb")).toBe("until the inside hits 165 °F (74 °C).");
+    expect(localizeCooking("pork to 63 °C, beef to 57 °C", "lb")).toBe("pork to 145 °F (63 °C), beef to 135 °F (57 °C)");
+    expect(localizeCooking("Bake at 180–200 °C.", "lb")).toBe("Bake at 350–400 °F (180–200 °C).");
   });
-  it("leaves Celsius alone for everyone else", () => {
-    expect(localizeCooking("Roast at 220 °C.", "kg")).toBe("Roast at 220 °C.");
+  it("shows Celsius first to everyone else, with Fahrenheit alongside", () => {
+    expect(localizeCooking("Roast at 220 °C.", "kg")).toBe("Roast at 220 °C (425 °F).");
+  });
+  it("never nests brackets and never converts twice", () => {
+    expect(localizeCooking("until steaming (74 °C).", "kg")).toBe("until steaming (74 °C / 165 °F).");
+    const once = localizeCooking("Roast at 220 °C.", "kg");
+    expect(localizeCooking(once, "kg")).toBe(once);
+  });
+  it("gives pound users inches next to centimetres", () => {
+    expect(localizeCooking("cut into 2 cm cubes", "lb", "en")).toBe("cut into 2 cm (¾ in) cubes");
+    expect(localizeCooking("en cubes de 2,5 cm", "lb", "fr")).toBe("en cubes de 2,5 cm (1 po)");
+    expect(localizeCooking("cut into 2 cm cubes", "kg")).toBe("cut into 2 cm cubes");
   });
 });
 

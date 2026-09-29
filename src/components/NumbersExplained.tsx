@@ -19,7 +19,7 @@ export function NumbersExplained({ profile, dayType, open: initiallyOpen = false
   const ex = explainTargets(profile, dayType);
   const proj = projection(profile);
   const lb = profile.units.weight === "lb";
-  const w = (kg: number) => (lb ? `${Math.abs(Math.round(kgToLb(kg) * 10) / 10)} lb` : `${Math.abs(Math.round(kg * 10) / 10)} kg`);
+  const w = (kg: number) => (lb ? `${Math.abs(Math.round(kgToLb(kg) * 10) / 10).toLocaleString(locale())} lb` : `${Math.abs(Math.round(kg * 10) / 10).toLocaleString(locale())} kg`);
   const losing = proj.perWeekKg < -0.05, gaining = proj.perWeekKg > 0.05;
 
   return (
@@ -57,7 +57,7 @@ export function NumbersExplained({ profile, dayType, open: initiallyOpen = false
                 )}
               </p>
               {proj.floored && <p className="text-xs text-smoke">{t("Ton alimentation est déjà à un plancher sécuritaire. Pour perdre plus vite, bouge plus (une marche par jour, une troisième séance) au lieu de manger moins.", "Your food is already at a safe floor. To lose faster, add movement — a daily walk, a third session — rather than eating less.")}</p>}
-              <p className="text-[11px] text-smoke">{t("Pèse-toi une fois par semaine, même matin, même balance : le plan revérifie tes chiffres à chaque fois.", "Weigh in once a week, same morning, same scale: the plan re-checks your numbers every time.")}</p>
+              <p className="text-[11px] text-smoke">{t("Pèse-toi 3 matins par semaine, au réveil, même balance. Chaque semaine, ton bilan compare ta vraie balance au plan et ajuste tes calories si ton corps ne suit pas la formule.", "Weigh in 3 mornings a week, on waking, same scale. Every week your check-in compares the real scale with the plan and adjusts your calories if your body does not follow the formula.")}</p>
             </div>
           </motion.div>
         )}

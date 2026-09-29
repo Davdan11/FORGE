@@ -22,17 +22,35 @@ export function localeUnits(locale?: string): UnitPrefs {
 }
 
 /**
- * Cooking temperatures in Fahrenheit for people who use pounds — in practice,
- * the US. Oven settings round to 25 °F, the way US ovens are marked; doneness
- * temperatures (under 100 °C) round to 5 °F, so 75 °C reads 165 °F.
+ * Cooking temperatures in both scales. Ovens in Québec and the US are marked
+ * in Fahrenheit, so people who weigh in pounds read "425 °F (220 °C)"; everyone
+ * else reads "220 °C (425 °F)". Oven settings round to 25 °F, the way ovens are
+ * marked; doneness temperatures (under 100 °C) round to 5 °F, so 74 °C reads
+ * 165 °F. For pound users, sizes in cm also get inches: "2 cm (¾ in)".
+ * Text already carrying a Fahrenheit value is left alone.
  */
-export function localizeCooking(text: string, u: WeightLike): string {
-  if (w(u) !== "lb") return text;
+export function localizeCooking(text: string, u: WeightLike, lang: "fr" | "en" = "en"): string {
+  const lb = w(u) === "lb";
   const f = (c: string) => {
     const x = (Number(c) * 9) / 5 + 32;
     return Number(c) >= 100 ? Math.round(x / 25) * 25 : Math.round(x / 5) * 5;
   };
-  return text.replace(/(\d+)(?:[–-](\d+))?\s?°C/g, (_m, a: string, b?: string) => (b ? `${f(a)}–${f(b)} °F` : `${f(a)} °F`));
+  let out = text.replace(/(\d+)(?:[–-](\d+))?\s?°C(?!\s*\(\s*\d+[^)]*°F)(?!\s*\/\s*\d)/g, (m, a: string, b: string | undefined, at: number, all: string) => {
+    const c = b ? `${a}–${b} °C` : `${a} °C`;
+    const fh = b ? `${f(a)}–${f(b)} °F` : `${f(a)} °F`;
+    // Already in brackets, "(74 °C)": no brackets inside brackets — "(74 °C / 165 °F)".
+    if (all[at - 1] === "(" && all[at + m.length] === ")") return lb ? `${fh} / ${c}` : `${c} / ${fh}`;
+    return lb ? `${fh} (${c})` : `${c} (${fh})`;
+  });
+  if (lb) {
+    const q = ["", "¼", "½", "¾"];
+    out = out.replace(/(\d+(?:[.,]\d+)?)\s?cm\b(?!\s*\()/g, (m, n: string) => {
+      const inch = Math.max(0.25, Math.round((Number(n.replace(",", ".")) / 2.54) * 4) / 4);
+      const whole = Math.floor(inch), part = Math.round((inch - whole) * 4);
+      return `${m} (${whole || ""}${q[part]} ${lang === "fr" ? "po" : "in"})`;
+    });
+  }
+  return out;
 }
 
 export const kgToLb = (kg: number) => kg * 2.2046226218;

@@ -133,6 +133,12 @@ export interface Profile {
   notifications: boolean;
   /** Weight on the day the plan was built: the start line for progress badges. */
   startWeightKg?: number;
+  /** The number the athlete is aiming for, kg. Sets the finish line and its date;
+   *  once reached, the food holds the weight there (see nutrition/coach.ts). */
+  targetWeightKg?: number;
+  /** The weekly coach: what the real scale taught about this body's energy
+   *  needs, and the check-ins that taught it. */
+  coach?: CoachState;
   /** When the health notice was accepted, at onboarding. */
   healthNoticeAt?: string;
   /** When the terms, privacy policy and processing of health data were agreed to. */
@@ -350,6 +356,34 @@ export interface CardioWorkout {
 
 export interface WeighIn { id: string; date: string; kg: number; note?: string }
 
+/** How closely the week's food plan was followed, in the athlete's own words. */
+export type Adherence = "all" | "most" | "some";
+/** One weekly check-in: what the scale and the week showed, and what changed. */
+export interface CoachCheckIn {
+  date: string;
+  /** Smoothed weight at the check-in (the trend, not the day's reading), kg. */
+  trendKg: number | null;
+  /** Measured change, kg a week (negative = losing). Null without enough weigh-ins. */
+  actualPerWeekKg: number | null;
+  /** What the plan was built to do, kg a week. */
+  expectedPerWeekKg: number;
+  adherence: Adherence;
+  /** Calories added (+) or taken off (−) a day at this check-in. */
+  deltaKcal: number;
+  /** The standing correction after it, kcal a day. */
+  adjustKcal: number;
+  sessionsDone: number; sessionsPlanned: number;
+  mealsDone: number; mealsPlanned: number;
+  verdict: "on_track" | "too_fast" | "too_slow" | "no_data" | "off_plan" | "reached";
+  /** The loss is slow but the food is already at the safe floor: the answer is movement, not less food. */
+  atFloor?: boolean;
+}
+export interface CoachState {
+  /** The standing calorie correction learned from the scale, kcal a day. */
+  adjustKcal: number;
+  checkIns: CoachCheckIn[];
+}
+
 /* ── Nutrition ─────────────────────────────────────────────── */
 export type MealSlot = "breakfast" | "lunch" | "snack" | "dinner" | "pre" | "post";
 export interface Meal {
@@ -372,6 +406,23 @@ export interface Meal {
   image: string;
   tip?: string;
   cuisine?: string;
+  /* ── Bilingual cookbook fields (all optional; English stays the source and the id). ──
+     Quantities inside steps and ingredient qty may be tokens resolved at render time
+     with the portion scale: {g:250} {ml:250} {tsp:0.5} {tbsp:1} {n:3|egg|eggs}.
+     Render through src/lib/nutrition/cookbook.ts (localizeMeal / stepsFor). */
+  /** French name (Québec). */
+  nameFr?: string;
+  cuisineFr?: string;
+  tipFr?: string;
+  /** Same order and length as `ingredients`. */
+  ingredientsFr?: { item: string; qty: string }[];
+  /** Same order and length as `steps`. */
+  stepsFr?: string[];
+  /** Cook-mode timer per step, in seconds (null = none). Absent: read from "N min" in the step. */
+  timers?: (number | null)[];
+  /** Portions, fridge life and reheating, shown after the method. */
+  storage?: string;
+  storageFr?: string;
 }
 export interface DayPlanMeal {
   slot: MealSlot; time: string; mealId: string; scale: number; done?: boolean;

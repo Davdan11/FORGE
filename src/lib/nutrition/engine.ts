@@ -4,7 +4,8 @@ import { fitScore, getMeal, sampleIds, searchRecipes } from "./recipes";
 import { MEALS as CURATED } from "../data/meals";
 import type { Diet } from "./ingredients";
 import { explainTargets, type DayType as SciDayType } from "./science";
-import { loc, tr } from "../i18n";
+import { getLang, loc, tr } from "../i18n";
+import { ingredientsFor, mealName } from "./cookbook";
 
 /* ─────────────────────────────────────────────────────────────
    NUTRITION ENGINE v3
@@ -181,15 +182,16 @@ type Macro = { kcal: number; protein: number; carbs: number; fat: number; sugar:
 const macrosOf = (m: Meal, k: number): Macro => ({ kcal: m.kcal * k, protein: m.protein * k, carbs: m.carbs * k, fat: m.fat * k, sugar: (m.sugar ?? 0) * k });
 const add = (a: Macro, b: Macro): Macro => ({ kcal: a.kcal + b.kcal, protein: a.protein + b.protein, carbs: a.carbs + b.carbs, fat: a.fat + b.fat, sugar: a.sugar + b.sugar });
 const ZERO: Macro = { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 };
-const SCALES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+/** Portions in tenths: fine enough to land the day within a few grams, coarse enough to cook (the recipe's grams scale with it). */
+const SCALES = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2];
 /** Big eaters (a 140 kg athlete on 4,000+ kcal) get bigger plates, not more plates. */
-const scalesFor = (kcal: number) => (kcal > 3400 ? [...SCALES, 2.25, 2.5] : SCALES);
+const scalesFor = (kcal: number) => (kcal > 3400 ? [...SCALES, 2.1, 2.2, 2.3, 2.4, 2.5] : SCALES);
 
 /** How far a day (or part of one) is from its targets: relative errors,
  *  protein short-fall weighted most, sugar only when over its ceiling. */
 function miss(got: Macro, t: Macro & { sugarMax: number }, proteinWeight = 3) {
   const rel = (g: number, w: number) => Math.abs(g - w) / Math.max(1, w);
-  return rel(got.kcal, t.kcal) * 2 + Math.max(0, (t.protein - got.protein) / t.protein) * proteinWeight + Math.max(0, (got.protein - t.protein * (t.kcal > 3400 ? 1.35 : 1.2)) / t.protein)
+  return rel(got.kcal, t.kcal) * 2 + Math.max(0, (t.protein - got.protein) / t.protein) * proteinWeight + Math.max(0, (got.protein - t.protein * (t.kcal > 3300 ? 1.3 : 1.1)) / t.protein) * (t.kcal > 3300 ? 1 : 1.2)
     + rel(got.carbs, t.carbs) * 0.7 + rel(got.fat, t.fat) * 0.7 + Math.max(0, (got.sugar - t.sugarMax) / Math.max(1, t.sugarMax)) * 3;
 }
 
@@ -258,13 +260,15 @@ export function buildNutritionDay(p: Profile, date: string, session: Session | n
   // portion around it, and keep it only if the whole day is closer to target.
   for (let extra = 0; extra < 4; extra++) {
     const now = total();
-    if (now.protein >= targets.protein * 0.93 && now.kcal >= targets.kcal * 0.93) break;
+    if (now.protein >= targets.protein * 0.95 && now.kcal >= targets.kcal * 0.95) break;
     const time = FREE.find((t) => chosen.every((c) => Math.abs(mins(c.plan.time) - mins(t)) >= 90));
     if (!time) break;
     // Short on protein: only protein-dense snacks (a third of the energy or more) qualify.
-    const needProtein = now.protein < targets.protein * 0.93;
+    const needProtein = now.protein < targets.protein * 0.95;
+    // Short on energy with protein already there: fats and carbs, not another shake.
+    const proteinFull = now.protein >= targets.protein;
     const pool = candidates("snack", p, avoid, rand)
-      .filter((m) => !needProtein || (m.protein * 4) / Math.max(1, m.kcal) >= 0.33)
+      .filter((m) => (needProtein ? (m.protein * 4) / Math.max(1, m.kcal) >= 0.33 : !proteinFull || (m.protein * 4) / Math.max(1, m.kcal) <= 0.2))
       .sort((a, b) => needProtein ? b.protein / b.kcal - a.protein / a.kcal : b.kcal - a.kcal)
       .slice(0, 4);
     const before = { e: miss(now, full), scales: chosen.map((c) => c.scale) };
@@ -283,6 +287,7 @@ export function buildNutritionDay(p: Profile, date: string, session: Session | n
     chosen.forEach((c, i) => (c.scale = kept!.scales[i]));
   }
 
+  tune(); // a last pass with everything in place
   const meals: DayPlanMeal[] = chosen.map((c) => ({ slot: c.plan.slot, time: c.plan.time, mealId: c.meal.id, scale: c.scale, ...(c.plan.note ? { note: c.plan.note } : {}) }));
   meals.sort((a, b) => a.time.localeCompare(b.time));
   return { id: date, date, dayType, targets: { kcal: targets.kcal, protein: targets.protein, carbs: targets.carbs, fat: targets.fat }, meals, waterMl: Math.round(p.weightKg * 35 + (train ? 500 : 0)) };
@@ -338,24 +343,28 @@ export function groceryList(days: NutritionDay[]) {
   const map = new Map<string, { item: string; qty: string[] }>();
   for (const d of days) for (const m of d.meals) {
     const meal = getMeal(m.mealId); if (!meal) continue;
-    for (const ing of meal.ingredients) {
+    // Shown in the reader's language, quantities already at the day's portion.
+    for (const ing of ingredientsFor(meal, getLang(), m.scale)) {
       const key = ing.item.toLowerCase();
       const cur = map.get(key) ?? { item: ing.item, qty: [] };
-      if (ing.qty) cur.qty.push(m.scale === 1 ? ing.qty : `${ing.qty} ×${m.scale}`);
+      if (ing.qty) cur.qty.push(ing.qty);
       map.set(key, cur);
     }
   }
   return [...map.values()].sort((a, b) => a.item.localeCompare(b.item));
 }
 
+/** A meal's name in one language (display only). */
+const nameIn = (id: string, lang: "fr" | "en") => { const m = getMeal(id); return m ? mealName(m, lang) : undefined; };
+
 export function nudgesFor(day: NutritionDay, session: Session | null, tomorrow?: NutritionDay) {
   const out: { time: string; title: string; body: string }[] = [];
   const pre = day.meals.find((m) => m.slot === "pre");
   const post = day.meals.find((m) => m.slot === "post");
-  if (pre && session) out.push({ time: pre.time, title: tr(`${loc(session.title, "fr")} dans 90 min`, `${loc(session.title, "en")} in 90 min`), body: tr(`Mange maintenant : ${getMeal(pre.mealId)?.name}. Des glucides avant, des protéines après.`, `Eat now: ${getMeal(pre.mealId)?.name}. Carbs before, protein after.`) });
-  if (post && session) out.push({ time: post.time, title: tr("Séance finie — fenêtre protéines", "Session done — protein window"), body: tr(`${getMeal(post.mealId)?.name} : ~30 g de protéines dans l’heure.`, `${getMeal(post.mealId)?.name}: ~30 g protein within the hour.`) });
+  if (pre && session) out.push({ time: pre.time, title: tr(`${loc(session.title, "fr")} dans 90 min`, `${loc(session.title, "en")} in 90 min`), body: tr(`Mange maintenant : ${nameIn(pre.mealId, "fr")}. Des glucides avant, des protéines après.`, `Eat now: ${nameIn(pre.mealId, "en")}. Carbs before, protein after.`) });
+  if (post && session) out.push({ time: post.time, title: tr("Séance finie — fenêtre protéines", "Session done — protein window"), body: tr(`${nameIn(post.mealId, "fr")} : ~30 g de protéines dans l’heure.`, `${nameIn(post.mealId, "en")}: ~30 g protein within the hour.`) });
   const lunch = day.meals.find((m) => m.slot === "lunch");
-  if (lunch) out.push({ time: lunch.time, title: tr("Dîner", "Lunch"), body: `${getMeal(lunch.mealId)?.name} · ${Math.round((getMeal(lunch.mealId)?.kcal ?? 0) * lunch.scale)} kcal` });
+  if (lunch) out.push({ time: lunch.time, title: tr("Dîner", "Lunch"), body: tr(`${nameIn(lunch.mealId, "fr")} · ${Math.round((getMeal(lunch.mealId)?.kcal ?? 0) * lunch.scale)} kcal`, `${nameIn(lunch.mealId, "en")} · ${Math.round((getMeal(lunch.mealId)?.kcal ?? 0) * lunch.scale)} kcal`) });
   if (tomorrow && tomorrow.dayType !== day.dayType) {
     const up = tomorrow.targets.kcal > day.targets.kcal;
     out.push({ time: "20:30", title: tr(`Demain : ${dayTypeLabel(tomorrow.dayType).toLowerCase()}`, `Tomorrow: ${tomorrow.dayType} day`), body: tr(`Calories ${up ? "à la hausse" : "à la baisse"} : ${tomorrow.targets.kcal}. Épicerie à jour.`, `Calories ${up ? "up" : "down"} to ${tomorrow.targets.kcal}. Groceries updated.`) });

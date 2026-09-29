@@ -1,3 +1,4 @@
+import { trendSeries } from "./nutrition/coach";
 import { addDays, db, getStats, getProfile, isoWeek, todayISO } from "./db";
 import { challengesFor, unpaid } from "./challenges";
 import { XP, levelFromXp, evaluateBadges } from "./gamification";
@@ -255,8 +256,13 @@ export async function unshareActivity(id: string) {
 export async function logWeighIn(kg: number, date: string) {
   await db.weights.put({ id: date, date, kg, dirty: 1, updatedAt: new Date().toISOString() });
   const p = await getProfile();
+  // The plan runs on the trend, not the morning's reading: one salty dinner is
+  // a kilo on the scale and no fat at all. With three weigh-ins or more the
+  // smoothed weight is what calories and loads follow.
+  const series = trendSeries(await db.weights.orderBy("date").toArray());
+  const trend = series.length >= 3 ? Math.round(series[series.length - 1].trend * 10) / 10 : kg;
   // The first weigh-in of an older profile becomes its start line.
-  if (p) await db.profile.update(p.id, { weightKg: kg, ...(p.startWeightKg == null ? { startWeightKg: p.weightKg } : {}), dirty: 1 });
+  if (p) await db.profile.update(p.id, { weightKg: trend, ...(p.startWeightKg == null ? { startWeightKg: p.weightKg } : {}), dirty: 1 });
   const stats = await getStats();
   // Once a day: re-entering the weight is a correction, not another reward.
   const xp = payOnce(stats, date, "weighin") ? XP.weighIn : 0;

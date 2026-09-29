@@ -9,7 +9,8 @@ import { useT, useLang } from "@/lib/i18n";
 import type { MealSlot } from "@/lib/types";
 import { getMeal } from "@/lib/nutrition/recipes";
 import { awardMeal } from "@/lib/progress";
-import { fmtDuration, localizeCooking } from "@/lib/units";
+import { fmtDuration } from "@/lib/units";
+import { localizeMeal } from "@/lib/nutrition/cookbook";
 import { Screen, Hero, Section, Empty, Check, Toast, ScreenSkeleton } from "@/components/ui";
 import { Page, Stagger, Item, Press, Ring, motion, AnimatePresence } from "@/components/motion";
 
@@ -53,7 +54,8 @@ function Recipe() {
   }, [running]);
 
   if (!meal) return <Screen><Empty title={tx("Recette introuvable", "Recipe not found")} body={tx("Cette recette n’est pas dans la collection.", "This recipe isn’t in the collection.")} cta={tx("Retour à la bouffe", "Back to food")} href="/food" /></Screen>;
-  const minutesIn = (s: string) => { const m = s.match(/(\d+(?:\.\d+)?)\s*min/); return m ? Math.round(Number(m[1]) * 60) : (s.match(/(\d+)\s*s\b/) ? Number(s.match(/(\d+)\s*s\b/)![1]) : null); };
+  // Everything shown below in the reader's language, quantities at this portion, temperatures in both scales.
+  const view = localizeMeal(meal, lang, { scale, units: profile?.units });
 
   async function logIt() {
     if (!day || !planned) { router.push("/food"); return; }
@@ -69,7 +71,7 @@ function Recipe() {
   return (
     <Page>
       <Screen>
-        <Hero image={meal.image} color height="h-[400px]" back="/food" eyebrow={[meal.cuisine ?? tx("Recette", "Recipe"), `${meal.minutes} min`, ...meal.slot.filter((sl) => sl.toLowerCase() !== (meal.cuisine ?? "").toLowerCase()).map((sl) => (lang === "fr" && SLOT_LABEL[sl as MealSlot] ? SLOT_LABEL[sl as MealSlot].fr : sl))].join(" · ")} title={<>{meal.name}</>}>
+        <Hero image={meal.image} color height="h-[400px]" back="/food" eyebrow={[view.cuisine ?? tx("Recette", "Recipe"), `${meal.minutes} min`, ...meal.slot.filter((sl) => sl.toLowerCase() !== (meal.cuisine ?? "").toLowerCase()).map((sl) => (lang === "fr" && SLOT_LABEL[sl as MealSlot] ? SLOT_LABEL[sl as MealSlot].fr : sl))].join(" · ")} title={<>{view.name}</>}>
           <div className="flex flex-wrap gap-1.5 mt-3">
             <span className="chip chip--volt tnum">{Math.round(meal.kcal * scale)} kcal</span>
             <span className="chip chip--live backdrop-blur-md tnum">{tx("Protéines", "Protein")} {Math.round(meal.protein * scale)} g</span>
@@ -106,21 +108,21 @@ function Recipe() {
                     <li className="flex gap-3"><span className="w-1.5 h-1.5 rounded-full bg-volt mt-2 shrink-0" /><span><strong className="tnum">{Math.round(kcal)} kcal</strong> — {lang === "fr" ? `${Math.round((kcal / t.kcal) * 100)} % de tes ${t.kcal} kcal, portion ×${scale} pour ce repas.` : `${Math.round((kcal / t.kcal) * 100)}% of your ${t.kcal} kcal, sized ×${scale} for this slot.`}</span></li>
                     <li className="flex gap-3"><span className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${sugar <= sugarShare ? "bg-volt" : "bg-danger"}`} /><span><strong className="tnum">{Math.round(sugar)} g {tx("de sucre", "sugar")}</strong> — {lang === "fr" ? `${sugar <= sugarShare ? "dans" : "au-dessus de"} ta part par repas de ${sugarShare} g (${t.sugarMax} g max par jour).${meal.fiber ? ` ${Math.round(meal.fiber * scale)} g de fibres.` : ""}` : `${sugar <= sugarShare ? "inside" : "over"} your per-meal share of ${sugarShare} g (${t.sugarMax} g a day max).${meal.fiber ? ` ${Math.round(meal.fiber * scale)} g fiber.` : ""}`}</span></li>
                   </ul>
-                  {meal.tip && <p className="text-sm text-smoke border-t border-line pt-3">{localizeCooking(meal.tip, profile.units)}</p>}
+                  {view.tip && <p className="text-sm text-smoke border-t border-line pt-3">{view.tip}</p>}
                 </div>
               </Item>
             );
           })()}
-          {(!profile || !day || !planned) && meal.tip && <Item><div className="card p-4 mb-6 flex gap-3"><span className="display text-volt text-2xl">!</span><p className="text-sm">{localizeCooking(meal.tip, profile?.units ?? "kg")}</p></div></Item>}
+          {(!profile || !day || !planned) && view.tip && <Item><div className="card p-4 mb-6 flex gap-3"><span className="display text-volt text-2xl">!</span><p className="text-sm">{view.tip}</p></div></Item>}
 
           <Item>
-            <Section title={tx("Ingrédients", "Ingredients")} aside={<span className="text-xs text-smoke">{Object.values(have).filter(Boolean).length}/{meal.ingredients.length} {tx("prêts", "ready")}</span>}>
+            <Section title={tx("Ingrédients", "Ingredients")} aside={<span className="text-xs text-smoke">{Object.values(have).filter(Boolean).length}/{view.ingredients.length} {tx("prêts", "ready")}</span>}>
               <ul className="card divide-y divide-line px-4">
-                {meal.ingredients.map((ing, i) => (
-                  <li key={ing.item} className="py-3 flex items-center gap-3 text-sm">
+                {view.ingredients.map((ing, i) => (
+                  <li key={`${i}-${ing.item}`} className="py-3 flex items-center gap-3 text-sm">
                     <Check on={!!have[i]} onToggle={() => setHave({ ...have, [i]: !have[i] })} label={ing.item} />
                     <span className={`flex-1 ${have[i] ? "line-through text-smoke" : ""}`}>{ing.item}</span>
-                    <span className="text-xs text-smoke tnum">{ing.qty ? (scale !== 1 ? `${ing.qty} ×${scale}` : ing.qty) : ""}</span>
+                    <span className="text-xs text-smoke tnum text-right">{ing.qty}</span>
                   </li>
                 ))}
               </ul>
@@ -130,26 +132,34 @@ function Recipe() {
           <Item>
             <Section title={tx("Préparation", "Method")}>
               <ol className="grid gap-3">
-                {meal.steps.map((s, i) => { const sec = minutesIn(s); return (
-                  <li key={s} className="card p-4 flex gap-4"><span className="display text-2xl text-volt tnum w-7">{i + 1}</span><div className="grid gap-1 flex-1"><p className="text-sm">{localizeCooking(s, profile?.units ?? "kg")}</p>{sec && <span className="chip justify-self-start">⏱ {fmtDuration(sec)}</span>}</div></li>); })}
+                {view.steps.map(({ text, sec }, i) => (
+                  <li key={i} className="card p-4 flex gap-4"><span className="display text-2xl text-volt tnum w-7">{i + 1}</span><div className="grid gap-1 flex-1"><p className="text-sm">{text}</p>{sec ? <span className="chip justify-self-start">⏱ {fmtDuration(sec)}</span> : null}</div></li>))}
               </ol>
             </Section>
           </Item>
+
+          {view.storage && (
+            <Item>
+              <Section title={tx("Portions et conservation", "Portions & storage")}>
+                <p className="card p-4 text-sm">{view.storage}</p>
+              </Section>
+            </Item>
+          )}
         </Stagger>
 
         <AnimatePresence>{cook && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-ink text-bone flex flex-col">
             <div className="flex items-center justify-between px-5 pt-[calc(var(--safe-top)+16px)] pb-3">
               <button type="button" className="chip chip--live" onClick={() => { setCook(false); setTimer(null); }}>✕ {tx("Fermer", "Close")}</button>
-              <span className="meta">{tx("Étape", "Step")} {step + 1} / {meal.steps.length}</span>
+              <span className="meta">{tx("Étape", "Step")} {step + 1} / {view.steps.length}</span>
               <span className="chip">{meal.minutes} min</span>
             </div>
-            <div className="px-5"><div className="bar"><motion.i animate={{ width: `${((step + 1) / meal.steps.length) * 100}%` }} /></div></div>
+            <div className="px-5"><div className="bar"><motion.i animate={{ width: `${((step + 1) / view.steps.length) * 100}%` }} /></div></div>
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="flex-1 grid content-center gap-6 px-6">
                 <span className="numeral text-volt">{step + 1}</span>
-                <p className="cook-step">{localizeCooking(meal.steps[step], profile?.units ?? "kg")}</p>
-                {(() => { const sec = minutesIn(meal.steps[step]); if (!sec) return null; return (
+                <p className="cook-step">{view.steps[step]?.text}</p>
+                {(() => { const sec = view.steps[step]?.sec; if (!sec) return null; return (
                   <div className="flex items-center gap-4">
                     <Ring value={timerTotal ? 1 - (timer ?? timerTotal) / timerTotal : 0} size={88} stroke={7} color={timer === 0 ? "var(--danger)" : "var(--volt)"}><span className="text-sm font-semibold tnum">{fmtDuration(timer ?? sec)}</span></Ring>
                     {timer == null || timer === 0 ? <button type="button" className="pill pill--bone" onClick={() => { setTimerTotal(sec); setTimer(sec); }}>{timer === 0 ? tx("Fini — recommencer", "Done — restart") : tx("Lancer le minuteur", "Start timer")}</button> : <button type="button" className="pill" onClick={() => setTimer(null)}>{tx("Arrêter", "Stop")}</button>}
@@ -158,7 +168,7 @@ function Recipe() {
             </AnimatePresence>
             <div className="flex gap-3 p-5 pb-[calc(var(--safe-bottom)+20px)]">
               <button type="button" className="pill flex-1" disabled={step === 0} onClick={() => { setStep(step - 1); setTimer(null); }}>{tx("Retour", "Back")}</button>
-              {step < meal.steps.length - 1 ? <button type="button" className="pill pill--volt flex-1" onClick={() => { setStep(step + 1); setTimer(null); }}>{tx("Étape suivante", "Next step")}</button> : <button type="button" className="pill pill--volt flex-1" onClick={() => { setCook(false); logIt(); }}>{tx("Servir et noter", "Plate & log")}</button>}
+              {step < view.steps.length - 1 ? <button type="button" className="pill pill--volt flex-1" onClick={() => { setStep(step + 1); setTimer(null); }}>{tx("Étape suivante", "Next step")}</button> : <button type="button" className="pill pill--volt flex-1" onClick={() => { setCook(false); logIt(); }}>{tx("Servir et noter", "Plate & log")}</button>}
             </div>
           </motion.div>
         )}</AnimatePresence>

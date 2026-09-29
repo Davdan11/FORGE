@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, todayISO, addDays } from "@/lib/db";
 import { getMeal, recipeCount } from "@/lib/nutrition/recipes";
+import { mealName, mealTitle } from "@/lib/nutrition/cookbook";
 import { buildNutritionDay, dayTotals, eatenTotals, groceryList, swapOptions, dailyTargets, retuneDay, DAY_TYPE_LABEL, SLOT_LABEL, NOTE_LABEL } from "@/lib/nutrition/engine";
 import { useT, useLang, locale } from "@/lib/i18n";
 import { NumbersExplained } from "@/components/NumbersExplained";
@@ -15,6 +16,8 @@ import { Page, Stagger, Item, Press, Ring, CountUp, motion, AnimatePresence } fr
 import type { DayPlanMeal, Meal, NutritionDay } from "@/lib/types";
 
 const enc = (id: string) => encodeURIComponent(id);
+/** A planned meal's name in one language (the toast carries both and picks one). */
+const nameOf = (id: string, lang: "fr" | "en") => { const m = getMeal(id); return m ? mealName(m, lang) : ""; };
 /** The goal as a French reader sees it; English shows the key as before. */
 const GOAL_FR: Record<string, string> = { strength: "force", build: "prise de masse", recomp: "recompo", cut: "sèche", endurance: "endurance", perform: "performance" };
 
@@ -55,7 +58,7 @@ export default function FoodPage() {
   async function toggleDone(m: DayPlanMeal) {
     const meals = day!.meals.map((x) => (x === m ? { ...x, done: !x.done } : x));
     await db.nutrition.update(day!.id, { meals, dirty: 1 });
-    if (!m.done) { const full = meals.every((x) => x.done); const xp = await awardMeal(full, day!.meals.indexOf(m), day!.date); setToast(t(`${getMeal(m.mealId)?.name} : noté.${xp ? ` +${xp} XP` : ""}${full && xp > 15 ? " — journée complète, bonus!" : ""}`, `${getMeal(m.mealId)?.name} logged.${xp ? ` +${xp} XP` : ""}${full && xp > 15 ? " — full day, bonus!" : ""}`)); setTimeout(() => setToast(null), 3000); }
+    if (!m.done) { const full = meals.every((x) => x.done); const xp = await awardMeal(full, day!.meals.indexOf(m), day!.date); setToast(t(`${nameOf(m.mealId, "fr")} : noté.${xp ? ` +${xp} XP` : ""}${full && xp > 15 ? " — journée complète, bonus!" : ""}`, `${nameOf(m.mealId, "en")} logged.${xp ? ` +${xp} XP` : ""}${full && xp > 15 ? " — full day, bonus!" : ""}`)); setTimeout(() => setToast(null), 3000); }
   }
   function openSwap(m: DayPlanMeal) { setSwapFor(m); setSwaps(swapOptions(profile!, day!, m)); }
   async function doSwap(to: string) {
@@ -91,7 +94,7 @@ export default function FoodPage() {
     <Page>
       <Screen>
         <Hero image={next && hero?.image ? hero.image : ART.food} color height="h-[360px]" eyebrow={`${L(DAY_TYPE_LABEL[day.dayType])} · ${day.targets.kcal.toLocaleString(locale())} kcal · ${day.targets.protein} g ${t("de protéines", "protein")}`}
-          title={next ? <>{t("À venir", "Next up")}<br /><em>{hero?.name.split(" with ")[0]}</em></> : lang === "fr" ? <>Journée <em>complétée.</em></> : <>Day <em>complete.</em></>}
+          title={next ? <>{t("À venir", "Next up")}<br /><em>{hero ? mealTitle(hero, lang)[0] : ""}</em></> : lang === "fr" ? <>Journée <em>complétée.</em></> : <>Day <em>complete.</em></>}
           right={<Seg value={tab} onChange={setTab} options={[{ v: "today", label: t("Aujourd’hui", "Today") }, { v: "groceries", label: t("Épicerie", "Groceries") }]} />}>
           {next && hero && <div className="flex items-center gap-2 mt-3 flex-wrap"><span className="chip chip--live backdrop-blur-md">{next.time}</span><span className="chip chip--live backdrop-blur-md tnum">{Math.round(hero.kcal * next.scale)} kcal</span><span className="chip chip--live backdrop-blur-md">{hero.minutes} min</span><Link href={`/food/meal?id=${enc(hero.id)}&date=${day.date}`} className="pill pill--sm pill--volt ml-auto">{t("Cuisiner", "Cook")}</Link></div>}
         </Hero>
@@ -141,8 +144,8 @@ export default function FoodPage() {
                             <Photo src={meal.image} color veil className="absolute inset-0" />
                             <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5 grid gap-1">
                               <span className="meta text-bone/80">{m.note ? <span className="font-bold" style={{ color: "#ff3d82" }}>{NOTE_LABEL[m.note] ? L(NOTE_LABEL[m.note]) : m.note}</span> : t(SLOT_LABEL[m.slot].fr, m.slot === "pre" ? "Pre-workout" : m.slot === "post" ? "Recovery" : m.slot)}{m.scale !== 1 ? ` · ×${m.scale}` : ""} · {meal.minutes} min</span>
-                              <span className="display text-2xl lg:text-3xl leading-[.95]">{meal.name.split(" with ")[0]}</span>
-                              {meal.name.includes(" with ") && <span className="text-sm text-bone/85">{t("avec", "with")} {meal.name.split(" with ")[1]}</span>}
+                              <span className="display text-2xl lg:text-3xl leading-[.95]">{mealTitle(meal, lang)[0]}</span>
+                              {mealTitle(meal, lang)[1] && <span className="text-sm text-bone/85">{mealTitle(meal, lang)[1]}</span>}
                             </div>
                           </Link>
                           <div className="grid grid-cols-4 divide-x divide-line border-t border-line text-center tnum">
@@ -168,7 +171,7 @@ export default function FoodPage() {
                   <div className="flex justify-between items-baseline"><span className="meta">{lang === "fr" ? `Meilleurs choix · ${SLOT_LABEL[swapFor.slot].fr.toLowerCase()} · ${GOAL_FR[profile.goal] ?? profile.goal}` : <>Best fits for your {swapFor.slot} · {profile.goal}</>}</span><button type="button" className="text-xs text-smoke underline" onClick={() => setSwaps(swapOptions(profile, day, swapFor))}>{t("Mélanger", "Shuffle")}</button></div>
                   {swaps.map((m) => (
                     <button key={m.id} type="button" className="flex items-center gap-3 p-2 rounded-xl border border-line text-left" onClick={() => { const c = { ...checked }; delete c[m.id]; setChecked(c); doSwap(m.id); }}>
-                      <Photo src={m.image} color className="thumb !w-12 !h-12" /><span className="flex-1 text-sm font-medium leading-tight">{m.name}</span><span className="text-xs text-smoke tnum text-right">{m.kcal} kcal<br />{m.protein} P · {m.sugar} S</span>
+                      <Photo src={m.image} color className="thumb !w-12 !h-12" /><span className="flex-1 text-sm font-medium leading-tight">{mealName(m, lang)}</span><span className="text-xs text-smoke tnum text-right">{m.kcal} kcal<br />{m.protein} P · {m.sugar} S</span>
                     </button>
                   ))}
                   <div className="flex justify-between"><Link href={`/food/browse?slot=${swapFor.slot}&date=${day.date}`} className="text-xs underline text-smoke">{t("Tout parcourir", "Browse all")}</Link><button type="button" className="text-xs text-smoke underline" onClick={() => setSwapFor(null)}>{t("Annuler", "Cancel")}</button></div>
@@ -193,7 +196,7 @@ export default function FoodPage() {
               {week.length > 1 && (
                 <Section title={t("La semaine", "The week")}>
                   <div className="grid gap-2">{week.map((d) => { const first = getMeal(d.meals[0]?.mealId); return (
-                    <div key={d.id} className="card flex items-center gap-3 p-2">{first && <Photo src={first.image} color className="thumb" />}<div className="flex-1 min-w-0"><p className="text-sm font-medium">{new Date(d.date + "T00:00:00").toLocaleDateString(locale(), { weekday: "long" })}</p><p className="text-xs text-smoke truncate">{lang === "fr" ? L(DAY_TYPE_LABEL[d.dayType]).toLowerCase() : `${d.dayType} day`} · {d.meals.map((m) => getMeal(m.mealId)?.name.split(/ with | and |,/)[0]).slice(0, 3).join(" · ")}</p></div><span className="tnum text-xs text-smoke">{d.targets.kcal}</span></div>); })}</div>
+                    <div key={d.id} className="card flex items-center gap-3 p-2">{first && <Photo src={first.image} color className="thumb" />}<div className="flex-1 min-w-0"><p className="text-sm font-medium">{new Date(d.date + "T00:00:00").toLocaleDateString(locale(), { weekday: "long" })}</p><p className="text-xs text-smoke truncate">{lang === "fr" ? L(DAY_TYPE_LABEL[d.dayType]).toLowerCase() : `${d.dayType} day`} · {d.meals.map((m) => { const x = getMeal(m.mealId); return x ? mealTitle(x, lang)[0].split(/ and | et |,/)[0] : undefined; }).slice(0, 3).join(" · ")}</p></div><span className="tnum text-xs text-smoke">{d.targets.kcal}</span></div>); })}</div>
                 </Section>
               )}
             </motion.div>

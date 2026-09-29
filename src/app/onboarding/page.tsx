@@ -9,6 +9,7 @@ import { generatePlan } from "@/lib/engine/plan";
 import { adaptationsFor } from "@/lib/engine/injury";
 import { buildNutritionDay, dailyTargets } from "@/lib/nutrition/engine";
 import { NumbersExplained } from "@/components/NumbersExplained";
+import { checkTarget, goalTimeline } from "@/lib/nutrition/coach";
 import { lbToKg, localeUnits } from "@/lib/units";
 import { APP_NAME, HEALTH_NOTICE, MIN_AGE, minimumAge } from "@/lib/brand";
 import { SPORTS } from "@/lib/data/sports";
@@ -91,6 +92,8 @@ export default function Onboarding() {
   const height = heightIn ?? (units.weight === "lb" ? 69 : 175);
   const weight = weightIn ?? (units.weight === "lb" ? 172 : 78);
   const [goal, setGoal] = useState<Goal>("build");
+  // Optional: the weight aimed for, in the units shown. Blank = no finish line yet.
+  const [targetIn, setTargetIn] = useState("");
   const [level, setLevel] = useState<Level>("intermediate");
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
@@ -165,6 +168,7 @@ export default function Onboarding() {
       baselines: {}, lifestyle,
       dietary, avoidFoods, mealsPerDay, wakeTime, trainTime, notifications: false, healthNoticeAt: new Date().toISOString(), consentAt: new Date().toISOString(), createdAt: new Date().toISOString(),
       startWeightKg: units.weight === "lb" ? lbToKg(weight) : weight,
+      ...(targetKg && targetCheck?.ok ? { targetWeightKg: Math.round(targetKg * 10) / 10 } : {}),
     };
     const injuries = adaptationsFor(await db.injuries.toArray(), todayISO());
     const { plan, sessions } = bilingual(() => generatePlan(profile, todayISO(), {}, injuries));
@@ -189,6 +193,11 @@ export default function Onboarding() {
   }
 
   const unitW = units.weight;
+  const weightKgNow = units.weight === "lb" ? lbToKg(weight) : weight;
+  const heightCmNow = units.weight === "lb" ? height * 2.54 : height;
+  const targetNum = Number(targetIn.replace(",", "."));
+  const targetKg = (goal === "cut" || goal === "recomp" || goal === "build") && targetNum > 0 ? (units.weight === "lb" ? lbToKg(targetNum) : targetNum) : null;
+  const targetCheck = targetKg ? checkTarget({ goal, weightKg: weightKgNow, heightCm: heightCmNow }, targetKg) : null;
   const unitH = units.weight === "lb" ? "in" : "cm";
   const variants = { enter: (d: number) => ({ opacity: 0, x: d * 40 }), center: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: d * -40 }) };
 
@@ -310,6 +319,18 @@ export default function Onboarding() {
                 </button>
               ))}
             </div>
+            {(goal === "cut" || goal === "recomp" || goal === "build") && (
+              <div className="grid gap-1.5">
+                <label className="field"><span className="meta">{t("Poids visé (optionnel)", "Target weight (optional)")} ({unitW})</span><input className="input tnum" type="number" inputMode="decimal" value={targetIn} onChange={(e) => setTargetIn(e.target.value)} placeholder={goal === "build" ? String(Math.round(weight * 1.05)) : String(Math.round(weight * 0.92))} /></label>
+                {targetCheck && !targetCheck.ok && <p className="text-xs text-danger">{lang === "fr" ? targetCheck.fr : targetCheck.en}</p>}
+                {targetCheck?.ok && targetKg && (() => {
+                  const draft = { id: "draft", name, sex, age, units, goal, level, heightCm: heightCmNow, weightKg: weightKgNow, daysPerWeek: days, sessionMinutes: minutes, equipment: [], pain: [], baselines: {}, lifestyle, dietary, mealsPerDay, wakeTime, trainTime, notifications: false, createdAt: new Date().toISOString(), startWeightKg: weightKgNow, targetWeightKg: targetKg } as Profile;
+                  const tl = goalTimeline(draft, todayISO());
+                  if (!tl) return null;
+                  return <p className="text-sm">{t("Environ", "About")} <strong className="tnum">{tl.weeks} {t("semaines", "weeks")}</strong> · {t("arrivée vers le", "arriving around")} <strong>{new Date(tl.date + "T12:00:00").toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" })}</strong>. <span className="text-smoke">{t("Un rythme qui garde ton muscle. Ton coach ajuste chaque semaine selon ta balance.", "A pace that keeps your muscle. Your coach adjusts every week from your scale.")}</span></p>;
+                })()}
+              </div>
+            )}
             {goal === "perform" && <div className="grid grid-cols-2 gap-3"><label className="field"><span className="meta">{t("Événement", "Event")}</span><input className="input" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder={t("Hyrox, marathon…", "Hyrox, marathon…")} /></label><label className="field"><span className="meta">{t("Date", "Date")}</span><input className="input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} /></label></div>}
             <RadioField label={t("Depuis combien de temps tu t’entraînes?", "How long have you been training?")} value={level} onChange={setLevel} options={[{ v: "new", label: t("Je commence", "Just starting") }, { v: "intermediate", label: t("1–3 ans", "1–3 years") }, { v: "advanced", label: t("3 ans et +", "3+ years") }]} />
             <p className="text-sm text-smoke">{t("Ton objectif fixe tes calories, tes reps et combien de cardio accompagne la muscu. Change-le n’importe quand et ton plan suit.", "Your goal sets your calories, your reps and how much cardio goes with the lifting. Change it any time and your plan updates.")}</p>
