@@ -4,6 +4,7 @@ import { Guard } from "@/components/Guard";
 import { LevelUpWatcher } from "@/components/LevelUp";
 import { XpBurst } from "@/components/XpBurst";
 import { BadgeUnlocked } from "@/components/BadgeUnlocked";
+import { WatchFeedSync } from "@/components/WatchPanel";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +15,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <XpBurst />
       <BadgeUnlocked />
       <LevelUpWatcher />
+      {/* Keeps the Garmin watch's FORGE screens current (no-op until a watch is paired). */}
+      <WatchFeedSync />
     </Guard>
   );
 }

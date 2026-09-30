@@ -31,6 +31,7 @@ import { AREAS, AVOID, DIETS, DEFAULT_LIFESTYLE, HOME_KIT, PLACES, SLEEP, STRESS
 import { buildNutritionDay } from "@/lib/nutrition/engine";
 import type { Goal, PainArea, Profile } from "@/lib/types";
 import { HealthPanel } from "@/components/HealthPanel";
+import { WatchPanel } from "@/components/WatchPanel";
 
 const GOALS: { v: Goal; name: { fr: string; en: string }; image: string }[] = [
   { v: "strength", name: { fr: "Devenir fort", en: "Get strong" }, image: sessionImage("lower", 400, 400) },
@@ -227,6 +228,10 @@ export default function SettingsPage() {
               <Section title={t("Apps connectées", "Connected apps")}>
                 <HealthPanel />
               </Section>
+            </Item>
+
+            <Item>
+              <WatchPanel />
             </Item>
 
             <Item>
