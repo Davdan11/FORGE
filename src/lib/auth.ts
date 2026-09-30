@@ -24,7 +24,7 @@ import { tr } from "./i18n";
    On the web the provider redirects to /auth/callback instead.
    ───────────────────────────────────────────────────────────── */
 
-export type Provider = "google" | "apple";
+export type Provider = "google" | "apple" | "facebook";
 
 /** Must match the scheme in AndroidManifest.xml and Info.plist, and be listed
  *  under Authentication → URL Configuration → Redirect URLs in Supabase. */
@@ -58,8 +58,8 @@ export async function signInWith(provider: Provider) {
       redirectTo: native ? NATIVE_CALLBACK : `${window.location.origin}/auth/callback/`,
       // In the shell we open the URL ourselves, in the system browser.
       skipBrowserRedirect: native,
-      // Apple only sends the name on the very first sign-in, and only if asked.
-      scopes: provider === "apple" ? "name email" : undefined,
+      // Apple only sends the name on the very first sign-in, and only if asked; Facebook needs the email asked for.
+      scopes: provider === "apple" ? "name email" : provider === "facebook" ? "email public_profile" : undefined,
     },
   });
   if (error) throw error;
@@ -181,15 +181,15 @@ export async function deleteAccount(): Promise<string | null> {
 
 /** Which sign-in methods the Supabase project has switched on (its public settings). Cached for the session:
  *  the account panel only shows what works, instead of buttons that answer "not enabled". */
-export type AuthMethods = { apple: boolean; google: boolean; phone: boolean; email: boolean };
+export type AuthMethods = { apple: boolean; google: boolean; facebook: boolean; phone: boolean; email: boolean };
 let methodsCache: Promise<AuthMethods> | null = null;
 export function authMethods(): Promise<AuthMethods> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const fallback: AuthMethods = { apple: false, google: false, phone: false, email: true };
+  const fallback: AuthMethods = { apple: false, google: false, facebook: false, phone: false, email: true };
   if (!url || !key) return Promise.resolve(fallback);
   methodsCache ??= fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })
     .then((r) => (r.ok ? r.json() : null))
-    .then((d: { external?: Record<string, boolean> } | null) => d?.external ? { apple: !!d.external.apple, google: !!d.external.google, phone: !!d.external.phone, email: d.external.email !== false } : fallback)
+    .then((d: { external?: Record<string, boolean> } | null) => d?.external ? { apple: !!d.external.apple, google: !!d.external.google, facebook: !!d.external.facebook, phone: !!d.external.phone, email: d.external.email !== false } : fallback)
     .catch(() => fallback);
   return methodsCache;
 }

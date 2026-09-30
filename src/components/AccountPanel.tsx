@@ -86,7 +86,8 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
       {/* Only the ways the project has switched on (see authMethods): no button that answers "not enabled". */}
       {methods?.apple && <button type="button" className="pill pill--block !bg-ink !text-bone !border-ink gap-3" disabled={!!busy} onClick={() => provider("apple")}><AppleMark />{busy === "apple" ? t("Ouverture d’Apple…", "Opening Apple…") : t("Continuer avec Apple", "Continue with Apple")}</button>}
       {methods?.google && <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button>}
-      {!methods || (!methods.apple && !methods.google && !methods.phone)
+      {methods?.facebook && <button type="button" className="pill pill--block !bg-[#1877F2] !text-white !border-[#1877F2] gap-3" disabled={!!busy} onClick={() => provider("facebook")}><FacebookMark />{busy === "facebook" ? t("Ouverture de Facebook…", "Opening Facebook…") : t("Continuer avec Facebook", "Continue with Facebook")}</button>}
+      {!methods || (!methods.apple && !methods.google && !methods.facebook && !methods.phone)
         ? <Press><button type="button" className="pill pill--volt pill--block" onClick={() => { setError(null); setStep({ kind: "email" }); }}>{t("Continuer avec mon courriel", "Continue with my email")}</button></Press>
         : <div className={`grid gap-2 ${methods?.phone ? "grid-cols-2" : ""}`}>
             {methods?.phone && <button type="button" className="pill" onClick={() => { setError(null); setStep({ kind: "phone" }); }}>{t("Numéro de téléphone", "Phone number")}</button>}
@@ -112,6 +113,9 @@ function friendly(e: unknown): string {
 /* Brand marks as their sign-in guidelines ask them to be shown. */
 function AppleMark() {
   return <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true"><path d="M16.37 12.62c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.43-3.65-.02-.04 0-.02 0-.04ZM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.01.61-2.66 1.37-.58.67-1.09 1.75-.96 2.79 1.02.08 2.05-.51 2.68-1.27Z" /></svg>;
+}
+function FacebookMark() {
+  return <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true"><path fill="currentColor" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07Z" /></svg>;
 }
 function GoogleMark() {
   return (
