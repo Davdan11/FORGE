@@ -5,6 +5,8 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { authMethods, isEmail, normalisePhone, sendCode, signInWith, verifyCode, type AuthMethods, type Provider } from "@/lib/auth";
 import { Press } from "./motion";
+import { GoogleWebButton } from "./GoogleSignIn";
+import { isNativeShell } from "@/lib/native";
 import { tr, useT } from "@/lib/i18n";
 
 export const AUTH_ERROR_EVENT = "forge:autherror";
@@ -85,7 +87,7 @@ export function AccountPanel({ onSignedIn: onSignedInProp, compact = false }: { 
     <div className={`grid ${compact ? "gap-2" : "gap-3"}`}>
       {/* Only the ways the project has switched on (see authMethods): no button that answers "not enabled". */}
       {methods?.apple && <button type="button" className="pill pill--block !bg-ink !text-bone !border-ink gap-3" disabled={!!busy} onClick={() => provider("apple")}><AppleMark />{busy === "apple" ? t("Ouverture d’Apple…", "Opening Apple…") : t("Continuer avec Apple", "Continue with Apple")}</button>}
-      {methods?.google && <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button>}
+      {methods?.google && (isNativeShell() ? <button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button> : <GoogleWebButton onSignedIn={onSignedIn} onError={setError} fallback={<button type="button" className="pill pill--block !bg-white gap-3" disabled={!!busy} onClick={() => provider("google")}><GoogleMark />{busy === "google" ? t("Ouverture de Google…", "Opening Google…") : t("Continuer avec Google", "Continue with Google")}</button>} />)}
       {methods?.facebook && <button type="button" className="pill pill--block !bg-[#1877F2] !text-white !border-[#1877F2] gap-3" disabled={!!busy} onClick={() => provider("facebook")}><FacebookMark />{busy === "facebook" ? t("Ouverture de Facebook…", "Opening Facebook…") : t("Continuer avec Facebook", "Continue with Facebook")}</button>}
       {!methods || (!methods.apple && !methods.google && !methods.facebook && !methods.phone)
         ? <Press><button type="button" className="pill pill--volt pill--block" onClick={() => { setError(null); setStep({ kind: "email" }); }}>{t("Continuer avec mon courriel", "Continue with my email")}</button></Press>
