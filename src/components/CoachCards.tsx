@@ -117,7 +117,11 @@ export function WeeklyCheckIn() {
   if (!snap || !p) return null;
 
   const pick = async (a: Adherence) => { setAdherence(a); setPreview(await previewCheckIn(a)); };
-  const apply = async () => { if (!adherence) return; setSaved(await applyCheckIn(adherence)); setPreview(null); };
+  // The week’s own log suggests an answer; a tap on another one still wins.
+  const chosen = adherence ?? snap.suggested;
+  const apply = async () => { if (!chosen) return; setSaved(await applyCheckIn(chosen)); setPreview(null); };
+  const intake = snap.week.intake;
+  const eatenLine = (eaten: number, planned: number) => t(`Mangé en moyenne : ${eaten.toLocaleString(locale())} kcal/jour (plan : ${planned.toLocaleString(locale())})`, `Eaten on average: ${eaten.toLocaleString(locale())} kcal/day (plan: ${planned.toLocaleString(locale())})`);
   const shown = saved ?? preview;
 
   if (snap.dueIn > 0 && !shown) {
@@ -139,9 +143,11 @@ export function WeeklyCheckIn() {
           <p className="text-sm">{t("Honnêtement, cette semaine, t’as suivi ton plan de repas…", "Honestly, this week, you followed your meal plan…")}</p>
           <div className="grid grid-cols-3 gap-2">
             {([["all", t("Presque tout", "Nearly all")], ["most", t("La plupart", "Mostly")], ["some", t("Pas vraiment", "Not really")]] as [Adherence, string][]).map(([a, label]) => (
-              <button key={a} type="button" aria-pressed={adherence === a} className={`pill ${adherence === a ? "pill--volt" : ""}`} onClick={() => pick(a)}>{label}</button>
+              <button key={a} type="button" aria-pressed={chosen === a} className={`pill ${chosen === a ? "pill--volt" : ""}`} onClick={() => pick(a)}>{label}</button>
             ))}
           </div>
+          {intake && <p className="text-sm tnum">{eatenLine(Math.round(intake.eatenKcal / intake.days), Math.round(intake.plannedKcal / intake.days))} <span className="text-xs text-smoke">{t(`· sur ${intake.days} jour(s) noté(s)`, `· over ${intake.days} logged day(s)`)}</span></p>}
+          {!adherence && snap.suggested && <div className="flex items-center gap-3"><p className="text-xs text-smoke flex-1">{t("Réponse suggérée d’après tes repas notés. Change-la si elle ne colle pas.", "Answer suggested from the meals you logged. Change it if it does not fit.")}</p><Press><button type="button" className="pill pill--sm pill--volt" onClick={() => pick(snap.suggested!)}>{t("Voir le bilan", "See the check-in")}</button></Press></div>}
           <p className="text-xs text-smoke">{t("Aucune mauvaise réponse : le coach s’en sert pour savoir si c’est ton corps ou ta semaine qui a changé.", "No wrong answer: the coach uses it to tell whether your body or your week changed.")}</p>
         </>)}
         {shown && (<>
@@ -151,6 +157,7 @@ export function WeeklyCheckIn() {
             <li className="flex justify-between gap-3"><span className="text-smoke">{t("Rythme prévu", "Planned pace")}</span><strong className="tnum">{w.signed(shown.expectedPerWeekKg)} {t("/ sem.", "/ wk")}</strong></li>
             {shown.sessionsPlanned > 0 && <li className="flex justify-between gap-3"><span className="text-smoke">{t("Séances", "Sessions")}</span><strong className="tnum">{shown.sessionsDone} / {shown.sessionsPlanned}</strong></li>}
             {shown.mealsPlanned > 0 && <li className="flex justify-between gap-3"><span className="text-smoke">{t("Repas cochés", "Meals ticked")}</span><strong className="tnum">{shown.mealsDone} / {shown.mealsPlanned}</strong></li>}
+            {shown.eatenKcalAvg != null && shown.plannedKcalAvg != null && <li className="text-sm tnum">{eatenLine(shown.eatenKcalAvg, shown.plannedKcalAvg)}</li>}
           </ul>
           {!(shown.atFloor && shown.deltaKcal === 0) && <p className="text-sm">{lang === "fr" ? VERDICT[shown.verdict].fr : VERDICT[shown.verdict].en}</p>}
           {shown.atFloor && <p className="text-sm card p-3 bg-[rgba(255,46,120,.10)]"><strong>{t("Tes calories sont à ton plancher sécuritaire.", "Your calories are at your safe floor.")}</strong> {t("Manger encore moins te ferait perdre du muscle. Pour avancer plus vite, ajoute du mouvement : 30 à 45 min de marche par jour (≈ 150–250 kcal), ou une séance de cardio de plus par semaine.", "Eating even less would cost muscle. To move faster, add movement: a 30–45 min walk a day (≈ 150–250 kcal), or one more cardio session a week.")}</p>}

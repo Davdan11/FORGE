@@ -1,7 +1,9 @@
 import type { NutritionDay, Profile, Readiness, Session } from "./types";
-import { nudgesFor } from "./nutrition/engine";
+import { nudgesFor, SLOT_LABEL } from "./nutrition/engine";
+import { getMeal } from "./nutrition/recipes";
+import { mealTitle } from "./nutrition/cookbook";
 import { sessionTitle } from "./engine/plan";
-import { loc, tr } from "./i18n";
+import { getLang, loc, tr } from "./i18n";
 
 /* ─────────────────────────────────────────────────────────────
    Which reminders the athlete gets, and when.
@@ -77,11 +79,27 @@ export function remindersFor(profile: Profile, days: Day[], now: Date, extras: R
         url: `/session?id=${s.id}`,
       });
     }
-    // Meal nudges, from the day's own menu.
+    // Every meal still to eat, at its time: the dish, its portion's kcal and
+    // protein. Phones mirror these to a paired watch (Garmin, Apple Watch), so
+    // the wrist says what to eat; a tap opens the recipe with its photo.
     if (d.nutrition) {
-      for (const n of nudgesFor(d.nutrition, s ?? null)) {
-        out.push({ key: `meal:${d.date}:${n.time}:${n.title}`, at: at(d.date, n.time), title: n.title, body: n.body, url: "/food" });
+      const nudges = nudgesFor(d.nutrition, s ?? null);
+      for (const m of d.nutrition.meals) {
+        if (m.done) continue;
+        const meal = getMeal(m.mealId); if (!meal) continue;
+        const name = mealTitle(meal, getLang())[0];
+        const kcal = Math.round(meal.kcal * m.scale), protein = Math.round(meal.protein * m.scale);
+        const around = nudges.find((n) => n.time === m.time && (m.slot === "pre" || m.slot === "post"));
+        const slot = SLOT_LABEL[m.slot];
+        out.push({
+          key: `meal:${d.date}:${m.time}:${m.slot}`, at: at(d.date, m.time),
+          title: around ? around.title : tr(`${slot.fr} · ${m.time}`, `${slot.en} · ${m.time}`),
+          body: tr(`${name} — ${kcal} kcal · ${protein} g de protéines. Touche pour la recette.`, `${name} — ${kcal} kcal · ${protein} g protein. Tap for the recipe.`),
+          url: `/food/meal?id=${encodeURIComponent(m.mealId)}&date=${d.date}`,
+        });
       }
+      // The evening heads-up about tomorrow's calories.
+      for (const n of nudges) if (n.time === "20:30") out.push({ key: `meal:${d.date}:${n.time}:${n.title}`, at: at(d.date, n.time), title: n.title, body: n.body, url: "/food" });
     }
   }
   // Only what is still ahead, soonest first.

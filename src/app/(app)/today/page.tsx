@@ -337,24 +337,30 @@ function WeekStrip({ today, sessions, mon }: { today: string; sessions: Session[
 
 function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: (r: Readiness) => void }) {
   // Last night's sleep from the watch (Health Connect / Apple Health), when connected: the slider starts there.
-  const measured = healthToday()?.sleepMin;
+  const health = healthToday();
+  const measured = health?.sleepMin;
+  // The watch's recovery signals, read against this person's own normal (their last three weeks), not a population's.
+  const past = useLiveQuery(() => db.readiness.orderBy("date").reverse().limit(21).toArray(), []) ?? [];
+  const avg = (xs: number[]) => (xs.length >= 3 ? xs.reduce((a, b) => a + b, 0) / xs.length : undefined);
+  const baseHrv = avg(past.map((r) => r.hrv ?? 0).filter((x) => x > 0));
+  const baseRhr = avg(past.map((r) => r.restingHr ?? 0).filter((x) => x > 0));
   const [sleep, setSleep] = useState(() => (measured ? Math.min(11, Math.max(3, Math.round((measured / 60) * 2) / 2)) : 7));
   const [quality, setQuality] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [soreness, setSoreness] = useState<1 | 2 | 3 | 4 | 5>(2);
   const [stress, setStress] = useState<1 | 2 | 3 | 4 | 5>(2);
   const [mood, setMood] = useState<1 | 2 | 3 | 4 | 5>(4);
-  const [hrv, setHrv] = useState("");
+  const [hrv, setHrv] = useState(health?.hrvMs ? String(health.hrvMs) : "");
   const [minutes, setMinutes] = useState<number | undefined>(undefined);
   const [gear, setGear] = useState<Readiness["equipmentToday"]>("full");
   const [pain, setPain] = useState<PainArea[]>([]);
   const [open, setOpen] = useState(false);
   const t = useT();
-  const preview = readinessScore({ sleepHours: sleep, sleepQuality: quality, soreness, stress, mood });
+  const preview = readinessScore({ sleepHours: sleep, sleepQuality: quality, soreness, stress, mood, hrv: hrv ? Number(hrv) : undefined, restingHr: health?.restingHr }, baseHrv, baseRhr);
 
   async function submit() {
     const profile = await getProfile(); if (!profile) return;
-    const base = { sleepHours: sleep, sleepQuality: quality, soreness, stress, mood, hrv: hrv ? Number(hrv) : undefined, minutesAvailable: minutes, equipmentToday: gear, painToday: pain };
-    const r: Readiness = { id: todayISO(), date: todayISO(), ...base, score: readinessScore(base) };
+    const base = { sleepHours: sleep, sleepQuality: quality, soreness, stress, mood, hrv: hrv ? Number(hrv) : undefined, restingHr: health?.restingHr, minutesAvailable: minutes, equipmentToday: gear, painToday: pain };
+    const r: Readiness = { id: todayISO(), date: todayISO(), ...base, score: readinessScore(base, baseHrv, baseRhr) };
     await db.readiness.put({ ...r, dirty: 1 });
     if (session && session.status === "planned") { const measured = await bestE1rmBySlug(), injuries = adaptationsFor(await db.injuries.toArray(), todayISO()); const adj = bilingual(() => autoRegulate(profile, session, r, measured, injuries)); await db.sessions.put({ ...adj.session, dirty: 1 }); }
     onDone(r);
@@ -373,6 +379,13 @@ function ReadinessCheck({ session, onDone }: { session: Session | null; onDone: 
                 style={{ background: preview >= 65 ? "var(--volt)" : preview >= 40 ? "var(--ink)" : "var(--danger)" }} />
             </span>
           </div>
+          {(health?.hrvMs || health?.restingHr) && (
+            <p className="text-xs sm:col-span-2 flex flex-wrap gap-2">
+              <span className="text-smoke">{t("Mesuré par ta montre :", "From your watch:")}</span>
+              {health?.hrvMs && <span className="chip">{t("VFC", "HRV")} {health.hrvMs} ms{baseHrv ? ` · ${t("ta moyenne", "your avg")} ${Math.round(baseHrv)}` : ""}</span>}
+              {health?.restingHr && <span className="chip">{t("Pouls au repos", "Resting HR")} {health.restingHr}{baseRhr ? ` · ${t("ta moyenne", "your avg")} ${Math.round(baseRhr)}` : ""}</span>}
+            </p>
+          )}
           <p className="text-sm text-smoke max-w-[38ch] sm:pb-1">{t("Ton sommeil et ton état décident de la charge du jour. Des réponses honnêtes font une meilleure séance.", "How you slept and feel decides today’s load. Honest answers make a better session.")}</p>
         </div>
         <div className="field"><span className="meta">{t("Sommeil cette nuit", "Sleep last night")} · {sleep} h{measured ? t(" · mesuré par ta montre", " · measured by your watch") : ""}</span><input type="range" min={3} max={11} step={0.5} value={sleep} onChange={(e) => setSleep(Number(e.target.value))} style={{ ["--fill" as string]: `${((sleep - 3) / 8) * 100}%` }} className="w-full" /></div>
@@ -421,6 +434,7 @@ function FoodToday({ nutrition, notifications, sessionName, onNotify }: { nutrit
         <div className="p-4 grid gap-3">
           <div className="flex items-baseline justify-between text-sm"><span>{nutrition.dayType === "rest" ? t("Jour de repos", "Rest day") : nutrition.dayType === "hard" ? t("Grosse journée", "Hard day") : t("Jour d’entraînement", "Training day")}{sessionName ? ` · ${sessionName}` : ""}</span><span className="tnum text-xs text-smoke">{nutrition.meals.filter((m) => m.done).length}/{nutrition.meals.length} {t("repas", "meals")} · {nutrition.targets.kcal.toLocaleString(locale())} kcal</span></div>
           <Bar value={nutrition.meals.filter((m) => m.done).length} max={nutrition.meals.length} />
+          {(nutrition.activityKcal ?? 0) > 0 && <p className="text-xs"><strong className="text-volt tnum">+{nutrition.activityKcal} kcal</strong> <span className="text-smoke">{t("ajoutées pour ton entraînement d’aujourd’hui, surtout en glucides. Les portions ont suivi.", "added for today’s training, mostly carbs. Portions followed.")}</span></p>}
           {/* Spelled out: a single letter next to a number is only legible to
               someone who already knows what the app is telling them. */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-smoke">

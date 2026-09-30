@@ -144,6 +144,7 @@ export async function awardActivity(a: Activity) {
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   await touchStreak();
   const { earned } = await finalize({ pending: a });
+  refuel();
   return { xp, earned, verification };
 }
 
@@ -178,6 +179,39 @@ export async function awardIndoor(a: Activity, credit: number) {
   stats.totals.elevGainM = (stats.totals.elevGainM ?? 0) + Math.round(a.elevGainM * credit);
   await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
   if (credit > 0) await touchStreak();
+  const { earned } = await finalize({ pending: a });
+  refuel();
+  return { xp, earned };
+}
+
+/** A workout today changes today's fuel (nutrition/activityFuel.ts). Loaded lazily: the food engine is big. */
+const refuel = () => { import("./nutrition/activityFuel").then((m) => m.applyActivityFuel()).catch(() => {}); };
+
+/**
+ * XP for a workout recorded by a watch and read from the phone's health store.
+ * No GPS track comes with it, so the device stands in for the proof: a known
+ * watch or bike computer pays in full, anything else (a workout typed into the
+ * health app by hand) pays 40 %. Distance counts in the same proportion.
+ */
+const WATCHES = /garmin|forerunner|fenix|epix|venu|vivoactive|instinct|edge|apple watch|watch|polar|coros|suunto|wahoo|fitbit|pixel watch|galaxy watch|amazfit|whoop/i;
+export function watchXpBreakdown(a: Pick<Activity, "durationSec" | "movingSec" | "title">) {
+  const credit = WATCHES.test(a.title ?? "") ? 1 : 0.4;
+  const minutes = Math.round((a.movingSec ?? a.durationSec) / 60);
+  const parts = [
+    { label: tr("Entraînement de ta montre", "Workout from your watch"), xp: XP.activityBase },
+    { label: tr(`${minutes} min en mouvement`, `${minutes} min moving`), xp: Math.round(minutes * XP.cardioMinute) },
+  ];
+  return { parts, credit, total: Math.round(parts.reduce((s, p) => s + p.xp, 0) * credit) };
+}
+
+export async function awardWatchActivity(a: Activity) {
+  const { total: xp, credit } = watchXpBreakdown(a);
+  const stats = await getStats();
+  stats.xp += xp;
+  stats.totals.distanceM += Math.round(a.distanceM * credit);
+  stats.totals.activities = (stats.totals.activities ?? 0) + 1;
+  await db.stats.put({ ...stats, dirty: 1, updatedAt: new Date().toISOString() });
+  if (credit >= 1) await touchStreak();
   const { earned } = await finalize({ pending: a });
   return { xp, earned };
 }

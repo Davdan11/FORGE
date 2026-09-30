@@ -377,6 +377,10 @@ export interface CoachCheckIn {
   verdict: "on_track" | "too_fast" | "too_slow" | "no_data" | "off_plan" | "reached";
   /** The loss is slow but the food is already at the safe floor: the answer is movement, not less food. */
   atFloor?: boolean;
+  /** Real intake over the logged days of the week (ticked meals + food eaten off the plan), kcal a day. */
+  eatenKcalAvg?: number;
+  /** What those same days were planned at, kcal a day. */
+  plannedKcalAvg?: number;
 }
 export interface CoachState {
   /** The standing calorie correction learned from the scale, kcal a day. */
@@ -428,6 +432,23 @@ export interface DayPlanMeal {
   slot: MealSlot; time: string; mealId: string; scale: number; done?: boolean;
   /** "Pre-workout" or "Recovery meal" when a regular meal doubles as one. */
   note?: string;
+  /** Not eaten: skipped, or replaced by food logged off the plan (see NutritionDay.extras). */
+  skipped?: boolean;
+}
+/** Food eaten outside the plan ("J'ai mangé autre chose"): the portion's own numbers, not per 100 g. */
+export interface FoodEntry {
+  id: string;
+  /** "HH:MM" */
+  time: string;
+  name: string;
+  brand?: string;
+  grams: number;
+  kcal: number; protein: number; carbs: number; fat: number;
+  sugar?: number; fiber?: number;
+  source: "off" | "search" | "manual" | "recent";
+  barcode?: string;
+  /** Open Food Facts product code, when it came from there. */
+  offCode?: string;
 }
 export interface NutritionDay {
   id: string;               // date ISO
@@ -436,6 +457,11 @@ export interface NutritionDay {
   targets: { kcal: number; protein: number; carbs: number; fat: number };
   meals: DayPlanMeal[];
   waterMl: number;
+  /** Extra fuel for training the plan did not count on (a watch run on a rest day,
+   *  a long ride), kcal; already inside `targets`. See nutrition/activityFuel.ts. */
+  activityKcal?: number;
+  /** Food eaten outside the plan; counts in what was eaten. */
+  extras?: FoodEntry[];
 }
 
 /* ── Gamification ──────────────────────────────────────────── */

@@ -66,8 +66,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>FORGE uses the camera only to scan a food's barcode when you log something you ate.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>FORGE reads your steps, sleep and the workouts from your watch or other apps so your training and recovery take them into account. FORGE never writes to Apple Health.</string>
+	<string>FORGE reads your steps, sleep, heart rate variability, resting heart rate, weight and the workouts from your watch, scale or other apps so your training and recovery take them into account. FORGE never writes to Apple Health.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>FORGE does not write to Apple Health.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>

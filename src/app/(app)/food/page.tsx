@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, getProfile, todayISO, addDays } from "@/lib/db";
 import { getMeal, recipeCount } from "@/lib/nutrition/recipes";
 import { mealName, mealTitle } from "@/lib/nutrition/cookbook";
-import { buildNutritionDay, dayTotals, eatenTotals, groceryList, swapOptions, dailyTargets, retuneDay, DAY_TYPE_LABEL, SLOT_LABEL, NOTE_LABEL } from "@/lib/nutrition/engine";
+import { buildNutritionDay, dayTotals, eatenTotals, groceryList, swapOptions, dailyTargets, retuneDay, withActivityFuel, DAY_TYPE_LABEL, SLOT_LABEL, NOTE_LABEL } from "@/lib/nutrition/engine";
 import { useT, useLang, locale } from "@/lib/i18n";
 import { NumbersExplained } from "@/components/NumbersExplained";
+import { FoodLogSheet } from "@/components/FoodLogSheet";
 import { awardMeal } from "@/lib/progress";
 import { ART } from "@/lib/data/images";
 import { Screen, Hero, Section, Bar, Toast, Photo, Check, ScreenSkeleton, Seg } from "@/components/ui";
 import { Page, Stagger, Item, Press, Ring, CountUp, motion, AnimatePresence } from "@/components/motion";
-import type { DayPlanMeal, Meal, NutritionDay } from "@/lib/types";
+import type { DayPlanMeal, FoodEntry, Meal, NutritionDay } from "@/lib/types";
 
 const enc = (id: string) => encodeURIComponent(id);
 /** A planned meal's name in one language (the toast carries both and picks one). */
@@ -31,6 +33,7 @@ export default function FoodPage() {
   const [swaps, setSwaps] = useState<Meal[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [logOpen, setLogOpen] = useState(false);
   const t = useT();
   const lang = useLang();
   const L = (l: { fr: string; en: string }) => l[lang];
@@ -51,15 +54,25 @@ export default function FoodPage() {
   const eaten = eatenTotals(day);           // what is ticked off
   const planned = dayTotals(day);       // what the day is built to deliver
   const tg = dailyTargets(profile, day.dayType);
-  const next = day.meals.find((m) => !m.done);
+  const next = day.meals.find((m) => !m.done && !m.skipped);
   const hero = next ? getMeal(next.mealId) : getMeal(day.meals[0]?.mealId);
-  const doneCount = day.meals.filter((m) => m.done).length;
+  // A meal replaced by food off the plan is settled, like a ticked one.
+  const doneCount = day.meals.filter((m) => m.done || m.skipped).length;
+  const extras = day.extras ?? [];
+  const overBy = Math.round(eaten.kcal - day.targets.kcal);
 
   async function toggleDone(m: DayPlanMeal) {
     const meals = day!.meals.map((x) => (x === m ? { ...x, done: !x.done } : x));
     await db.nutrition.update(day!.id, { meals, dirty: 1 });
     if (!m.done) { const full = meals.every((x) => x.done); const xp = await awardMeal(full, day!.meals.indexOf(m), day!.date); setToast(t(`${nameOf(m.mealId, "fr")} : noté.${xp ? ` +${xp} XP` : ""}${full && xp > 15 ? " — journée complète, bonus!" : ""}`, `${nameOf(m.mealId, "en")} logged.${xp ? ` +${xp} XP` : ""}${full && xp > 15 ? " — full day, bonus!" : ""}`)); setTimeout(() => setToast(null), 3000); }
   }
+  async function unskip(m: DayPlanMeal) {
+    await db.nutrition.update(day!.id, { meals: day!.meals.map((x) => (x === m ? { ...x, skipped: false } : x)), dirty: 1, updatedAt: new Date().toISOString() });
+  }
+  async function removeExtra(e: FoodEntry) {
+    await db.nutrition.update(day!.id, { extras: (day!.extras ?? []).filter((x) => x.id !== e.id), dirty: 1, updatedAt: new Date().toISOString() });
+  }
+  function showToast(text: string, ms = 3500) { setToast(text); setTimeout(() => setToast(null), ms); }
   function openSwap(m: DayPlanMeal) { setSwapFor(m); setSwaps(swapOptions(profile!, day!, m)); }
   async function doSwap(to: string) {
     if (!swapFor) return;
@@ -72,7 +85,11 @@ export default function FoodPage() {
     const recent = (await db.nutrition.where("date").between(addDays(today, -3), addDays(today, -1), true, true).toArray()).flatMap((d) => d.meals.map((m) => m.mealId));
     const s = await db.sessions.where("date").equals(today).first();
     const nd = buildNutritionDay(profile!, today, s ?? null, undefined, [...recent, ...day!.meals.map((m) => m.mealId)]);
-    await db.nutrition.put({ ...nd, dirty: 1 });
+    // A new menu does not undo what was already eaten off the plan.
+    // Nor the fuel added for today's training.
+    const fueled = day!.activityKcal ? retuneDay(profile!, { ...nd, activityKcal: day!.activityKcal }) : nd;
+    const ft = day!.activityKcal ? withActivityFuel(dailyTargets(profile!, nd.dayType), day!.activityKcal) : null;
+    await db.nutrition.put({ ...fueled, ...(ft ? { targets: { kcal: ft.kcal, protein: ft.protein, carbs: ft.carbs, fat: ft.fat } } : {}), ...(day!.extras?.length ? { extras: day!.extras } : {}), dirty: 1 });
     setToast(t("Nouveau menu pour aujourd’hui.", "New menu for today.")); setTimeout(() => setToast(null), 2500);
   }
   async function buildWeek() {
@@ -114,6 +131,7 @@ export default function FoodPage() {
                       ? t("Journée complétée.", "Day complete.")
                       : t(`${Math.max(0, Math.round(day.targets.kcal - eaten.kcal)).toLocaleString(locale())} kcal restantes · le menu du jour en donne ${Math.round(planned.kcal).toLocaleString(locale())}.`, `${Math.max(0, Math.round(day.targets.kcal - eaten.kcal)).toLocaleString(locale())} kcal left · today's menu delivers ${Math.round(planned.kcal).toLocaleString(locale())}.`)}
                   </p>
+                  {overBy > 0 && extras.length > 0 && <p className="text-[11px] tnum">{t(`+${overBy.toLocaleString(locale())} kcal au-dessus de ta cible aujourd’hui — pas grave, le bilan de la semaine en tient compte.`, `+${overBy.toLocaleString(locale())} kcal over today’s target — no big deal, the weekly check-in accounts for it.`)}</p>}
                 </div>
                 </div>
                 <div className="grid gap-2">
@@ -123,6 +141,7 @@ export default function FoodPage() {
                   <div className="flex gap-3 text-[11px] tnum"><span className={eaten.sugar > tg.sugarMax ? "text-danger" : "text-smoke"}>{t("Sucre", "Sugar")} {Math.round(eaten.sugar)} / {tg.sugarMax} g max</span><span className={eaten.fiber >= tg.fiberMin ? "text-volt" : "text-smoke"}>{t("Fibres", "Fiber")} {Math.round(eaten.fiber)} / {tg.fiberMin} g</span><span className="text-smoke ml-auto">{t("Eau", "Water")} {(Math.round(day.waterMl / 100) / 10).toLocaleString(locale())} L</span></div>
                 </div>
               </div>
+              <Press className="block mb-4"><button type="button" className="pill pill--volt w-full" onClick={() => setLogOpen(true)}>+ {t("J’ai mangé autre chose", "I ate something else")}</button></Press>
               <div className="mb-4"><NumbersExplained profile={profile} dayType={day.dayType} /></div>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <Link href="/food/browse" className="pill pill--sm">{t(`Parcourir ${recipeCount().toLocaleString(locale())} recettes`, `Browse ${recipeCount().toLocaleString(locale())} recipes`)}</Link>
@@ -139,7 +158,7 @@ export default function FoodPage() {
                     <Item key={key}>
                       <div className="grid grid-cols-[44px_minmax(0,1fr)] lg:grid-cols-[56px_minmax(0,1fr)] gap-3">
                         <div className="relative border-r border-line pr-3 pt-1 text-right"><span className="text-xs tnum text-smoke">{m.time}</span><span className={`absolute -right-[5px] top-2.5 w-[9px] h-[9px] rounded-full border-2 border-paper ${m.done ? "bg-volt" : "bg-line-strong"}`} /></div>
-                        <div className={`card overflow-hidden transition-opacity ${m.done ? "opacity-55" : ""}`}>
+                        <div className={`card overflow-hidden transition-opacity ${m.done || m.skipped ? "opacity-55" : ""}`}>
                           <Link href={`/food/meal?id=${enc(meal.id)}&date=${day.date}`} className="block relative h-44 md:h-52 lg:h-56">
                             <Photo src={meal.image} color veil className="absolute inset-0" />
                             <div className="on-photo absolute inset-x-0 bottom-0 p-4 lg:p-5 grid gap-1">
@@ -157,7 +176,7 @@ export default function FoodPage() {
                           <div className="flex items-center gap-2 p-3 border-t border-line">
                             <Link href={`/food/meal?id=${enc(meal.id)}&date=${day.date}`} className="pill pill--sm pill--bone">{t("Cuisiner", "Cook")}</Link>
                             <button type="button" className="pill pill--sm" onClick={() => openSwap(m)}>{t("Changer", "Swap")}</button>
-                            <span className="ml-auto"><Check on={!!m.done} onToggle={() => toggleDone(m)} label={m.done ? t("Annuler le repas", "Unlog meal") : t("Noter le repas", "Log meal")} /></span>
+                            <span className="ml-auto flex items-center gap-2">{m.skipped ? <><span className="chip">{t("Remplacé", "Replaced")}</span><button type="button" className="text-xs underline text-smoke" onClick={() => unskip(m)}>{t("Remettre", "Restore")}</button></> : <Check on={!!m.done} onToggle={() => toggleDone(m)} label={m.done ? t("Annuler le repas", "Unlog meal") : t("Noter le repas", "Log meal")} />}</span>
                           </div>
                         </div>
                       </div>
@@ -165,6 +184,24 @@ export default function FoodPage() {
                   );
                 })}
               </Stagger>
+
+              {extras.length > 0 && (
+                <Section title={t("Mangé hors plan", "Eaten off the plan")} aside={<span className="text-xs text-smoke tnum">{Math.round(extras.reduce((a, e) => a + e.kcal, 0)).toLocaleString(locale())} kcal</span>}>
+                  <ul className="grid gap-2">{extras.map((e) => (
+                    <li key={e.id} className="grid grid-cols-[44px_minmax(0,1fr)] lg:grid-cols-[56px_minmax(0,1fr)] gap-3">
+                      <span className="text-xs tnum text-smoke text-right pr-3 pt-3">{e.time}</span>
+                      <div className="card p-3 flex items-center gap-3 border-dashed">
+                        <span className="grid flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate">{e.name}</span>
+                          <span className="text-xs text-smoke tnum truncate">{e.brand ? `${e.brand} · ` : ""}{e.grams ? `${e.grams} g · ` : ""}{Math.round(e.protein)} P · {Math.round(e.carbs)} G · {Math.round(e.fat)} L</span>
+                        </span>
+                        <strong className="tnum text-sm shrink-0">{e.kcal} kcal</strong>
+                        <button type="button" className="p-1.5 text-smoke shrink-0" aria-label={t(`Retirer ${e.name}`, `Remove ${e.name}`)} onClick={() => removeExtra(e)}><Trash2 size={16} /></button>
+                      </div>
+                    </li>
+                  ))}</ul>
+                </Section>
+              )}
 
               <AnimatePresence>{swapFor && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="card p-4 mt-4 grid gap-2">
@@ -202,6 +239,7 @@ export default function FoodPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        <FoodLogSheet day={day} open={logOpen} onClose={() => setLogOpen(false)} onLogged={(text) => showToast(text, 5000)} />
         <Toast text={toast} />
       </Screen>
     </Page>

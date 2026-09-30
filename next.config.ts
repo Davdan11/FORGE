@@ -27,7 +27,11 @@ const nextConfig: NextConfig = {
         // needs to be a folder with an index.html in it.
         trailingSlash: true,
       }
-    : {}),
+    : {
+        // Server-only files (route handlers the static phone build cannot
+        // have) end in `.web.ts`: only the web build picks them up.
+        pageExtensions: ["tsx", "ts", "jsx", "js", "web.ts"],
+      }),
 };
 
 export default nextConfig;

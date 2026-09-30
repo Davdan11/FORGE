@@ -6,6 +6,7 @@ import type { Diet } from "./ingredients";
 import { explainTargets, type DayType as SciDayType } from "./science";
 import { getLang, loc, tr } from "../i18n";
 import { ingredientsFor, mealName } from "./cookbook";
+import { extrasTotals } from "./foodlog";
 
 /* ─────────────────────────────────────────────────────────────
    NUTRITION ENGINE v3
@@ -293,17 +294,25 @@ export function buildNutritionDay(p: Profile, date: string, session: Session | n
   return { id: date, date, dayType, targets: { kcal: targets.kcal, protein: targets.protein, carbs: targets.carbs, fat: targets.fat }, meals, waterMl: Math.round(p.weightKg * 35 + (train ? 500 : 0)) };
 }
 
+/** The day's targets plus fuel for unplanned training: mostly carbs (70 %), the rest fat; protein does not move. */
+export function withActivityFuel<T extends { kcal: number; carbs: number; fat: number }>(t: T, extra: number): T {
+  if (!extra) return t;
+  return { ...t, kcal: t.kcal + extra, carbs: t.carbs + Math.round((extra * 0.7) / 4), fat: t.fat + Math.round((extra * 0.3) / 9) };
+}
+
 /** After a swap, re-tune every portion so the day still adds up. */
 export function retuneDay(p: Profile, day: NutritionDay): NutritionDay {
-  const t = dailyTargets(p, day.dayType);
+  const t = withActivityFuel(dailyTargets(p, day.dayType), day.activityKcal ?? 0);
   const SC = scalesFor(t.kcal);
   const full = { ...t, sugar: 0 };
   const meals = day.meals.map((m) => ({ ...m }));
-  const total = () => meals.reduce((acc, m) => { const r = getMeal(m.mealId); return r ? add(acc, macrosOf(r, m.scale)) : acc; }, ZERO);
+  // Food eaten off the plan is part of the day; a meal it replaced is not.
+  const off = (day.extras ?? []).reduce((acc, e) => add(acc, { kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat, sugar: e.sugar ?? 0 }), ZERO);
+  const total = () => meals.reduce((acc, m) => { if (m.skipped) return acc; const r = getMeal(m.mealId); return r ? add(acc, macrosOf(r, m.scale)) : acc; }, off);
   for (let pass = 0; pass < 4; pass++) {
     let improved = false;
     for (const m of meals) {
-      if (m.done) continue;
+      if (m.done || m.skipped) continue;
       const was = m.scale;
       let best = { k: was, e: miss(total(), full) };
       for (const k of SC) { m.scale = k; const e = miss(total(), full); if (e < best.e - 1e-9) best = { k, e }; }
@@ -329,14 +338,17 @@ export function dayTotals(day: NutritionDay) {
 }
 
 /**
- * What has actually been eaten so far: ticked meals only.
+ * What has actually been eaten so far: ticked meals, plus food logged off the
+ * plan ("J'ai mangé autre chose"). Skipped meals count for nothing.
  *
  * Progress bars have to start empty and fill as the day is logged. Summing the
  * whole plan made them full before the first bite, so ticking a meal changed
  * nothing and the card read as though the day were already done.
  */
 export function eatenTotals(day: NutritionDay) {
-  return sumMeals(day.meals.filter((m) => m.done));
+  const t = sumMeals(day.meals.filter((m) => m.done && !m.skipped));
+  const x = extrasTotals(day);
+  return { kcal: t.kcal + x.kcal, protein: t.protein + x.protein, carbs: t.carbs + x.carbs, fat: t.fat + x.fat, sugar: t.sugar + x.sugar, fiber: t.fiber + x.fiber };
 }
 
 export function groceryList(days: NutritionDay[]) {
