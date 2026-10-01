@@ -5,6 +5,7 @@ import { LevelUpWatcher } from "@/components/LevelUp";
 import { XpBurst } from "@/components/XpBurst";
 import { BadgeUnlocked } from "@/components/BadgeUnlocked";
 import { WatchFeedSync } from "@/components/WatchPanel";
+import { LobbyPresence } from "@/components/LobbyPresence";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <LevelUpWatcher />
       {/* Keeps the Garmin watch's FORGE screens current (no-op until a watch is paired). */}
       <WatchFeedSync />
+      {/* "N online" on each road and the owner's panel: this tab counted, never named. */}
+      <LobbyPresence />
     </Guard>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from "@/lib/rewards";
 import { Screen, Section, Seg, ScreenSkeleton, Toast, StatRow } from "@/components/ui";
 import { Page, Press } from "@/components/motion";
+import { AdminOverview } from "@/components/admin/AdminOverview";
 
 /* ─────────────────────────────────────────────────────────────
    The owner's panel: decide the gifts, read the claims, ship.
@@ -27,7 +28,7 @@ const EMPTY: Campaign = { id: "", title: "", description: "", image_url: null, r
 
 export default function AdminPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"claims" | "campaigns">("claims");
+  const [tab, setTab] = useState<"overview" | "claims" | "campaigns">("overview");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [editing, setEditing] = useState<Campaign | null>(null);
@@ -63,16 +64,16 @@ export default function AdminPage() {
       <Screen>
         <div className="pt-[calc(var(--safe-top)+24px)] grid gap-2 mb-6">
           <p className="eyebrow">Admin</p>
-          <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>{t("Comptoir des", "Rewards")} <em>{t("récompenses.", "desk.")}</em></h1>
+          <h1 className="display display--lg leading-[0.95]" style={{ fontSize: "var(--text-display-lg)" }}>{tab === "overview" ? <>{t("Tableau de", "Owner's")} <em>{t("bord.", "dashboard.")}</em></> : <>{t("Comptoir des", "Rewards")} <em>{t("récompenses.", "desk.")}</em></>}</h1>
         </div>
-        <StatRow items={[
+        {tab !== "overview" && <StatRow items={[
           { label: t("À vérifier", "To review"), value: String(pending) },
           { label: t("Approuvées", "Approved"), value: String(claims.filter((c) => c.status === "approved").length) },
           { label: t("Expédiées", "Shipped"), value: String(claims.filter((c) => c.status === "shipped").length) },
-        ]} />
-        <div className="my-6"><Seg fill value={tab} onChange={setTab} options={[{ v: "claims", label: `${t("Réclamations", "Claims")}${pending ? ` · ${pending}` : ""}` }, { v: "campaigns", label: t("Cadeaux", "Gifts") }]} /></div>
+        ]} />}
+        <div className="my-6"><Seg fill value={tab} onChange={setTab} options={[{ v: "overview", label: t("Tableau de bord", "Dashboard") }, { v: "claims", label: `${t("Réclamations", "Claims")}${pending ? ` · ${pending}` : ""}` }, { v: "campaigns", label: t("Cadeaux", "Gifts") }]} /></div>
 
-        {tab === "campaigns" ? (
+        {tab === "overview" ? <AdminOverview /> : tab === "campaigns" ? (
           editing ? (
             <CampaignForm initial={editing} onCancel={() => setEditing(null)} onSaved={async () => { setEditing(null); await refresh(); say(t("Enregistré.", "Saved.")); }} say={say} />
           ) : (

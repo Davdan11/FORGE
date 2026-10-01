@@ -7,6 +7,7 @@ import { sensorAvailability, connectSensor, SensorFusion, sensorName, type Avail
 import { shouldSendGrade, resultText, cmdRequestControl, cmdTargetIncline } from "@/lib/indoor/ftms";
 import { curveName, powerFromCurve, trainerLabel, PROTOCOL_LABEL, PROTOCOL_LABEL_FR, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
 import { extrapolate, joinRoom, prune, type Room } from "@/lib/indoor/live";
+import { routeOfRoom, setWhere, watchLobby } from "@/lib/indoor/lobby";
 import { DROP_AT, VoiceChat, reportVoice, voiceSignal, type ReportReason } from "@/lib/indoor/voice";
 import { RadioCards, RadioField } from "@/components/ui";
 import { addSplits, profileMessage, rewardMessage, ridersMessage, unityRoom, type UnityMessage, type UnitySummary } from "@/lib/indoor/unity";
@@ -213,10 +214,23 @@ export function UnityRide({ profile, ftpW, startRoute, startSport, onExit, say }
     }, (from, name, key) => send({ type: "chat", id: `p-${from}`, from: name, key }));
     if (roomKey.current !== key) { r?.leave(); return; }
     room.current = r; setInRoom(!!r);
+    // The lobby counts this tab in this room (no name): the "N online" on each road, and the owner's panel.
+    void setWhere(r ? { w: "web", r: key, s: sportRef.current === "run" ? "run" : "ride" } : { w: "app" });
     voice.current?.setRoom(r?.me ?? "", r ? (to, sig) => r.signal(to, sig) : null);
     if (!r) sayRef.current(tr("Connecte-toi à ton compte pour rouler avec les autres.", "Sign in to ride with other people."));
   }
-  useEffect(() => () => { voice.current?.stop(); voice.current = null; room.current?.leave(); room.current = null; }, []);
+  useEffect(() => () => { voice.current?.stop(); voice.current = null; room.current?.leave(); room.current = null; void setWhere({ w: "app" }); }, []);
+  // How many ride each road right now, for the game's route cards ("roomCounts": route key → riders).
+  useEffect(() => {
+    if (!ready) return;
+    let sent = "";
+    return watchLobby((snap) => {
+      const counts: Record<string, number> = {};
+      for (const [r, n] of snap.rooms) { const k = routeOfRoom(r); if (k) counts[k] = (counts[k] ?? 0) + n; }
+      const json = JSON.stringify(counts);
+      if (json !== sent) { sent = json; send({ type: "roomCounts", counts }); }
+    });
+  }, [ready]);
 
   /* ── the loop: effort into the game, the room into the game, the game into the trainer ── */
   useEffect(() => {
