@@ -7,7 +7,7 @@ import { watchLobby, type LobbySnapshot } from "@/lib/indoor/lobby";
 import { roomName } from "@/lib/indoor/live";
 import type { DownloadStats } from "@/lib/admin/downloads";
 import { Section, StatRow } from "@/components/ui";
-import { useT } from "@/lib/i18n";
+import { tr, useT } from "@/lib/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    The owner's dashboard (/admin → "Tableau de bord"):
@@ -43,18 +43,18 @@ export function AdminOverview() {
       const { data, error } = await sb.rpc("admin_overview");
       if (!alive) return;
       if (error) setOverviewError(/admin_overview|function/i.test(error.message) && !/admins only/i.test(error.message)
-        ? t("Il manque la fonction SQL : lance supabase/admin-overview.sql dans Supabase → SQL Editor.", "The SQL function is missing: run supabase/admin-overview.sql in Supabase → SQL Editor.")
+        ? tr("Il manque la fonction SQL : lance supabase/admin-overview.sql dans Supabase → SQL Editor.", "The SQL function is missing: run supabase/admin-overview.sql in Supabase → SQL Editor.")
         : error.message);
       else setOverview(data as Overview);
       const token = (await sb.auth.getSession()).data.session?.access_token;
       try {
         const res = await fetch("/api/admin/downloads", { headers: { Authorization: `Bearer ${token ?? ""}` }, cache: "no-store" });
         if (!alive) return;
-        if (res.ok) setDownloads(await res.json()); else setDownloadsError(res.status === 404 ? t("Seulement sur le site web (app.forgeachieve.com).", "Only on the website (app.forgeachieve.com).") : `HTTP ${res.status}`);
-      } catch { if (alive) setDownloadsError(t("Serveur injoignable.", "Server unreachable.")); }
+        if (res.ok) setDownloads(await res.json()); else setDownloadsError(res.status === 404 ? tr("Seulement sur le site web (app.forgeachieve.com).", "Only on the website (app.forgeachieve.com).") : `HTTP ${res.status}`);
+      } catch { if (alive) setDownloadsError(tr("Serveur injoignable.", "Server unreachable.")); }
     })();
     return () => { alive = false; };
-  }, [t]);
+  }, []); // once: `t` is a new function every render, and depending on it asked the server in a loop
 
   const rooms = useMemo(() => [...(lobby?.rooms ?? new Map<string, number>()).entries()].sort((a, b) => b[1] - a[1]), [lobby]);
   const users = useMemo(() => {
