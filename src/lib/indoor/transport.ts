@@ -380,6 +380,46 @@ const webTransport: Transport = {
   },
 };
 
+export type TrainerSetup = Awaited<ReturnType<typeof setupTrainer>>;
+
+/**
+ * A trainer that drops (unplugged a second, a radio hiccup, the rider walked off with the phone) is looked for again,
+ * every 2 s for half an hour, and once back taken control of again (start) — the ride's commands keep working through
+ * the same object, and its next grade or ERG target (sent at least every 10 s) lands on the new link.
+ */
+export function reconnectingTrainer(first: TrainerSetup, reopen: () => Promise<TrainerSetup>, abort: () => void, onDisconnect?: () => void, opts?: ConnectOptions) {
+  let cur = first, closed = false, retrying = false;
+  const cmd = () => (cur.trainer.commands ?? first.trainer.commands)!;
+  const commands: TrainerControl | undefined = first.trainer.commands && {
+    start: () => cmd().start(),
+    stop: () => cmd().stop(),
+    setGrade: (pct) => cmd().setGrade(pct),
+    setTargetPower: (w) => cmd().setTargetPower(w),
+  };
+  const control: Sensor["control"] = first.control && ((b) => (cur.control ?? first.control!)(b));
+  const dropped = () => {
+    if (closed || retrying) return;
+    retrying = true; opts?.onLink?.(false);
+    const until = Date.now() + RECONNECT_FOR_MS;
+    const retry = async () => {
+      if (closed) { retrying = false; return; }
+      try {
+        const next = await within(reopen(), 15000);
+        if (closed) { next.stop(); retrying = false; return; }
+        try { cur.stop(); } catch { /* the old link is gone */ }
+        cur = next; retrying = false;
+        await cur.trainer.commands?.start().catch(() => undefined);
+        opts?.onLink?.(true);
+      } catch {
+        abort();
+        if (Date.now() < until) setTimeout(retry, 2000); else { retrying = false; onDisconnect?.(); }
+      }
+    };
+    setTimeout(retry, 1000);
+  };
+  return { trainer: { ...first.trainer, commands }, control, dropped, stop: () => { closed = true; cur.stop(); } };
+}
+
 async function webTrainer(bt: MinimalBluetooth, onReading: (r: Reading) => void, onDisconnect?: () => void, opts?: ConnectOptions): Promise<Sensor> {
   // Any of the trainer services, plus names for trainers that advertise none
   // of them. Every service must also be optional, or it cannot be opened.
@@ -387,56 +427,60 @@ async function webTrainer(bt: MinimalBluetooth, onReading: (r: Reading) => void,
     filters: [...TRAINER_SERVICES.map((s) => ({ services: [s] })), { namePrefix: "Tacx" }, { namePrefix: "KICKR" }],
     optionalServices: [...TRAINER_SERVICES, uuid16(SERVICE.heart_rate)],
   });
-  const server = await device.gatt?.connect();
-  if (!server) throw new Error(tr("Impossible de se connecter au trainer.", "Could not connect to the trainer."));
+  // Connect, find what it speaks, subscribe: the first time and after every drop.
+  const open = async (): Promise<TrainerSetup> => {
+    const server = await device.gatt?.connect();
+    if (!server) throw new Error(tr("Impossible de se connecter au trainer.", "Could not connect to the trainer."));
 
-  const services = new Map<string, Promise<MinimalService | null>>();
-  const svc = (u: string) => {
-    if (!services.has(u)) services.set(u, server.getPrimaryService(u).catch(() => null));
-    return services.get(u)!;
-  };
-  const chars = new Map<string, Promise<MinimalCharacteristic>>();
-  const char = (s: string, c: string) => {
-    const k = `${s}/${c}`;
-    if (!chars.has(k)) {
-      const p = svc(s).then((x) => { if (!x) throw new Error("missing service"); return x.getCharacteristic(c); });
-      p.catch(() => chars.delete(k));
-      chars.set(k, p);
-    }
-    return chars.get(k)!;
+    const services = new Map<string, Promise<MinimalService | null>>();
+    const svc = (u: string) => {
+      if (!services.has(u)) services.set(u, server.getPrimaryService(u).catch(() => null));
+      return services.get(u)!;
+    };
+    const chars = new Map<string, Promise<MinimalCharacteristic>>();
+    const char = (s: string, c: string) => {
+      const k = `${s}/${c}`;
+      if (!chars.has(k)) {
+        const p = svc(s).then((x) => { if (!x) throw new Error("missing service"); return x.getCharacteristic(c); });
+        p.catch(() => chars.delete(k));
+        chars.set(k, p);
+      }
+      return chars.get(k)!;
+    };
+
+    const gatt: Gatt = {
+      hasService: async (s) => (await svc(s)) != null,
+      hasCharacteristic: (s, c) => char(s, c).then(() => true, () => false),
+      async subscribe(s, c, fn) {
+        const ch = await char(s, c);
+        const h = (e: Event) => { const v = (e.target as unknown as MinimalCharacteristic).value; if (v) fn(v); };
+        ch.addEventListener("characteristicvaluechanged", h);
+        await ch.startNotifications();
+        return () => { ch.removeEventListener("characteristicvaluechanged", h); ch.stopNotifications().catch(() => {}); };
+      },
+      async write(s, c, b) {
+        const ch = await char(s, c);
+        const buf = b.slice().buffer as ArrayBuffer;
+        const noResponse = ch.properties && !ch.properties.write && ch.properties.writeWithoutResponse;
+        if (noResponse && ch.writeValueWithoutResponse) await ch.writeValueWithoutResponse(buf);
+        else if (ch.writeValueWithResponse) await ch.writeValueWithResponse(buf);
+        else await ch.writeValue!(buf);
+      },
+    };
+    try { return await setupTrainer(gatt, device.name, onReading, opts); }
+    catch (e) { if (device.gatt?.connected) device.gatt.disconnect(); throw e; }
   };
 
-  const gatt: Gatt = {
-    hasService: async (s) => (await svc(s)) != null,
-    hasCharacteristic: (s, c) => char(s, c).then(() => true, () => false),
-    async subscribe(s, c, fn) {
-      const ch = await char(s, c);
-      const h = (e: Event) => { const v = (e.target as unknown as MinimalCharacteristic).value; if (v) fn(v); };
-      ch.addEventListener("characteristicvaluechanged", h);
-      await ch.startNotifications();
-      return () => { ch.removeEventListener("characteristicvaluechanged", h); ch.stopNotifications().catch(() => {}); };
-    },
-    async write(s, c, b) {
-      const ch = await char(s, c);
-      const buf = b.slice().buffer as ArrayBuffer;
-      const noResponse = ch.properties && !ch.properties.write && ch.properties.writeWithoutResponse;
-      if (noResponse && ch.writeValueWithoutResponse) await ch.writeValueWithoutResponse(buf);
-      else if (ch.writeValueWithResponse) await ch.writeValueWithResponse(buf);
-      else await ch.writeValue!(buf);
-    },
-  };
-
-  let t: Awaited<ReturnType<typeof setupTrainer>>;
-  try { t = await setupTrainer(gatt, device.name, onReading, opts); }
-  catch (e) { if (device.gatt?.connected) device.gatt.disconnect(); throw e; }
-  device.addEventListener("gattserverdisconnected", () => onDisconnect?.());
+  const first = await open();
+  const kept = reconnectingTrainer(first, open, () => { try { if (device.gatt?.connected) device.gatt.disconnect(); } catch { /* down */ } }, onDisconnect, opts);
+  device.addEventListener("gattserverdisconnected", kept.dropped);
 
   return {
     kind: "trainer",
-    name: t.trainer.label,
-    control: t.control,
-    trainer: t.trainer,
-    disconnect: () => { t.stop(); if (device.gatt?.connected) device.gatt.disconnect(); },
+    name: first.trainer.label,
+    control: kept.control,
+    trainer: kept.trainer,
+    disconnect: () => { kept.stop(); if (device.gatt?.connected) device.gatt.disconnect(); },
   };
 }
 
@@ -527,39 +571,46 @@ async function nativeTrainer(onReading: (r: Reading) => void, onDisconnect?: () 
   // Scanning with several services finds a device advertising any of them.
   const device = await BleClient.requestDevice({ services: TRAINER_SERVICES, optionalServices: [...TRAINER_SERVICES, uuid16(SERVICE.heart_rate)] });
   const id = device.deviceId;
-  await BleClient.connect(id, () => onDisconnect?.());
+  let dropped = () => {};
 
-  let t: Awaited<ReturnType<typeof setupTrainer>>;
-  try {
-    const list = await BleClient.getServices(id);
-    const findService = (s: string) => list.find((x) => normUuid(x.uuid) === s);
-    const findChar = (s: string, c: string) => findService(s)?.characteristics.find((x) => normUuid(x.uuid) === c);
-    const gatt: Gatt = {
-      hasService: async (s) => findService(s) != null,
-      hasCharacteristic: async (s, c) => findChar(s, c) != null,
-      async subscribe(s, c, fn) {
-        await BleClient.startNotifications(id, s, c, fn);
-        return () => { BleClient.stopNotifications(id, s, c).catch(() => {}); };
-      },
-      async write(s, c, b) {
-        const props = findChar(s, c)?.properties;
-        const v = new DataView(b.slice().buffer);
-        if (props && !props.write && props.writeWithoutResponse) await BleClient.writeWithoutResponse(id, s, c, v);
-        else await BleClient.write(id, s, c, v);
-      },
-    };
-    t = await setupTrainer(gatt, device.name, onReading, opts);
-  } catch (e) {
-    BleClient.disconnect(id).catch(() => {});
-    throw e;
-  }
+  // Connect, find what it speaks, subscribe: the first time and after every drop.
+  const open = async (): Promise<TrainerSetup> => {
+    await BleClient.connect(id, () => dropped());
+    try {
+      const list = await BleClient.getServices(id);
+      const findService = (s: string) => list.find((x) => normUuid(x.uuid) === s);
+      const findChar = (s: string, c: string) => findService(s)?.characteristics.find((x) => normUuid(x.uuid) === c);
+      const gatt: Gatt = {
+        hasService: async (s) => findService(s) != null,
+        hasCharacteristic: async (s, c) => findChar(s, c) != null,
+        async subscribe(s, c, fn) {
+          await BleClient.startNotifications(id, s, c, fn);
+          return () => { BleClient.stopNotifications(id, s, c).catch(() => {}); };
+        },
+        async write(s, c, b) {
+          const props = findChar(s, c)?.properties;
+          const v = new DataView(b.slice().buffer);
+          if (props && !props.write && props.writeWithoutResponse) await BleClient.writeWithoutResponse(id, s, c, v);
+          else await BleClient.write(id, s, c, v);
+        },
+      };
+      return await setupTrainer(gatt, device.name, onReading, opts);
+    } catch (e) {
+      BleClient.disconnect(id).catch(() => {});
+      throw e;
+    }
+  };
+
+  const first = await open();
+  const kept = reconnectingTrainer(first, open, () => { BleClient.disconnect(id).catch(() => {}); }, onDisconnect, opts);
+  dropped = kept.dropped;
 
   return {
     kind: "trainer",
-    name: t.trainer.label,
-    control: t.control,
-    trainer: t.trainer,
-    disconnect: () => { t.stop(); BleClient.disconnect(id).catch(() => {}); },
+    name: first.trainer.label,
+    control: kept.control,
+    trainer: kept.trainer,
+    disconnect: () => { kept.stop(); BleClient.disconnect(id).catch(() => {}); },
   };
 }
 

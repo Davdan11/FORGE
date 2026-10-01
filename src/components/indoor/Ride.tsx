@@ -292,7 +292,7 @@ export function Ride({ course, profile, sport, workout, thresholds, onEnd, say }
   async function connect(kind: SensorKind) {
     setConnecting(kind);
     try {
-      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(tr(`${sensorName(kind)} : déconnecté.`, `${sensorName(kind)} disconnected.`)), { onLink: (up: boolean) => say(up ? tr(`${sensorName(kind)} reconnecté ✓`, `${sensorName(kind, true)} reconnected ✓`) : tr(`${sensorName(kind)} en veille : il revient dès que tu pédales.`, `${sensorName(kind, true)} asleep: it comes back as soon as you pedal.`)) });
+      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(tr(`${sensorName(kind)} : déconnecté.`, `${sensorName(kind)} disconnected.`)), { onLink: (up: boolean) => say(up ? tr(`${sensorName(kind)} reconnecté ✓`, `${sensorName(kind, true)} reconnected ✓`) : kind === "trainer" ? tr("Trainer déconnecté : reconnexion…", "Trainer disconnected: reconnecting…") : tr(`${sensorName(kind)} en veille : il revient dès que tu pédales.`, `${sensorName(kind, true)} asleep: it comes back as soon as you pedal.`)) });
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
       say(tr(`${s.name} : connecté.`, `${s.name} connected.`));
       if (s.control) await takeControl(s);

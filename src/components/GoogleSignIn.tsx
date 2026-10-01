@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { useLang } from "@/lib/i18n";
 
@@ -41,7 +41,8 @@ async function sha256Hex(text: string) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function GoogleWebButton({ onSignedIn, onError, fallback }: { onSignedIn: (u: User) => void; onError: (message: string) => void; fallback: ReactNode }) {
+/** `client`: another Supabase client than the app's (the Windows game's sign-in, lib/pcLink). */
+export function GoogleWebButton({ onSignedIn, onError, fallback, client }: { onSignedIn: (u: User) => void; onError: (message: string) => void; fallback: ReactNode; client?: SupabaseClient | null }) {
   const box = useRef<HTMLDivElement>(null);
   const lang = useLang();
   const [failed, setFailed] = useState(false);
@@ -49,7 +50,8 @@ export function GoogleWebButton({ onSignedIn, onError, fallback }: { onSignedIn:
   useEffect(() => {
     let live = true;
     (async () => {
-      if (!supabase) throw new Error("no supabase");
+      const sb = client ?? supabase;
+      if (!sb) throw new Error("no supabase");
       const raw = `${crypto.randomUUID()}${crypto.randomUUID()}`;
       const hashed = await sha256Hex(raw);
       await loadGsi();
@@ -61,8 +63,8 @@ export function GoogleWebButton({ onSignedIn, onError, fallback }: { onSignedIn:
         ux_mode: "popup",
         use_fedcm_for_button: true,
         callback: async (resp: { credential?: string }) => {
-          if (!resp.credential || !supabase) return;
-          const { data, error } = await supabase.auth.signInWithIdToken({ provider: "google", token: resp.credential, nonce: raw });
+          if (!resp.credential) return;
+          const { data, error } = await sb.auth.signInWithIdToken({ provider: "google", token: resp.credential, nonce: raw });
           if (error) onError(error.message);
           else if (data.user) onSignedIn(data.user);
         },
@@ -74,7 +76,7 @@ export function GoogleWebButton({ onSignedIn, onError, fallback }: { onSignedIn:
       });
     })().catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
-  }, [lang, onError, onSignedIn]);
+  }, [lang, onError, onSignedIn, client]);
 
   if (failed) return <>{fallback}</>;
   return <div ref={box} className="flex justify-center min-h-[44px] w-full" />;

@@ -528,7 +528,7 @@ export function UnityRide({ profile, ftpW, startRoute, startSport, onExit, say }
   async function connect(kind: SensorKind) {
     setConnecting(kind);
     try {
-      const s = await connectSensor(kind, (r) => kept.sink?.(r), () => { kept.sensors = kept.sensors.filter((x) => x.kind !== kind); kept.lost?.(kind); }, { riderKg: profile.weightKg, onLink: (up: boolean) => say(up ? tr(`${sensorName(kind)} reconnecté ✓`, `${sensorName(kind, true)} reconnected ✓`) : tr(`${sensorName(kind)} en veille : il revient dès que tu pédales.`, `${sensorName(kind, true)} asleep: it comes back as soon as you pedal.`)) });
+      const s = await connectSensor(kind, (r) => kept.sink?.(r), () => { kept.sensors = kept.sensors.filter((x) => x.kind !== kind); kept.lost?.(kind); }, { riderKg: profile.weightKg, onLink: (up: boolean) => say(up ? tr(`${sensorName(kind)} reconnecté ✓`, `${sensorName(kind, true)} reconnected ✓`) : kind === "trainer" ? tr("Trainer déconnecté : reconnexion…", "Trainer disconnected: reconnecting…") : tr(`${sensorName(kind)} en veille : il revient dès que tu pédales.`, `${sensorName(kind, true)} asleep: it comes back as soon as you pedal.`)) });
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
       // Paired: the panel gets out of the way (it opens again from "Capteurs").
       if (!s.trainer?.commands) window.setTimeout(() => setPanel(false), 1200);
