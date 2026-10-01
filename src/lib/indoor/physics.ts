@@ -158,6 +158,16 @@ export function powerFromSpeed(speedMs: number): Effort {
 }
 
 /**
+ * A cadence sensor alone (a Garmin cadence pod on a basic trainer): no power, no wheel speed. How fast the pedals
+ * turn against a fixed resistance still says roughly how hard someone rides — about 150 W at 85 rpm on a typical
+ * gear — so the rider moves, as an estimate and labelled so. Below 20 rpm nobody is really pedalling.
+ */
+export function powerFromCadence(rpm: number): Effort {
+  if (!(rpm >= 20)) return { watts: 0, quality: "estimated" };
+  return { watts: Math.round(clamp(150 * Math.pow(rpm / 85, 2.2), 0, 450)), quality: "estimated" };
+}
+
+/**
  * Effort someone typed in.
  *
  * Kept deliberately separate and labelled `declared`, because it is not a

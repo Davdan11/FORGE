@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Bluetooth, BluetoothOff, Gauge, Heart, Mountain, ChevronDown, ChevronUp, Users, Check } from "lucide-react";
 import { at, type Course } from "@/lib/indoor/course";
-import { step, ROAD_BIKE, powerFromHr, powerFromSpeed, declaredPower, maxHrFor, XP_CREDIT, type Effort, type EffortQuality } from "@/lib/indoor/physics";
+import { step, ROAD_BIKE, powerFromHr, powerFromSpeed, powerFromCadence, declaredPower, maxHrFor, XP_CREDIT, type Effort, type EffortQuality } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, sensorName, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
 import { cmdRequestControl, cmdStart, cmdStop, cmdSimulation, cmdTargetPower, cmdTargetIncline, cmdTargetSpeed, shouldSendGrade, resultText } from "@/lib/indoor/ftms";
 import { flatten, positionAt, targetFor, zoneOfPct, zoneName, ZONE_HEX, type StructuredWorkout } from "@/lib/indoor/workouts";
@@ -179,6 +179,8 @@ export function Ride({ course, profile, sport, workout, thresholds, onEnd, say }
         const machineSpeed = fusion.current.get("speedMs");
         if (power != null) effort = { watts: power, quality: "measured" };
         else if (machineSpeed != null) effort = powerFromSpeed(machineSpeed);
+        // A cadence pod alone (no power, no wheel speed): the pedals' pace, estimated.
+        else if (fusion.current.get("cadence") != null) effort = powerFromCadence(fusion.current.get("cadence")!);
         else if (hr != null) effort = powerFromHr(hr, 55, maxHr, thresholds.ftpW);
         // Paired but silent: coast rather than ride on a stale number.
         else if (L.hasSensor) effort = { watts: 0, quality: "measured" };
@@ -290,7 +292,7 @@ export function Ride({ course, profile, sport, workout, thresholds, onEnd, say }
   async function connect(kind: SensorKind) {
     setConnecting(kind);
     try {
-      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(tr(`${sensorName(kind)} : déconnecté.`, `${sensorName(kind)} disconnected.`)));
+      const s = await connectSensor(kind, (r) => fusion.current.accept(r), () => say(tr(`${sensorName(kind)} : déconnecté.`, `${sensorName(kind)} disconnected.`)), { onLink: (up: boolean) => say(up ? tr(`${sensorName(kind)} reconnecté ✓`, `${sensorName(kind, true)} reconnected ✓`) : tr(`${sensorName(kind)} en veille : il revient dès que tu pédales.`, `${sensorName(kind, true)} asleep: it comes back as soon as you pedal.`)) });
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
       say(tr(`${s.name} : connecté.`, `${s.name} connected.`));
       if (s.control) await takeControl(s);

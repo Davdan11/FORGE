@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  step, steadySpeed, ROAD_BIKE, powerFromHr, powerFromSpeed, declaredPower,
+  step, steadySpeed, ROAD_BIKE, powerFromHr, powerFromSpeed, powerFromCadence, declaredPower,
   guessFtp, maxHrFor, XP_CREDIT,
 } from "./physics";
 import { SensorFusion } from "./sensors";
@@ -208,5 +208,17 @@ describe("SensorFusion — merging several sensors", () => {
 
   it("is silent before it has heard anything", () => {
     expect(new SensorFusion().silent()).toBe(true);
+  });
+});
+
+describe("powerFromCadence", () => {
+  it("moves a rider who only has a cadence pod, as an estimate", () => {
+    expect(powerFromCadence(85)).toEqual({ watts: 150, quality: "estimated" });
+    expect(powerFromCadence(60).watts).toBeLessThan(powerFromCadence(90).watts);
+    expect(powerFromCadence(200).watts).toBeLessThanOrEqual(450);
+  });
+  it("is zero when the pedals barely turn", () => {
+    expect(powerFromCadence(10).watts).toBe(0);
+    expect(powerFromCadence(NaN).watts).toBe(0);
   });
 });

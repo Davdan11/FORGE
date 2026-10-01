@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bluetooth, BluetoothOff, Check, Users, X, SlidersHorizontal, Mic, MicOff, Volume2, VolumeX, Flag, MoreHorizontal } from "lucide-react";
-import { powerFromHr, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
+import { powerFromHr, powerFromCadence, declaredPower, maxHrFor, XP_CREDIT, type Effort } from "@/lib/indoor/physics";
 import { sensorAvailability, connectSensor, SensorFusion, sensorName, type Availability, type Sensor, type SensorKind } from "@/lib/indoor/sensors";
 import { shouldSendGrade, resultText, cmdRequestControl, cmdTargetIncline } from "@/lib/indoor/ftms";
 import { curveName, powerFromCurve, trainerLabel, PROTOCOL_LABEL, PROTOCOL_LABEL_FR, SPEED_CURVES, type ControlResult, type SpeedCurveId, type TrainerControl, type TrainerProtocol } from "@/lib/indoor/trainer";
@@ -258,6 +258,8 @@ export function UnityRide({ profile, ftpW, startRoute, startSport, onExit, say }
       let effort: Effort;
       if (power != null) effort = { watts: power, quality: "measured" };
       else if (machineSpeed != null) effort = powerFromCurve(machineSpeed, L.curve);
+      // A cadence pod alone (no power, no wheel speed): the pedals' pace, estimated.
+      else if (cadence != null) effort = powerFromCadence(cadence);
       else if (hr != null) effort = powerFromHr(hr, 55, maxHr, ftpW);
       else if (L.hasSensor) effort = { watts: 0, quality: "measured" };
       else effort = declaredPower(L.manual);
@@ -526,7 +528,7 @@ export function UnityRide({ profile, ftpW, startRoute, startSport, onExit, say }
   async function connect(kind: SensorKind) {
     setConnecting(kind);
     try {
-      const s = await connectSensor(kind, (r) => kept.sink?.(r), () => { kept.sensors = kept.sensors.filter((x) => x.kind !== kind); kept.lost?.(kind); }, { riderKg: profile.weightKg });
+      const s = await connectSensor(kind, (r) => kept.sink?.(r), () => { kept.sensors = kept.sensors.filter((x) => x.kind !== kind); kept.lost?.(kind); }, { riderKg: profile.weightKg, onLink: (up: boolean) => say(up ? tr(`${sensorName(kind)} reconnecté ✓`, `${sensorName(kind, true)} reconnected ✓`) : tr(`${sensorName(kind)} en veille : il revient dès que tu pédales.`, `${sensorName(kind, true)} asleep: it comes back as soon as you pedal.`)) });
       setSensors((cur) => [...cur.filter((x) => x.kind !== kind), s]);
       // Paired: the panel gets out of the way (it opens again from "Capteurs").
       if (!s.trainer?.commands) window.setTimeout(() => setPanel(false), 1200);

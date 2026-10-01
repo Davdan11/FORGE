@@ -103,7 +103,18 @@ export interface Sensor {
   trainer?: TrainerInfo & { commands?: TrainerControl };
 }
 
-export type ConnectOptions = ControlOptions;
+export type ConnectOptions = ControlOptions & {
+  /** A sensor's link dropped (false) or came back (true) while the app reconnects it by itself. */
+  onLink?: (up: boolean) => void;
+};
+
+/** One reconnect attempt: a sleeping sensor does not advertise, and a connect to it can wait forever. */
+const RECONNECT_TRY_MS = 8000;
+/** How long a dropped sensor is looked for before it is reported lost (a long pause, a coffee). */
+const RECONNECT_FOR_MS = 30 * 60_000;
+function within<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+}
 
 /**
  * One command at a time, each waiting for its indication.
@@ -313,15 +324,22 @@ const webTransport: Transport = {
       return { service: svc, characteristic: ch };
     };
     let { service, characteristic } = await open();
-    let closed = false;
+    let closed = false, retrying = false;
     device.addEventListener("gattserverdisconnected", () => {
-      if (closed) return;
-      // Try again every 3 s for 10 minutes (the rider may just have stopped pedalling), then report it lost.
-      let tries = 0;
+      if (closed || retrying) return;
+      // Crank and wheel pods sleep a few seconds after the pedals stop and wake when they turn again: look for it
+      // every 2 s (each try bounded, a connect to a sleeping pod never answers) for half an hour, then report it lost.
+      retrying = true; opts?.onLink?.(false);
+      const until = Date.now() + RECONNECT_FOR_MS;
       const retry = async () => {
-        if (closed) return;
-        try { ({ service, characteristic } = await open()); }
-        catch { if (++tries < 200) setTimeout(retry, 3000); else onDisconnect?.(); }
+        if (closed) { retrying = false; return; }
+        try {
+          ({ service, characteristic } = await within(open(), RECONNECT_TRY_MS));
+          retrying = false; opts?.onLink?.(true);
+        } catch {
+          try { if (device.gatt?.connected) device.gatt.disconnect(); } catch { /* already down */ }
+          if (Date.now() < until) setTimeout(retry, 2000); else { retrying = false; onDisconnect?.(); }
+        }
       };
       setTimeout(retry, 1000);
     });
@@ -452,10 +470,29 @@ const nativeTransport: Transport = {
     const characteristic = numberToUUID(CHARACTERISTIC[kind]);
 
     const device = await BleClient.requestDevice({ services: [service], optionalServices: [numberToUUID(SERVICE.heart_rate)] });
-    await BleClient.connect(device.deviceId, () => onDisconnect?.());
 
     const decode = decoderFor(kind);
-    await BleClient.startNotifications(device.deviceId, service, characteristic, (v) => onReading(decode(v)));
+    // A pod that sleeps when the pedals stop drops the link: look for it again by itself, as on the web.
+    let closed = false, retrying = false;
+    const dropped = () => {
+      if (closed || retrying) return;
+      retrying = true; opts?.onLink?.(false);
+      const until = Date.now() + RECONNECT_FOR_MS;
+      const retry = async () => {
+        if (closed) { retrying = false; return; }
+        try { await within(listen(), RECONNECT_TRY_MS); retrying = false; opts?.onLink?.(true); }
+        catch {
+          BleClient.disconnect(device.deviceId).catch(() => {});
+          if (Date.now() < until) setTimeout(retry, 2000); else { retrying = false; onDisconnect?.(); }
+        }
+      };
+      setTimeout(retry, 1000);
+    };
+    const listen = async () => {
+      await BleClient.connect(device.deviceId, dropped);
+      await BleClient.startNotifications(device.deviceId, service, characteristic, (v) => onReading(decode(v)));
+    };
+    await listen();
 
     let control: Sensor["control"];
     const cp = numberToUUID(CONTROL_POINT);
@@ -476,6 +513,7 @@ const nativeTransport: Transport = {
       name: device.name ?? sensorName(kind),
       control,
       disconnect: () => {
+        closed = true;
         if (cpOn) BleClient.stopNotifications(device.deviceId, service, cp).catch(() => {});
         BleClient.stopNotifications(device.deviceId, service, characteristic).catch(() => {});
         BleClient.disconnect(device.deviceId).catch(() => {});
