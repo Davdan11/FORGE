@@ -98,7 +98,7 @@ export function UnityRide({ profile, ftpW, startRoute, startSport, onExit, say }
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [panel, setPanel] = useState(false);
   const [manual, setManual] = useState(0);
-  const [curve, setCurve] = useState<SpeedCurveId>("generic");
+  const [curve, setCurve] = useState<SpeedCurveId>("generic-fluid");
   const [people, setPeople] = useState(0);
   // What the sensors actually send, shown in the panel (so a trainer that never reports cadence is plain to see).
   const [readout, setReadout] = useState<{ w?: number; rpm?: number; kph?: number } | null>(null);
@@ -115,7 +115,7 @@ export function UnityRide({ profile, ftpW, startRoute, startSport, onExit, say }
 
   // What the game last told us, read by the timers.
   const game = useRef({ category: "D" as Category, quality: "declared" as string, watts: 0, hr: null as number | null, cadence: null as number | null, eventRoom: null as string | null, route: "", event: null as string | null, distance: 0, speedKph: 0, elapsed: 0, grade: 0, erg: null as number | null });
-  const live = useRef({ manual: 0, hasSensor: false, curve: "generic" as SpeedCurveId, powerAdjust: 0 });
+  const live = useRef({ manual: 0, hasSensor: false, curve: "generic-fluid" as SpeedCurveId, powerAdjust: 0 });
   // Power calibration: every trainer measures a little differently; the rider nudges it once (-10 to +15 %).
   const [powerAdjust, setPowerAdjust] = useState(() => { const v = Number(readPref("forge.powerAdjust")); return Number.isFinite(v) ? Math.max(-10, Math.min(15, v)) : 0; });
   useEffect(() => { live.current = { manual, hasSensor: sensors.length > 0, curve, powerAdjust }; }, [manual, sensors, curve, powerAdjust]);
